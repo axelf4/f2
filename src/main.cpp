@@ -1,9 +1,18 @@
+#include <Windows.h>
 #include <iostream>
 #include "sqr.h"
 #include "SDL.h"
 #include <GL\glew.h>
 #include <SDL_opengl.h>
 #include <SOIL.h>
+#include <glm/mat4x4.hpp>
+
+#include <btBulletDynamicsCommon.h>
+
+/* assimp include files. These three are usually needed. */
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 using namespace std;
 
@@ -26,12 +35,22 @@ int main(int argc, char **argv) {
 
 
 	SOIL_load_OGL_texture("", 0, 0, 0);
+	glActiveTexture(GL_TEXTURE0);
+
+	btBroadphaseInterface *broadphase = new btDbvtBroadphase();
+	delete broadphase;
+
+	Assimp::Importer importer;
+	const aiScene *scene = importer.ReadFile("", // aiProcess_CalcTangentSpace |
+		aiProcess_Triangulate |
+		aiProcess_JoinIdenticalVertices |
+		aiProcess_SortByPType);
 
 	SDL_GL_DeleteContext(glcontext);
 	SDL_Quit();
 
 	std::cout << sqr(2) << std::endl;
-	
+
 	system("pause");
 	return 0;
 }
