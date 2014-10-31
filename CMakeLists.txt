@@ -9,13 +9,16 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 #SET (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /SAFESEH:NO")
 
 set(SOURCES
-	src/sqr.cpp
-	include/sqr.h
-	)
+	src/f1.cpp
+	src/vbo.cpp
+	
+	include/f1.h
+	include/glh.h
+	include/vbo.h
+	include/obj_loader.h)
 
 set(TEST_SOURCES
-	src/main.cpp
-	)
+	src/main.cpp)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${TEST_SOURCES})
@@ -30,5 +33,17 @@ find_package(Assimp REQUIRED)
 
 include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
 target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
+
+if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
+	# list of files for which we add a copy rule
+	file(GLOB_RECURSE RESOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/resource resource/*)
+
+	foreach(item IN LISTS RESOURCES)
+		message(STATUS ${item})
+		add_custom_command(
+			TARGET game POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/resource/${item}" "${CMAKE_CURRENT_BINARY_DIR}/${item}")
+	endforeach()
+endif()
 
 # cmake -G "Visual Studio 12 2013" ..
