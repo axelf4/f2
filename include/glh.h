@@ -3,7 +3,8 @@
 
 #include "f1.h"
 
-#define GLSL(src) "#version 120\n" #src
+// 110
+#define GLSL(...) "#version 130\n" #__VA_ARGS__
 
 #ifdef _DEBUG
 #define GL_CHECK(stmt) do { stmt; GLenum err = glGetError(); if (err != GL_NO_ERROR) { printf("OpenGL error %08x, at %s:%i - for %s\n", err, fname, line, #stmt); abort(); } } while(0)

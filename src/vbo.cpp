@@ -1,4 +1,5 @@
 #include "vbo.h"
+#include "glh.h"
 #include <iostream>
 
 inline f1::vertex_data::~vertex_data() {}
@@ -29,9 +30,9 @@ void f1::vbo::bind(program *program) {
 	glBindBuffer(GL_ARRAY_BUFFER, id);
 	for (int i = 0, location; i < attribLen; i++) {
 		attrib attribute = attributes[i];
-		// if (location = glGetAttribLocation(program, attribute.name) < 0) continue;
+		if (location = glGetAttribLocation(*program, attribute.name) < 0) continue;
 		glEnableVertexAttribArray(location = glGetAttribLocation(*program, attribute.name));
-		glVertexAttribPointer(location, attribute.size, GL_FLOAT, GL_FALSE, stride, (void*)(attribute.offset));
+		glVertexAttribPointer(location, attribute.size, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(attribute.offset));
 	}
 }
 

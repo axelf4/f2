@@ -81,9 +81,10 @@ struct model {
 
 GLuint load_texture(const char *filename) {
 	GLuint texture = SOIL_load_OGL_texture(
-		(std::string("cs_office/") + filename).c_str(),
+		filename,
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID,
-		SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS);
+		SOIL_FLAG_MIPMAPS | SOIL_FLAG_TEXTURE_REPEATS | SOIL_FLAG_INVERT_Y);
+	if (texture == 0) printf("SOIL loading error: %s\n", SOIL_last_result());
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -115,13 +116,13 @@ GLuint create_null_texture(int width, int height) {
 	return texture;
 }
 
-model * loadMeshUsingAssimp(char *path) {
+model * loadMeshUsingAssimp(char *filename) {
 	Assimp::Importer importer;
-	const aiScene *scene = importer.ReadFile(path, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
+	const aiScene *scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
 		aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes);
 
 	if (!scene) {
-		std::cerr << "Error loading model: " << path << ", " << importer.GetErrorString() << std::endl;
+		std::cerr << "Error loading model: " << filename << ", " << importer.GetErrorString() << std::endl;
 		throw 0;
 	}
 
@@ -134,7 +135,11 @@ model * loadMeshUsingAssimp(char *path) {
 		const struct aiMaterial *material = scene->mMaterials[i];
 		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 			aiString path;
-			if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS) textures[i] = load_texture(path.C_Str());
+			if (material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS) {
+				string fullpath(filename);
+				fullpath = fullpath.substr(0, fullpath.rfind('/') + 1).append(path.C_Str());
+				textures[i] = load_texture(fullpath.c_str());
+			}
 		}
 		else textures[i] = 0;
 	}
@@ -152,11 +157,9 @@ model * loadMeshUsingAssimp(char *path) {
 				vertices[j++] = mesh->mVertices[i].z;
 			}
 			if (mesh->HasTextureCoords(0)) {
-				vertices[j++] = 1.222222f;
-				vertices[j++] = 0.444444f;
-				// vertices[j++] = mesh->mTextureCoords[0][i].x;
-				// vertices[j++] = mesh->mTextureCoords[0][i].y;
-				//cout << mesh->mTextureCoords[0][i].x << " " << mesh->mTextureCoords[0][i].y << endl;
+				vertices[j++] = mesh->mTextureCoords[0][i].x;
+				vertices[j++] = mesh->mTextureCoords[0][i].y;
+				cout << mesh->mTextureCoords[0][i].x << " " << mesh->mTextureCoords[0][i].y << endl;
 			}
 			if (mesh->HasNormals()) {
 				vertices[j++] = mesh->mNormals[i].x;
@@ -213,6 +216,119 @@ GLuint setupSkyboxTexture() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 	return cubemap;
+}
+
+namespace shaders {
+	// skybox.vert & skybox.frag
+	const char skyboxVertexSrc[] = GLSL(in vec2 vertex; uniform mat4 invProjection; uniform mat4 trnModelView; out vec3 eyeDirection; void main() { eyeDirection = vec3(trnModelView * invProjection * (gl_Position = vec4(vertex, 0.0, 1.0))); /* trnModelView * unprojected */ });
+	const char skyboxFragmentSrc[] = GLSL(in vec3 eyeDirection; uniform samplerCube texture; void main() { gl_FragColor = textureCube(texture, eyeDirection); });
+
+	// phong.vert
+	const char phongVertexSrc[] = GLSL(
+		in vec3 vertex;
+	in vec2 texCoord;
+	in vec3 normal;
+
+	uniform mat4 m, v, p;
+	uniform mat4 normalMatrix;
+
+	out vec4 position; // position of the vertex (and fragment) in world space
+	out vec3 N; // surface normal vector in world space
+	out vec2 f_texCoord;
+
+	void main() {
+		gl_Position = p * v * (position = m * vec4(vertex, 1.0)); // to clip coordinates
+
+		position = vec4(vertex, 1.0);
+		N = normalize(vec3(normalMatrix * vec4(normal, 0.0)));
+		f_texCoord = texCoord;
+	}
+	);
+	// phong.frag
+	const char phongFragmentSrc[] = GLSL(
+		in vec4 position;
+	in vec3 N; // Normal in eye coord
+	in vec2 f_texCoord;
+
+	uniform mat4 m, v, p;
+	uniform vec4 eyeCoords;
+	uniform mat4 vInv;
+	uniform sampler2D tex;
+
+	struct lightSource {
+		vec4 position;
+		vec4 diffuse;
+		vec4 specular;
+		float constantAttenuation, linearAttenuation, quadraticAttenuation;
+		float spotCutoff, spotExponent;
+		vec3 spotDirection;
+	};
+	lightSource light0 = lightSource(
+		vec4(1.0, 0.0, 0.0, 0.0),
+		vec4(0.8, 0.8, 0.8, 1.0),
+		vec4(1.0, 1.0, 1.0, 1.0),
+		1.0, 0.0, 0.0,
+		180.0, 0.0,
+		vec3(0.0, 0.0, 0.0)
+		);
+	const vec3 ambient = vec3(0.0, 0.0, 0.0);
+
+	struct material {
+		vec4 ambient;
+		vec4 diffuse;
+		vec4 specular;
+		float shininess;
+	};
+	material frontMaterial = material(
+		vec4(1.0, 1.0, 1.0, 1.0),
+		vec4(1.0, 0.0, 0.0, 1.0),
+		vec4(1.0, 1.0, 1.0, 1.0),
+		15.0
+		);
+
+	void main() {
+		vec3 normalDirection = normalize(N);
+		vec3 viewDirection = normalize(vec3(vInv * vec4(0.0, 0.0, 0.0, 1.0) - position));
+		vec3 lightDirection;
+		float attenuation;
+
+		// directional light?
+		if (0.0 == light0.position.w) {
+			attenuation = 1.0; // no attenuation
+			lightDirection = normalize(vec3(light0.position));
+		}
+		else { // point light or spotlight (or other kind of light) 
+			// vec3 positionToLightSource = vec3(light0.position - position);
+			vec3 positionToLightSource = vec3(eyeCoords - position);
+			float distance = length(positionToLightSource);
+			lightDirection = normalize(positionToLightSource);
+			attenuation = 1.0 / (light0.constantAttenuation
+				+ light0.linearAttenuation * distance
+				+ light0.quadraticAttenuation * distance * distance);
+
+			if (light0.spotCutoff <= 90.0) { // spotlight?
+				float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
+				if (clampedCosine < cos(radians(light0.spotCutoff))) attenuation = 0.0; // outside of spotlight cone?
+				else attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
+			}
+		}
+
+		vec3 ambientLighting = ambient * vec3(frontMaterial.ambient);
+
+		vec3 diffuseReflection = attenuation
+			* vec3(light0.diffuse) * vec3(frontMaterial.diffuse)
+			* max(0.0, dot(normalDirection, lightDirection));
+
+		vec3 specularReflection;
+		// light source on the wrong side?
+		if (dot(normalDirection, lightDirection) < 0.0) specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
+		else specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
+			* pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess); // light source on the right side
+
+		// gl_FragColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0);
+		gl_FragColor = texture2D(tex, f_texCoord);
+	}
+	);
 }
 
 struct game_world;
@@ -293,7 +409,9 @@ int main(int argc, char* argv[]) {
 	// Culling
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	// Texturing
+	glEnable(GL_TEXTURE_2D);
+	// glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	glm::vec3 position;
 	float yaw = 0.f, pitch = 0.f;
@@ -321,7 +439,7 @@ int main(int argc, char* argv[]) {
 	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	const float skyboxVertices[] = { -1, -1, 1, -1, 1, 1, -1, 1 };
 	GLuint skyboxTex = setupSkyboxTexture();
-	program *skyboxProg = new program(readFile("skymap.vert").c_str(), readFile("skymap.frag").c_str());
+	program *skyboxProg = new program(shaders::skyboxVertexSrc, shaders::skyboxFragmentSrc);
 	cout << "Skybox program info log: " << *skyboxProg << endl;
 	attrib skyboxAttribs[] = { { "vertex", 2, 0 } };
 	f1::mesh *skybox = new f1::mesh(true, skyboxAttribs, 1);
@@ -330,10 +448,10 @@ int main(int argc, char* argv[]) {
 	skybox->getIndices()->bind();
 	skybox->getIndices()->setIndices(sizeof(unsigned int) * 6, cubeIndices);
 
-	program *phong = new program(readFile("phong.vert").c_str(), readFile("phong.frag").c_str());
+	program *phong = new program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
 	cout << "Shader program info log: " << *phong << endl;
 	// mesh *mesh = f1::getObjModel("bunny.obj");
-	struct model *groundMesh = loadMeshUsingAssimp("cs_office/cs_office.obj");
+	struct model *groundMesh = loadMeshUsingAssimp("cube_texture.obj/cube_texture.obj");
 
 	bool done = false;
 	SDL_Event event;
@@ -367,7 +485,7 @@ int main(int argc, char* argv[]) {
 		glUniformMatrix4fv(glGetUniformLocation(*skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
-		glUniform1i(glGetUniformLocation(*skyboxProg, "tex"), 0);
+		glUniform1i(glGetUniformLocation(*skyboxProg, "texture"), 0);
 		skybox->bind(skyboxProg);
 		skybox->draw(GL_TRIANGLES, 0, 6);
 		skybox->unbind(skyboxProg);
@@ -384,6 +502,7 @@ int main(int argc, char* argv[]) {
 		/* Draw ground. */
 		ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
+		model = glm::scale(model, vec3(1000.f));
 		glUniformMatrix4fv(glGetUniformLocation(*phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(glGetUniformLocation(*phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));
 		// set active texture
@@ -392,12 +511,13 @@ int main(int argc, char* argv[]) {
 		FOR(i, groundMesh->nodeCount) {
 			model_node *node = groundMesh->nodes[i];
 
-			node->mesh->bind(phong);
 			glBindTexture(GL_TEXTURE_2D, node->texture);
 
+			node->mesh->bind(phong);
 			node->mesh->draw(GL_TRIANGLES, 0, node->indexCount); // 36
 			node->mesh->unbind(phong);
 		}
+
 		/* Draw bunny model. */
 		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
