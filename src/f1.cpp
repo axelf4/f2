@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <string.h>
 
 float f1::opengl_version = -1;
 

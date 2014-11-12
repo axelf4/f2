@@ -1,17 +1,19 @@
 #include <iostream>
-#include <thread>
+#include <stdlib.h>
 
 #include <SDL.h>
-#include <GL\glew.h>
+#include <GL/glew.h>
 #include <SDL_opengl.h>
 
 #include "f1.h"
 #include "glh.h"
 #include "vbo.h"
 
+#include "shaders.h"
+
 #define GLM_FORCE_RADIANS
-#include <glm\mat4x4.hpp>
-#include <glm\gtx\quaternion.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -28,9 +30,9 @@
 #define WINDOW_WIDTH 800.f
 #define WINDOW_HEIGHT 600.f
 #define FPS 60
-
 #define MOUSE_SENSITIVITY 0.006f
 #define MOVEMENT_SPEED 0.2f * 50
+#define RESOURCE_DIR "resource/"
 
 using namespace std;
 using namespace f1;
@@ -100,7 +102,8 @@ GLuint create_null_texture(int width, int height) {
 	// be used to draw the OBJ model with and without textures applied.
 
 	int pitch = ((width * 32 + 31) & ~31) >> 3; // align to 4-byte boundaries
-	GLubyte *pixels = new GLubyte[pitch * height] { 255 };
+	GLubyte *pixels = new GLubyte[pitch * height] /* { 255 } */;
+	for (int i = 0; i < pitch * height; i++) pixels[i] = 255;
 	GLuint texture = 0;
 
 	glGenTextures(1, &texture);
@@ -116,7 +119,8 @@ GLuint create_null_texture(int width, int height) {
 	return texture;
 }
 
-model * loadMeshUsingAssimp(char *filename) {
+model * loadMeshUsingAssimp(const char *filename) {
+	unsigned int i;
 	Assimp::Importer importer;
 	const aiScene *scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
 		aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes);
@@ -131,7 +135,7 @@ model * loadMeshUsingAssimp(char *filename) {
 	model->nodeCount = scene->mNumMeshes;
 
 	GLuint *textures = new GLuint[scene->mNumMaterials];
-	for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
+	for (i = 0; i < scene->mNumMaterials; i++) {
 		const struct aiMaterial *material = scene->mMaterials[i];
 		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 			aiString path;
@@ -144,7 +148,7 @@ model * loadMeshUsingAssimp(char *filename) {
 		else textures[i] = 0;
 	}
 
-	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
+	for (i = 0; i < scene->mNumMeshes; i++) {
 		const struct aiMesh *mesh = scene->mMeshes[i];
 		model_node *node = model->nodes[i] = new model_node;
 
@@ -177,7 +181,7 @@ model * loadMeshUsingAssimp(char *filename) {
 		}
 
 		attrib *attributes = new attrib[1 + mesh->HasTextureCoords(0) + mesh->HasNormals()];
-		size_t i = 0;
+		i = 0;
 		if (mesh->HasPositions()) attributes[i++] = { "vertex", 3, 0 };
 		if (mesh->HasTextureCoords(0)) attributes[i++] = { "texCoord", 2, 0 };
 		if (mesh->HasNormals()) attributes[i++] = { "normal", 3, 0 };
@@ -216,119 +220,6 @@ GLuint setupSkyboxTexture() {
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 	return cubemap;
-}
-
-namespace shaders {
-	// skybox.vert & skybox.frag
-	const char skyboxVertexSrc[] = GLSL(in vec2 vertex; uniform mat4 invProjection; uniform mat4 trnModelView; out vec3 eyeDirection; void main() { eyeDirection = vec3(trnModelView * invProjection * (gl_Position = vec4(vertex, 0.0, 1.0))); /* trnModelView * unprojected */ });
-	const char skyboxFragmentSrc[] = GLSL(in vec3 eyeDirection; uniform samplerCube texture; void main() { gl_FragColor = textureCube(texture, eyeDirection); });
-
-	// phong.vert
-	const char phongVertexSrc[] = GLSL(
-		in vec3 vertex;
-	in vec2 texCoord;
-	in vec3 normal;
-
-	uniform mat4 m, v, p;
-	uniform mat4 normalMatrix;
-
-	out vec4 position; // position of the vertex (and fragment) in world space
-	out vec3 N; // surface normal vector in world space
-	out vec2 f_texCoord;
-
-	void main() {
-		gl_Position = p * v * (position = m * vec4(vertex, 1.0)); // to clip coordinates
-
-		position = vec4(vertex, 1.0);
-		N = normalize(vec3(normalMatrix * vec4(normal, 0.0)));
-		f_texCoord = texCoord;
-	}
-	);
-	// phong.frag
-	const char phongFragmentSrc[] = GLSL(
-		in vec4 position;
-	in vec3 N; // Normal in eye coord
-	in vec2 f_texCoord;
-
-	uniform mat4 m, v, p;
-	uniform vec4 eyeCoords;
-	uniform mat4 vInv;
-	uniform sampler2D tex;
-
-	struct lightSource {
-		vec4 position;
-		vec4 diffuse;
-		vec4 specular;
-		float constantAttenuation, linearAttenuation, quadraticAttenuation;
-		float spotCutoff, spotExponent;
-		vec3 spotDirection;
-	};
-	lightSource light0 = lightSource(
-		vec4(1.0, 0.0, 0.0, 0.0),
-		vec4(0.8, 0.8, 0.8, 1.0),
-		vec4(1.0, 1.0, 1.0, 1.0),
-		1.0, 0.0, 0.0,
-		180.0, 0.0,
-		vec3(0.0, 0.0, 0.0)
-		);
-	const vec3 ambient = vec3(0.0, 0.0, 0.0);
-
-	struct material {
-		vec4 ambient;
-		vec4 diffuse;
-		vec4 specular;
-		float shininess;
-	};
-	material frontMaterial = material(
-		vec4(1.0, 1.0, 1.0, 1.0),
-		vec4(1.0, 0.0, 0.0, 1.0),
-		vec4(1.0, 1.0, 1.0, 1.0),
-		15.0
-		);
-
-	void main() {
-		vec3 normalDirection = normalize(N);
-		vec3 viewDirection = normalize(vec3(vInv * vec4(0.0, 0.0, 0.0, 1.0) - position));
-		vec3 lightDirection;
-		float attenuation;
-
-		// directional light?
-		if (0.0 == light0.position.w) {
-			attenuation = 1.0; // no attenuation
-			lightDirection = normalize(vec3(light0.position));
-		}
-		else { // point light or spotlight (or other kind of light) 
-			// vec3 positionToLightSource = vec3(light0.position - position);
-			vec3 positionToLightSource = vec3(eyeCoords - position);
-			float distance = length(positionToLightSource);
-			lightDirection = normalize(positionToLightSource);
-			attenuation = 1.0 / (light0.constantAttenuation
-				+ light0.linearAttenuation * distance
-				+ light0.quadraticAttenuation * distance * distance);
-
-			if (light0.spotCutoff <= 90.0) { // spotlight?
-				float clampedCosine = max(0.0, dot(-lightDirection, light0.spotDirection));
-				if (clampedCosine < cos(radians(light0.spotCutoff))) attenuation = 0.0; // outside of spotlight cone?
-				else attenuation = attenuation * pow(clampedCosine, light0.spotExponent);
-			}
-		}
-
-		vec3 ambientLighting = ambient * vec3(frontMaterial.ambient);
-
-		vec3 diffuseReflection = attenuation
-			* vec3(light0.diffuse) * vec3(frontMaterial.diffuse)
-			* max(0.0, dot(normalDirection, lightDirection));
-
-		vec3 specularReflection;
-		// light source on the wrong side?
-		if (dot(normalDirection, lightDirection) < 0.0) specularReflection = vec3(0.0, 0.0, 0.0); // no specular reflection
-		else specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
-			* pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess); // light source on the right side
-
-		// gl_FragColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0);
-		gl_FragColor = texture2D(tex, f_texCoord);
-	}
-	);
 }
 
 struct game_world;
@@ -391,7 +282,7 @@ int main(int argc, char* argv[]) {
 	SDL_SetRelativeMouseMode(SDL_TRUE); // Capture mouse and use relative coordinates
 
 	SDL_Window *win = SDL_CreateWindow("Point and Click Adventures", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)WINDOW_WIDTH, (int)WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
-	if (win == nullptr) {
+	if (win == 0) {
 		std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
 		SDL_Quit();
 		return 1;
@@ -400,6 +291,9 @@ int main(int argc, char* argv[]) {
 	GLenum err = glewInit();
 	if (err != GLEW_OK) std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
 	cout << "OpenGL vendor: " << glGetString(GL_VENDOR) << ", renderer: " << glGetString(GL_RENDERER) << ", version: " << glGetString(GL_VERSION) << endl << "Using GLEW " << glewGetString(GLEW_VERSION) << endl;
+	cout << "OpenGL version: " << f1::getVersion() << endl;
+	set_opengl_version();
+	cout << GL_V << " : " << OPENGL_VERSION << endl;
 
 	// Depth testing
 	glDepthFunc(GL_LEQUAL);
@@ -451,7 +345,7 @@ int main(int argc, char* argv[]) {
 	program *phong = new program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
 	cout << "Shader program info log: " << *phong << endl;
 	// mesh *mesh = f1::getObjModel("bunny.obj");
-	struct model *groundMesh = loadMeshUsingAssimp("cube_texture.obj/cube_texture.obj");
+	struct model *groundMesh = loadMeshUsingAssimp(RESOURCE_DIR "cube_texture.obj/cube_texture.obj");
 
 	bool done = false;
 	SDL_Event event;
@@ -491,16 +385,17 @@ int main(int argc, char* argv[]) {
 		skybox->unbind(skyboxProg);
 
 		/* Draw everything. */
-		glEnable(GL_DEPTH_TEST);
+		/*glEnable(GL_DEPTH_TEST);
 		(*phong)();
 		glUniformMatrix4fv(glGetUniformLocation(*phong, "p"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(*phong, "v"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(*phong, "vInv"), 1, GL_FALSE, glm::value_ptr(vInv));
 		glUniform4f(glGetUniformLocation(*phong, "eyeCoords"), position.x, position.y, position.z, 1);
+		*/
 
 		btTransform t;
 		/* Draw ground. */
-		ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
+		/*ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
 		model = glm::scale(model, vec3(1000.f));
 		glUniformMatrix4fv(glGetUniformLocation(*phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
@@ -516,7 +411,7 @@ int main(int argc, char* argv[]) {
 			node->mesh->bind(phong);
 			node->mesh->draw(GL_TRIANGLES, 0, node->indexCount); // 36
 			node->mesh->unbind(phong);
-		}
+		}*/
 
 		/* Draw bunny model. */
 		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
@@ -527,7 +422,7 @@ int main(int argc, char* argv[]) {
 		mesh->bind(prog);
 		mesh->draw(GL_TRIANGLES, 0, 3 * 4968); // 4968, 3968
 		mesh->unbind(prog);
-		/* Draw light. */
+		/ * Draw light. */
 		/*model = glm::translate(mat4(1.f), vec3(-2, 2, 0));
 		glUniformMatrix4fv(glGetUniformLocation(*prog, "m"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(glGetUniformLocation(*prog, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));

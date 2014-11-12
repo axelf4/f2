@@ -5,7 +5,7 @@
 inline f1::vertex_data::~vertex_data() {}
 inline f1::index_data::~index_data() {}
 
-f1::vbo::vbo(attrib attributes[], int len, GLenum usage) : attributes(attributes), attribLen(len), usage(usage), stride(f1::calculateStride(attributes, len)) {
+f1::vbo::vbo(attrib attributes[], int len, GLenum usage) : usage(usage), attributes(attributes), attribLen(len), stride(f1::calculateStride(attributes, len)) {
 	// glGenVertexArrays(1, &vao); // Create a Vertex Array Object
 	// glBindVertexArray(vao);
 	glGenBuffers(1, &id); // Generate a Vertex Buffer Object
@@ -28,9 +28,10 @@ void f1::vbo::bind() {
 
 void f1::vbo::bind(program *program) {
 	glBindBuffer(GL_ARRAY_BUFFER, id);
-	for (int i = 0, location; i < attribLen; i++) {
+	GLint location;
+	for (int i = 0; i < attribLen; i++) {
 		attrib attribute = attributes[i];
-		if (location = glGetAttribLocation(*program, attribute.name) < 0) continue;
+		if ((location = glGetAttribLocation(*program, attribute.name)) < 0) continue;
 		glEnableVertexAttribArray(location = glGetAttribLocation(*program, attribute.name));
 		glVertexAttribPointer(location, attribute.size, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(attribute.offset));
 	}
@@ -97,16 +98,17 @@ void f1::mesh::unbind(program *program) {
 
 void f1::mesh::draw(GLenum mode, GLint first, GLsizei size) {
 	if (indices == NULL) glDrawArrays(mode, first, size);
-	else glDrawElements(mode, size, GL_UNSIGNED_INT, (void*)first);
+	else glDrawElements(mode, size, GL_UNSIGNED_INT, BUFFER_OFFSET(first));
 }
 
 f1::program::program(const GLchar *vertexShader, const GLchar *fragmentShader) {
+	bool vertSuccess, fragSuccess;
 	std::cout << "Vertex shader: " << std::endl;
-	vert = compileShader(GL_VERTEX_SHADER, vertexShader);
+	vert = compileShader(GL_VERTEX_SHADER, vertexShader, &vertSuccess);
 	std::cout << "Fragment shader: " << std::endl;
-	frag = compileShader(GL_FRAGMENT_SHADER, fragmentShader);
-	if (frag == -1) glDeleteShader(vert);
-	if (vert == -1 || frag == -1) throw glsl_error("GLSL error");
+	frag = compileShader(GL_FRAGMENT_SHADER, fragmentShader, &fragSuccess);
+	if (!fragSuccess) glDeleteShader(vert);
+	if (!vertSuccess || !fragSuccess) throw glsl_error("GLSL error");
 
 	id = glCreateProgram();
 	using namespace std;
@@ -131,7 +133,7 @@ f1::program::~program() {
 	glDeleteShader(frag);
 }
 
-GLuint f1::program::compileShader(GLenum type, const GLchar *src) {
+GLuint f1::program::compileShader(GLenum type, const GLchar *src, bool *success) {
 	GLuint shader = glCreateShader(type);
 	glShaderSource(shader, 1, &src, NULL);
 
@@ -145,9 +147,10 @@ GLuint f1::program::compileShader(GLenum type, const GLchar *src) {
 		std::cerr << infoLog << std::endl;
 		delete[] infoLog;
 		glDeleteShader(shader); /* We don't need the shader anymore. */
-		return -1;
+		*success = false;
 	}
 
+	*success = true;
 	return shader;
 }
 

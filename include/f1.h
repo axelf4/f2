@@ -2,7 +2,7 @@
 #define F1_H
 
 #include <string>
-#include <GL\glew.h>
+#include <GL/glew.h>
 
 #define FOR(i, x) for (unsigned int i = 0; i < x; i++)
 
@@ -16,6 +16,8 @@
 #define CLAMP(x,a,b) MIN(MAX(x,a),b)
 
 #define LOWER_CASE(p) for (; *p; ++p) *p = tolower(*p);
+
+#define ever (;;)
 
 namespace f1 {
 	extern float opengl_version;

@@ -5,7 +5,7 @@
 # GLEW_FOUND
 # GLEW_INCLUDE_DIR
 # GLEW_LIBRARY
-# 
+#
 
 IF(WIN32)
 	FIND_PATH( GLEW_INCLUDE_DIR GL/glew.h
@@ -24,6 +24,7 @@ IF(WIN32)
         DOC "The GLEW library")
 ELSE(WIN32)
 	FIND_PATH( GLEW_INCLUDE_DIR GL/glew.h
+		PATHS
 		/usr/include
 		/usr/local/include
 		/sw/include

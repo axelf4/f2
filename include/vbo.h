@@ -22,7 +22,7 @@ namespace f1 {
 		GLint size;
 		int offset;
 	};
-	static int calculateStride(attrib *attributes, int len);
+	int calculateStride(attrib *attributes, int len);
 
 	class glsl_error : public std::exception {
 	private:
@@ -39,13 +39,13 @@ namespace f1 {
 	class program {
 		GLuint id, vert, frag;
 
-		static GLuint compileShader(GLenum type, const GLchar *source);
+		static GLuint compileShader(GLenum type, const GLchar *source, bool *success);
 	public:
 		program(const char *vertexShader, const char *fragmentShader);
 		~program();
 
-		GLint f1::program::getAttribLoc(const GLchar *name);
-		GLint f1::program::getUniformLoc(const GLchar *name);
+		GLint getAttribLoc(const GLchar *name);
+		GLint getUniformLoc(const GLchar *name);
 
 		/* Returns the program id. */
 		GLuint getId() const;
