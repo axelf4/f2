@@ -1,5 +1,3 @@
-# TODO add automated dependencies
-
 # Compilers used
 CC ?= gcc
 CFLAGS += -Wall -Iinclude
@@ -12,15 +10,17 @@ PREFIX = /usr/local
 SRC_PATH = src
 SRC_DIR = src
 
+# SRCS
 SOURCES := $(filter-out src/main.cpp, $(wildcard $(SRC_PATH)/*.cpp))
 CSOURCES=$(wildcard $(SRC_PATH)/*.c)
 OBJECTS=$(SOURCES:$(SRC_PATH)/%.cpp=%.o)
-COBJECTS=$(SOURCES:$(SRC_PATH)/%.c=%.o)
+COBJECTS=$(CSOURCES:$(SRC_PATH)/%.c=%.o)
 
 TEST_SOURCES := $(SRC_PATH)/main.cpp
 TEST_OBJECTS := $(TEST_SOURCES:$(SRC_PATH)/%.cpp=%.o)
 
 $(info $$SOURCES is [${SOURCES}])
+$(info $$COBJECTS is [${COBJECTS}])
 $(info $$libdir is [${libdir}])
 
 ifneq ($(BUILD), shared)
@@ -34,10 +34,10 @@ ifeq ($(MSYSTEM), MINGW32)
 else
   EXE_EXT    =
   LIB_EXT    = .so
-  RM=rm -fi
+  RM=rm -f
 endif
 
-all: game
+all: libf2.a game
 
 f2: $(BUILD)
 static: libf2.a
@@ -68,10 +68,22 @@ game: $(TEST_OBJECTS) libf2.a
 	$(CXX) $(LDFLAGS) -o $@ $< $(LDLIBS)
 
 %.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MD -c $< -o $@
+	@cp $*.d $*.P; \
+		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+			-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+		rm -f $*.d
+
+-include *.P # $(CSOURSES:.c=.P)
 
 %.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -MD -c $< -o $@
+	@cp $*.d $*.P; \
+          sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+              -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+          rm -f $*.d
+
+-include *.P # $(SOURCES:.cpp=.P)
 
 # Removes all build files
 clean:

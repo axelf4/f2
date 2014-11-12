@@ -292,8 +292,7 @@ int main(int argc, char* argv[]) {
 	if (err != GLEW_OK) std::cerr << "Error: " << glewGetErrorString(err) << std::endl;
 	cout << "OpenGL vendor: " << glGetString(GL_VENDOR) << ", renderer: " << glGetString(GL_RENDERER) << ", version: " << glGetString(GL_VERSION) << endl << "Using GLEW " << glewGetString(GLEW_VERSION) << endl;
 	cout << "OpenGL version: " << f1::getVersion() << endl;
-	set_opengl_version();
-	cout << GL_V << " : " << OPENGL_VERSION << endl;
+	cout << "OpenGL version" << GLV << endl;
 
 	// Depth testing
 	glDepthFunc(GL_LEQUAL);
