@@ -1,43 +1,47 @@
-# TODO add automated dependencies
-
 # Compilers used
 CC ?= gcc
-CFLAGS += -Wall -Iinclude
+override CFLAGS += -m32 -Wall -Iinclude
 CXX ?= g++
-CXXFLAGS += -std=c++11 -Wall -Iinclude -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
-LDFLAGS += -fPIC -L/usr/lib -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu
-LDLIBS += -lSDL2 -lSDL2main -lGLEW -lSOIL -lassimp -lBulletDynamics -lBulletCollision -lLinearMath -lGL ./libf2.a
+override CXXFLAGS += -m32 -std=c++11 -Wall -Iinclude -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
+# LDFLAGS += -fPIC -L/usr/lib -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu
+LDFLAGS += 
+# LDLIBS += -lGL
+LDLIBS += -lSDL2 -lSDL2main -lSOIL -lassimp -lzlibstatic -lBulletDynamics -lBulletCollision -lLinearMath ./libf2.a -lglew32
 PREFIX = /usr/local
 # Path to the source directory, relative to the makefile
 SRC_PATH = src
 SRC_DIR = src
 
+# SRCS
 SOURCES := $(filter-out src/main.cpp, $(wildcard $(SRC_PATH)/*.cpp))
 CSOURCES=$(wildcard $(SRC_PATH)/*.c)
 OBJECTS=$(SOURCES:$(SRC_PATH)/%.cpp=%.o)
-COBJECTS=$(SOURCES:$(SRC_PATH)/%.c=%.o)
+COBJECTS=$(CSOURCES:$(SRC_PATH)/%.c=%.o)
 
 TEST_SOURCES := $(SRC_PATH)/main.cpp
 TEST_OBJECTS := $(TEST_SOURCES:$(SRC_PATH)/%.cpp=%.o)
 
-$(info $$SOURCES is [${SOURCES}])
-$(info $$libdir is [${libdir}])
+$(info $$CFLAGS is [${CFLAGS}])
 
 ifneq ($(BUILD), shared)
 	BUILD = static
 endif
 
 ifeq ($(MSYSTEM), MINGW32)
-  EXE_EXT    = .exe
-  LIB_EXT    = .dll
-  RM=del /F /Q
+    #EXE_EXT    = .exe
+    #LIB_EXT    = .dll
+    #RM=del /F /Q
+    EXECUTABLE = game.exe
 else
+    EXECUTABLE = game
+endif
+#else
   EXE_EXT    =
   LIB_EXT    = .so
-  RM=rm -fi
-endif
+  RM=rm -f
+#endif
 
-all: game
+all: libf2.a $(EXECUTABLE)
 
 f2: $(BUILD)
 static: libf2.a
@@ -64,14 +68,24 @@ install-shared: libf2.so
 	$(MKDIR) $(DESTDIR)$(PREFIX)\/lib/
 	$(INSTALL) -pm0755 $< $(DESTDIR)$(PREFIX)/$<
 
-game: $(TEST_OBJECTS) libf2.a
+$(EXECUTABLE): $(TEST_OBJECTS) libf2.a
 	$(CXX) $(LDFLAGS) -o $@ $< $(LDLIBS)
 
 %.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -MD -c $< -o $@
+	@cp $*.d $*.P; \
+		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+			-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+		rm -f $*.d
+-include *.P # $(CSOURSES:.c=.P)
 
 %.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -MD -c $< -o $@
+	@cp $*.d $*.P; \
+          sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+              -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+          rm -f $*.d
+-include *.P # $(SOURCES:.cpp=.P)
 
 # Removes all build files
 clean:

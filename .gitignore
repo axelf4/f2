@@ -1,5 +1,8 @@
 build
 *.o
+*.P
 *.a
 game
 dlls
+*.dll
+game.exe
