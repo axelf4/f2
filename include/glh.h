@@ -34,7 +34,11 @@ struct attrib2 {
 	int offset;
 };
 
+#ifndef __cplusplus
 #define NULL_ATTRIB ((struct attrib2) { 0, 0, 0 })
+#else
+#define NULL_ATTRIB (attrib2 { 0, 0, 0 })
+#endif
 
 /* SHADER PROGRAM */
 

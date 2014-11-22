@@ -10,6 +10,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 set(SOURCES
 	src/f1.cpp
+	src/glh.c
 	src/vbo.cpp
 
 	include/f1.h
@@ -18,7 +19,8 @@ set(SOURCES
 	include/obj_loader.h)
 
 set(TEST_SOURCES
-	src/main.cpp)
+	test/main.cpp
+	test/shaders.h)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${TEST_SOURCES})
@@ -38,19 +40,21 @@ message(${GLM_INCLUDE_DIRS})
 message(${BULLET_INCLUDE_DIRS})
 message(${ASSIMP_INCLUDE_DIR})
 
-include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR}/.. ${SOIL_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
+include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
 target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
 
-if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
-	# list of files for which we add a copy rule
-	file(GLOB_RECURSE RESOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/resource resource/*)
+add_definitions(-DRESOURCE_DIR="../resource/")
 
-	foreach(item IN LISTS RESOURCES)
-		# message(STATUS ${item})
-		add_custom_command(
-			TARGET game POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/resource/${item}" "${CMAKE_CURRENT_BINARY_DIR}/${item}")
-	endforeach()
-endif()
+# if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
+# 	# list of files for which we add a copy rule
+# 	file(GLOB_RECURSE RESOURCES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/resource resource/*)
+#
+# 	foreach(item IN LISTS RESOURCES)
+# 		# message(STATUS ${item})
+# 		add_custom_command(
+# 			TARGET game POST_BUILD
+# 			COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/resource/${item}" "${CMAKE_CURRENT_BINARY_DIR}/${item}")
+# 	endforeach()
+# endif()
 
 # cmake -G "Visual Studio 12 2013" ..

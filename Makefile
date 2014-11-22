@@ -12,15 +12,18 @@ PREFIX = /usr/local
 # Path to the source directory, relative to the makefile
 SRC_PATH = src
 SRC_DIR = src
+TEST_DIR = test
 
 # SRCS
-SOURCES := $(filter-out src/main.cpp, $(wildcard $(SRC_PATH)/*.cpp))
+# SOURCES := $(filter-out src/main.cpp, $(wildcard $(SRC_PATH)/*.cpp))
+SOURCES := $(wildcard $(SRC_PATH)/*.cpp)
 CSOURCES=$(wildcard $(SRC_PATH)/*.c)
 OBJECTS=$(SOURCES:$(SRC_PATH)/%.cpp=%.o)
 COBJECTS=$(CSOURCES:$(SRC_PATH)/%.c=%.o)
 
-TEST_SOURCES := $(SRC_PATH)/main.cpp
-TEST_OBJECTS := $(TEST_SOURCES:$(SRC_PATH)/%.cpp=%.o)
+# TEST_SOURCES := $(SRC_PATH)/main.cpp
+TEST_SOURCES := $(wildcard $(TEST_DIR)/*.cpp)
+TEST_OBJECTS := $(TEST_SOURCES:$(TEST_DIR)/%.cpp=%.o)
 
 $(info $$CFLAGS is [${CFLAGS}])
 
@@ -88,8 +91,16 @@ $(EXECUTABLE): $(TEST_OBJECTS) libf2.a
           rm -f $*.d
 -include *.P # $(SOURCES:.cpp=.P)
 
+%.o: $(TEST_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -MD -c $< -o $@
+	@cp $*.d $*.P; \
+          sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+              -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+          rm -f $*.d
+-include *.P # $(TEST_SOURCES:.cpp=.P)
+
 # Removes all build files
 clean:
-	$(RM) *.o *.a *.so game
+	$(RM) *.o *.P *.a *.so game
 
 .PHONY: all static install shared install-static install-shared clean f2
