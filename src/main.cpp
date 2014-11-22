@@ -71,7 +71,10 @@ typedef struct {
 struct model_node {
 	// material material;
 	GLuint texture;
-	f1::mesh *mesh;
+	// f1::mesh *mesh;
+	struct mesh2 *mesh;
+	struct attrib2 *attributes;
+	GLsizei stride;
 	GLsizei vertexCount;
 	GLsizei indexCount;
 };
@@ -80,6 +83,18 @@ struct model {
 	model_node **nodes;
 	size_t nodeCount;
 };
+
+void destroy_model(struct model *model) {
+	for (size_t i = 0; i < model->nodeCount; i++) {
+		model_node *node = model->nodes[i];
+		glDeleteTextures(1, &node->texture);
+		destroy_mesh(node->mesh);
+		free(node->attributes);
+		delete node;
+	}
+	delete[] model->nodes;
+	delete model;
+}
 
 GLuint load_texture(const char *filename) {
 	GLuint texture = SOIL_load_OGL_texture(
@@ -119,8 +134,7 @@ GLuint create_null_texture(int width, int height) {
 	return texture;
 }
 
-model * loadMeshUsingAssimp(const char *filename) {
-	unsigned int i;
+model * loadMeshUsingAssimp(const char *filename, GLuint program) {
 	Assimp::Importer importer;
 	const aiScene *scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
 		aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes);
@@ -135,7 +149,7 @@ model * loadMeshUsingAssimp(const char *filename) {
 	model->nodeCount = scene->mNumMeshes;
 
 	GLuint *textures = new GLuint[scene->mNumMaterials];
-	for (i = 0; i < scene->mNumMaterials; i++) {
+	for (unsigned int i = 0; i < scene->mNumMaterials; i++) {
 		const struct aiMaterial *material = scene->mMaterials[i];
 		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
 			aiString path;
@@ -148,39 +162,39 @@ model * loadMeshUsingAssimp(const char *filename) {
 		else textures[i] = 0;
 	}
 
-	for (i = 0; i < scene->mNumMeshes; i++) {
+	for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
 		const struct aiMesh *mesh = scene->mMeshes[i];
 		model_node *node = model->nodes[i] = new model_node;
 
 		unsigned int vertexCount = node->vertexCount = mesh->mNumVertices * (mesh->HasPositions() * 3 + mesh->HasTextureCoords(0) * 2 + mesh->HasNormals() * 3);
 		float *vertices = new float[vertexCount];
-		for (unsigned int i = 0, j = 0; i < mesh->mNumVertices; i++) {
+		for (unsigned int j = 0, k = 0; j < mesh->mNumVertices; j++) {
 			if (mesh->HasPositions()) {
-				vertices[j++] = mesh->mVertices[i].x;
-				vertices[j++] = mesh->mVertices[i].y;
-				vertices[j++] = mesh->mVertices[i].z;
+				vertices[k++] = mesh->mVertices[j].x;
+				vertices[k++] = mesh->mVertices[j].y;
+				vertices[k++] = mesh->mVertices[j].z;
 			}
 			if (mesh->HasTextureCoords(0)) {
-				vertices[j++] = mesh->mTextureCoords[0][i].x;
-				vertices[j++] = mesh->mTextureCoords[0][i].y;
+				vertices[k++] = mesh->mTextureCoords[0][j].x;
+				vertices[k++] = mesh->mTextureCoords[0][j].y;
 			}
 			if (mesh->HasNormals()) {
-				vertices[j++] = mesh->mNormals[i].x;
-				vertices[j++] = mesh->mNormals[i].y;
-				vertices[j++] = mesh->mNormals[i].z;
+				vertices[k++] = mesh->mNormals[j].x;
+				vertices[k++] = mesh->mNormals[j].y;
+				vertices[k++] = mesh->mNormals[j].z;
 			}
 		}
 		unsigned int indexCount = node->indexCount = mesh->mNumFaces * 3;
 		unsigned int *indices = new unsigned int[indexCount];
-		for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-			const aiFace &face = mesh->mFaces[i]; // Assume that faces're triangles; 3 indices.
-			indices[i * 3 + 0] = face.mIndices[0];
-			indices[i * 3 + 1] = face.mIndices[1];
-			indices[i * 3 + 2] = face.mIndices[2];
+		for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
+			const aiFace &face = mesh->mFaces[j]; // Assume that faces're triangles; 3 indices.
+			indices[j * 3 + 0] = face.mIndices[0];
+			indices[j * 3 + 1] = face.mIndices[1];
+			indices[j * 3 + 2] = face.mIndices[2];
 		}
 
-		attrib *attributes = new attrib[1 + mesh->HasTextureCoords(0) + mesh->HasNormals()];
-		size_t k = 0;
+		size_t j = 0;
+		/*attrib *attributes = new attrib[1 + mesh->HasTextureCoords(0) + mesh->HasNormals()];
 		if (mesh->HasPositions()) attributes[k++] = { "vertex", 3, 0 };
 		if (mesh->HasTextureCoords(0)) attributes[k++] = { "texCoord", 2, 0 };
 		if (mesh->HasNormals()) attributes[k++] = { "normal", 3, 0 };
@@ -190,13 +204,22 @@ model * loadMeshUsingAssimp(const char *filename) {
 		delete[] vertices;
 		node->mesh->getIndices()->bind();
 		node->mesh->getIndices()->setIndices(sizeof(unsigned int) * indexCount, indices);
-		node->texture = textures[mesh->mMaterialIndex];
+		delete[] indices;*/
+		node->attributes = (struct attrib2 *) malloc(sizeof(struct attrib2) * (2 + mesh->HasTextureCoords(0) + mesh->HasNormals()));
+		if (mesh->HasPositions()) node->attributes[j++] = { glGetAttribLocation(program, "vertex"), 3, 0 };
+		if (mesh->HasTextureCoords(0)) node->attributes[j++] = { glGetAttribLocation(program, "texCoord"), 2, 0 };
+		if (mesh->HasNormals()) node->attributes[j++] = { glGetAttribLocation(program, "normal"), 3, 0 };
+		node->attributes[j++] = NULL_ATTRIB;
+		node->mesh = create_mesh(GL_STATIC_DRAW);
+		node->stride = calculate_stride(node->attributes);
+		glBindBuffer(GL_ARRAY_BUFFER, node->mesh->vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount, vertices, GL_STATIC_DRAW);
+		delete[] vertices;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->mesh->ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indexCount, indices, GL_STATIC_DRAW);
 		delete[] indices;
-		
-		std::cout << "Loaded mesh " << i << " out of " << scene->mNumMeshes << endl;
+		node->texture = textures[mesh->mMaterialIndex];
 	}
-	
-	std::cout << "Loaded model" << endl;
 
 	delete[] textures;
 	return model;
@@ -214,7 +237,6 @@ GLuint setupSkyboxTexture() {
 		SOIL_LOAD_AUTO,
 		SOIL_CREATE_NEW_ID,
 		SOIL_FLAG_MIPMAPS);
-	// glEnable(GL_TEXTURE_CUBE_MAP);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -305,12 +327,11 @@ int main(int argc, char *argv[]) {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	// Texturing
-	glEnable(GL_TEXTURE_2D);
 	// glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	glm::vec3 position;
 	float yaw = 0.f, pitch = 0.f;
-	glm::mat4 projection = glm::perspective(glm::radians(45.f), WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f), // 67.f 3000.f
+	glm::mat4 projection = glm::perspective(glm::radians(90.f), WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f), // 67.f 45.f
 		view, vInv,
 		model = glm::scale(glm::mat4(1.f), vec3(1.f));
 
@@ -334,19 +355,43 @@ int main(int argc, char *argv[]) {
 	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	const float skyboxVertices[] = { -1, -1, 1, -1, 1, 1, -1, 1 };
 	GLuint skyboxTex = setupSkyboxTexture();
-	program *skyboxProg = new program(shaders::skyboxVertexSrc, shaders::skyboxFragmentSrc);
-	cout << "Skybox program info log: " << *skyboxProg << endl;
+	GLuint skyboxProg = create_program(shaders::skyboxVertexSrc, shaders::skyboxFragmentSrc);
+	glUseProgram(skyboxProg);
+	GLchar *infoLog = getProgramInfoLog(skyboxProg);
+	cout << "Skybox program info log: " << infoLog << endl;
+	free(infoLog);
+	/*struct attributes *skyboxAttribs = (struct attributes *)malloc(sizeof(struct attributes)); // TODO make it easy to create stack-based attributes
+	skyboxAttribs->array = { { glGetAttribLocation(skyboxProg, "vertex"), 2, 0 } };
+	skyboxAttribs->len = 1;*/
+	// struct attributes skyboxAttribs = { .len = 1, .array = { (struct attrib[]) { .location = glGetAttribLocation(skyboxProg, "vertex"), .size = 2 } } };
+	struct attrib2 skyboxAttribs[] = { { glGetAttribLocation(skyboxProg, "vertex"), 2, 0 }, NULL_ATTRIB };
+	/*struct attrib2 *skyboxAttribs = (struct attrib2 *) malloc(sizeof(struct attrib2) * 2);
+	skyboxAttribs[0] = { glGetAttribLocation(skyboxProg, "vertex"), 2, 0 };
+	skyboxAttribs[1] = NULL_ATTRIB;*/
+	struct mesh2 *skybox = create_mesh(GL_STATIC_DRAW);
+	cout << "Stride: " << calculate_stride(skyboxAttribs) << endl;
+	glBindBuffer(GL_ARRAY_BUFFER, skybox->vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, skyboxVertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skybox->ibo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, cubeIndices, GL_STATIC_DRAW);
+	/*f1::program *skyboxProg = new program(skyboxProg2);
+	// program *skyboxProg = new program(shaders::skyboxVertexSrc, shaders::skyboxFragmentSrc);
+	// cout << "Skybox program info log: " << *skyboxProg << endl;
 	attrib *skyboxAttribs = new attrib[1] { { "vertex", 2, 0 } };
 	f1::mesh *skybox = new f1::mesh(true, skyboxAttribs, 1);
 	skybox->getVertices()->bind();
 	skybox->getVertices()->setVertices(sizeof(float) * 2 * 4, skyboxVertices);
 	skybox->getIndices()->bind();
-	skybox->getIndices()->setIndices(sizeof(unsigned int) * 6, cubeIndices);
+	skybox->getIndices()->setIndices(sizeof(unsigned int) * 6, cubeIndices);*/
 
-	program *phong = new program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
-	cout << "Shader program info log: " << *phong << endl;
+	// f1::program *phong = new program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
+	GLuint phong = create_program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
+	infoLog = getProgramInfoLog(skyboxProg);
+	cout << "Shader program info log: " << infoLog << endl;
+	free(infoLog);
+	// cout << "Shader program info log: " << *phong << endl;
 	// mesh *mesh = f1::getObjModel("bunny.obj");
-	struct model *groundMesh = loadMeshUsingAssimp(RESOURCE_DIR "cs_office/cs_office.obj");
+	struct model *groundMesh = loadMeshUsingAssimp(RESOURCE_DIR "cs_office/cs_office.obj", phong);
 
 	bool done = false;
 	SDL_Event event;
@@ -370,46 +415,52 @@ int main(int argc, char *argv[]) {
 
 		glClearColor(0.5f, 0.3f, 0.8f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		view = glm::translate(glm::mat4(1.f), position);
-		view = glm::inverse(vInv = (view * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
+		view = glm::inverse(vInv = (glm::translate(glm::mat4(1.f), position) * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
 
 		/* Draw skybox. */
 		glDisable(GL_DEPTH_TEST);
-		(*skyboxProg)();
-		glUniformMatrix4fv(glGetUniformLocation(*skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
+		glUseProgram(skyboxProg); // (*skyboxProg)();
+		/*glUniformMatrix4fv(glGetUniformLocation(*skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
 		glUniformMatrix4fv(glGetUniformLocation(*skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		glUniform1i(glGetUniformLocation(*skyboxProg, "texture"), 0);
 		skybox->bind(skyboxProg);
 		skybox->draw(GL_TRIANGLES, 0, 6);
-		skybox->unbind(skyboxProg);
+		skybox->unbind(skyboxProg);*/
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
+		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
+		bind_mesh(skybox, skyboxAttribs, 0, glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
 
 		/* Draw everything. */
 		glEnable(GL_DEPTH_TEST);
-		(*phong)();
-		glUniformMatrix4fv(glGetUniformLocation(*phong, "p"), 1, GL_FALSE, glm::value_ptr(projection));
-		glUniformMatrix4fv(glGetUniformLocation(*phong, "v"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(*phong, "vInv"), 1, GL_FALSE, glm::value_ptr(vInv));
-		glUniform4f(glGetUniformLocation(*phong, "eyeCoords"), position.x, position.y, position.z, 1);
+		glUseProgram(phong); // (*phong)();
+		glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, glm::value_ptr(vInv));
+		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), position.x, position.y, position.z, 1);
 
 		// btTransform t;
 		/* Draw ground. */
 		// ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		// t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
-		glUniformMatrix4fv(glGetUniformLocation(*phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(glGetUniformLocation(*phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));
 		// set active texture
 		glActiveTexture(GL_TEXTURE0);
-		glUniform1i(glGetUniformLocation(*phong, "tex"), 0);
+		glUniform1i(glGetUniformLocation(phong, "tex"), 0);
 		FOR(i, groundMesh->nodeCount) {
 			model_node *node = groundMesh->nodes[i];
 
 			glBindTexture(GL_TEXTURE_2D, node->texture);
 
-			node->mesh->bind(phong);
+			/*node->mesh->bind(phong);
 			node->mesh->draw(GL_TRIANGLES, 0, node->indexCount); // 36
-			node->mesh->unbind(phong);
+			node->mesh->unbind(phong);*/
+			bind_mesh(node->mesh, node->attributes, node->stride, glDrawElements(GL_TRIANGLES, node->indexCount, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
 		}
 
 		/* Draw bunny model. */
@@ -442,19 +493,15 @@ int main(int argc, char *argv[]) {
 	delete ball;
 	delete world;*/
 
-	for (unsigned int i = 0; i < groundMesh->nodeCount; i++) {
-		model_node *node = groundMesh->nodes[i];
-		glDeleteTextures(1, &node->texture);
-		delete node->mesh;
-		delete node;
-	}
-	delete[] groundMesh->nodes;
-	delete groundMesh;
+	destroy_model(groundMesh);
 	// delete mesh;
 	// delete prog;
+	
 	glDeleteTextures(1, &skyboxTex);
-	delete skyboxProg;
-	delete skybox;
+	// delete skyboxProg;
+	// delete skybox;
+	glDeleteProgram(skyboxProg);
+	destroy_mesh(skybox);
 
 	/* Cleanup */
 	SDL_GL_DeleteContext(glcontext);

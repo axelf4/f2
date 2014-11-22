@@ -4,11 +4,11 @@
 namespace shaders {
     // skybox.vert & skybox.frag
     const char *skyboxVertexSrc = GLSL(attribute vec2 vertex; uniform mat4 invProjection; uniform mat4 trnModelView; varying vec3 eyeDirection; void main() { eyeDirection = vec3(trnModelView * invProjection * (gl_Position = vec4(vertex, 0.0, 1.0))); /* trnModelView * unprojected */ });
-    const char *skyboxFragmentSrc = GLSL(varying vec3 eyeDirection; uniform samplerCube texture; void main() { gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0)/*textureCube(texture, eyeDirection)*/; });
+    const char *skyboxFragmentSrc = GLSL(varying vec3 eyeDirection; uniform samplerCube texture; void main() { gl_FragColor = textureCube(texture, eyeDirection); });
 
     // phong.vert
     const char phongVertexSrc[] = GLSL(
-        attribute vec3 vertex;
+		attribute vec3 vertex;
     attribute vec2 texCoord;
     attribute vec3 normal;
 
@@ -29,7 +29,7 @@ namespace shaders {
     );
     // phong.frag
     const char phongFragmentSrc[] = GLSL(
-        varying vec4 position;
+		varying vec4 position;
     varying vec3 N; // Normal in eye coord
     varying vec2 f_texCoord;
 
@@ -47,14 +47,14 @@ namespace shaders {
         vec3 spotDirection;
     };
     lightSource light0 = lightSource(
-        vec4(1.0, 0.0, 0.0, 0.0),
+        vec4(0.0, 0.0, 0.0, 1.0),
         vec4(0.8, 0.8, 0.8, 1.0),
         vec4(1.0, 1.0, 1.0, 1.0),
         1.0, 0.0, 0.0,
         180.0, 0.0,
         vec3(0.0, 0.0, 0.0)
         );
-    const vec3 ambient = vec3(0.0, 0.0, 0.0);
+    const vec3 ambient = vec3(0.5, 0.5, 0.5);
 
     struct material {
         vec4 ambient;
@@ -64,7 +64,7 @@ namespace shaders {
     };
     material frontMaterial = material(
         vec4(1.0, 1.0, 1.0, 1.0),
-        vec4(1.0, 0.0, 0.0, 1.0),
+        vec4(1.0, 1.0, 1.0, 1.0),
         vec4(1.0, 1.0, 1.0, 1.0),
         15.0
         );
@@ -108,8 +108,8 @@ namespace shaders {
         else specularReflection = attenuation * vec3(light0.specular) * vec3(frontMaterial.specular)
             * pow(max(0.0, dot(reflect(-lightDirection, normalDirection), viewDirection)), frontMaterial.shininess); // light source on the right side
 
-        // gl_FragColor = vec4(ambientLighting + diffuseReflection + specularReflection, 1.0);
-        gl_FragColor = texture2D(tex, f_texCoord);
+        gl_FragColor = texture2D(tex, f_texCoord) * vec4(ambientLighting + diffuseReflection + specularReflection, 1.0);
+        // gl_FragColor = texture2D(tex, f_texCoord);
     }
     );
 }

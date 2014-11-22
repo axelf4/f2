@@ -130,6 +130,8 @@ f1::program::program(const GLchar *vertexShader, const GLchar *fragmentShader) {
 	}
 }
 
+f1::program::program(GLuint id) : id(id) {}
+
 f1::program::~program() {
 	glDeleteProgram(id);
 	glDeleteShader(vert);

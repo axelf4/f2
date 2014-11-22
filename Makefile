@@ -2,9 +2,10 @@
 CC ?= gcc
 override CFLAGS += -m32 -Wall -Iinclude
 CXX ?= g++
-override CXXFLAGS += -m32 -std=c++11 -Wall -Iinclude -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
+# CXXFLAGS += -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
+override CXXFLAGS += -m32 -std=c++11 -Wall -Iinclude
 # LDFLAGS += -fPIC -L/usr/lib -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu
-LDFLAGS += 
+override LDFLAGS += -Wl,--as-needed
 # LDLIBS += -lGL
 LDLIBS += -lSDL2 -lSDL2main -lSOIL -lassimp -lzlibstatic -lBulletDynamics -lBulletCollision -lLinearMath ./libf2.a -lglew32
 PREFIX = /usr/local
