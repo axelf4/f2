@@ -43,7 +43,7 @@ message(${ASSIMP_INCLUDE_DIR})
 include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
 target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
 
-add_definitions(-DRESOURCE_DIR="../resource/")
+add_definitions(-D_CRT_SECURE_NO_WARNINGS -DRESOURCE_DIR="../resource/")
 
 # if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
 # 	# list of files for which we add a copy rule
