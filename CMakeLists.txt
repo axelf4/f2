@@ -20,7 +20,9 @@ set(SOURCES
 
 set(TEST_SOURCES
 	test/main.cpp
-	test/shaders.h)
+	test/shaders.h
+	test/GLDebugDrawer.cpp
+	test/GLDebugDrawer.h)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${TEST_SOURCES})

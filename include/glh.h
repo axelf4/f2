@@ -58,7 +58,7 @@ GLchar * getProgramInfoLog(GLuint program);
 /* MESH */
 
 struct mesh2 {
-	GLint vbo, ibo;
+	GLuint vbo, ibo;
 	// TODO delete usage member
 	GLenum usage;
 	/** The stride of the VBO data. */

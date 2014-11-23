@@ -9,8 +9,6 @@
 #include "glh.h"
 #include "vbo.h"
 
-#include "shaders.h"
-
 #define GLM_FORCE_RADIANS
 #include <glm/mat4x4.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -24,7 +22,10 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-// #include <btBulletDynamicsCommon.h>
+#include <btBulletDynamicsCommon.h>
+
+#include "shaders.h"
+#include "GLDebugDrawer.h"
 
 // 640/480, 800/600, 1366/768
 #define WINDOW_WIDTH 800.f
@@ -137,7 +138,7 @@ GLuint create_null_texture(int width, int height) {
 	return texture;
 }
 
-model * loadMeshUsingAssimp(const char *filename, GLuint program) {
+model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape, btBvhTriangleMeshShape *shape) {
 	Assimp::Importer importer;
 	const aiScene *scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
 		aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes);
@@ -237,9 +238,7 @@ GLuint setupSkyboxTexture() {
 		RESOURCE_DIR "yneg.png",
 		RESOURCE_DIR "xpos.png",
 		RESOURCE_DIR "xneg.png",
-		SOIL_LOAD_AUTO,
-		SOIL_CREATE_NEW_ID,
-		SOIL_FLAG_MIPMAPS);
+		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -250,7 +249,7 @@ GLuint setupSkyboxTexture() {
 	return cubemap;
 }
 
-/*struct game_world;
+struct game_world;
 
 struct game_entity {
 	btDynamicsWorld *world;
@@ -278,6 +277,8 @@ struct game_world {
 	btSequentialImpulseConstraintSolver *solver;
 	btDiscreteDynamicsWorld *world;
 
+	btIDebugDraw *debugDraw;
+
 	void init() {
 		broadphase = new btDbvtBroadphase();
 		collisionConfiguration = new btDefaultCollisionConfiguration();
@@ -285,6 +286,10 @@ struct game_world {
 		solver = new btSequentialImpulseConstraintSolver();
 		world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
 		world->setGravity(btVector3(0, -9.8f, 0));
+
+		debugDraw = new GLDebugDrawer();
+		debugDraw->setDebugMode(btIDebugDraw::DBG_DrawWireframe);
+		world->setDebugDrawer(debugDraw);
 	}
 
 	~game_world() {
@@ -298,7 +303,7 @@ struct game_world {
 	void add_entity(game_entity *entity) {
 		world->addRigidBody(entity->body);
 	}
-};*/
+};
 
 int main(int argc, char *argv[]) {
 	/* First, initialize SDL's video subsystem. */
@@ -338,22 +343,22 @@ int main(int argc, char *argv[]) {
 		view, vInv,
 		model = glm::scale(glm::mat4(1.f), vec3(1.f));
 
-	/*// Bullet Physics initialization
+	// Bullet Physics initialization
 	game_world *world = new game_world;
 	world->init();
-	/ * Ground body * /
-	btCollisionShape *groundShape = / * new btStaticPlaneShape(btVector3(0, 1, 0), 1) * / new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
+	/* Ground body */
+	btCollisionShape *groundShape = /* new btStaticPlaneShape(btVector3(0, 1, 0), 1) */ new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
 	btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)));
 	game_entity *ground = new game_entity(world->world, 0, groundMotionState, groundShape, btVector3(0, 0, 0));
 	world->add_entity(ground);
-	/ * Ball body * /
+	/* Ball body */
 	btCollisionShape* ballShape = new btSphereShape(1);
 	btDefaultMotionState* ballMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
 	btScalar mass = 1;
 	btVector3 ballInertia(0, 0, 0);
 	ballShape->calculateLocalInertia(mass, ballInertia);
 	game_entity *ball = new game_entity(world->world, mass, ballMotionState, ballShape, ballInertia);
-	world->add_entity(ball);*/
+	world->add_entity(ball);
 
 	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	const float skyboxVertices[] = { -1, -1, 1, -1, 1, 1, -1, 1 };
@@ -413,29 +418,32 @@ int main(int argc, char *argv[]) {
 		if (state[SDL_SCANCODE_A]) walk(&position, yaw, MOVEMENT_SPEED, 270);
 		if (state[SDL_SCANCODE_S]) walk(&position, yaw, MOVEMENT_SPEED, 0);
 		if (state[SDL_SCANCODE_D]) walk(&position, yaw, MOVEMENT_SPEED, 90);
-		if (state[SDL_SCANCODE_SPACE]) position.y += MOVEMENT_SPEED;
+		if (state[SDL_SCANCODE_SPACE]) {
+			position.y += MOVEMENT_SPEED;
+			ball->body->applyCentralForce(btVector3(0.0f, 100.0f, 0.f));
+		}
 		if (state[SDL_SCANCODE_LSHIFT]) position.y -= MOVEMENT_SPEED;
+		// Set the view matrix
+		btTransform t;
+		// view = glm::translate(glm::mat4(1.f), position);
+		ball->body->getMotionState()->getWorldTransform(t);
+		t.getOpenGLMatrix(glm::value_ptr(view));
+		view = glm::inverse(vInv = (view * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
 
 		glClearColor(0.5f, 0.3f, 0.8f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		view = glm::inverse(vInv = (glm::translate(glm::mat4(1.f), position) * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
 
 		/* Draw skybox. */
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(skyboxProg); // (*skyboxProg)();
-		/*glUniformMatrix4fv(glGetUniformLocation(*skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
-		glUniformMatrix4fv(glGetUniformLocation(*skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
-		glUniform1i(glGetUniformLocation(*skyboxProg, "texture"), 0);
-		skybox->bind(skyboxProg);
-		skybox->draw(GL_TRIANGLES, 0, 6);
-		skybox->unbind(skyboxProg);*/
 		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
 		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
+		/*skybox->bind(skyboxProg);
+		skybox->draw(GL_TRIANGLES, 0, 6);
+		skybox->unbind(skyboxProg);*/
 		bind_mesh(skybox, skyboxAttribs, 0, glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
 
 		/* Draw everything. */
@@ -446,13 +454,11 @@ int main(int argc, char *argv[]) {
 		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, glm::value_ptr(vInv));
 		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), position.x, position.y, position.z, 1);
 
-		// btTransform t;
 		/* Draw ground. */
-		// ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
-		// t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
+		ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
+		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
 		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));
-		// set active texture
 		glActiveTexture(GL_TEXTURE0);
 		glUniform1i(glGetUniformLocation(phong, "tex"), 0);
 		FOR(i, groundMesh->nodeCount) {
@@ -483,18 +489,21 @@ int main(int argc, char *argv[]) {
 		mesh->draw(GL_TRIANGLES, 0, 3 * 4968); // 4968, 3968
 		mesh->unbind(prog);*/
 
+		((*GLDebugDrawer) world->debugDraw)->
+		world->world->debugDrawWorld();
+
 		GLenum error;
 		while ((error = glGetError()) != 0) cout << "GL error: " << error << endl;/**/
 		SDL_GL_SwapWindow(win);
-		// world->world->stepSimulation(1 / 60.f, 10);
+		world->world->stepSimulation(1 / 60.f, 10);
 		if ((1000 / FPS) > (SDL_GetTicks() - start_time)) SDL_Delay((1000 / FPS) - (SDL_GetTicks() - start_time));
 	}
 
 	SDL_HideWindow(win);
 
-	/*delete ground;
+	delete ground;
 	delete ball;
-	delete world;*/
+	delete world;
 
 	destroy_model(groundMesh);
 	// delete mesh;
