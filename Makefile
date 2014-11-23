@@ -1,11 +1,12 @@
 # Compilers used
-CC ?= gcc
-CFLAGS += -Wall -Iinclude
+CC = gcc
+CFLAGS += -Wall -I./include
 CXX ?= g++
-CXXFLAGS += -std=c++11 -Wall -Iinclude -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
+CXXFLAGS += -std=c++11 -Wall -I./include -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
 LDFLAGS += -fPIC -L/usr/lib -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu
-LDLIBS += -lSDL2 -lSDL2main -lGLEW -lSOIL -lassimp -lBulletDynamics -lBulletCollision -lLinearMath -lGL ./libf2.a
-PREFIX = /usr/local
+#LDLIBS += -lGL
+LDLIBS += ./libf2.a -lSDL2 -lSDL2main -lSOIL -lassimp -lBulletDynamics -lBulletCollision -lLinearMath -lglew32 -lopengl32
+#PREFIX = /usr/local
 # Path to the source directory, relative to the makefile
 SRC_PATH = src
 SRC_DIR = src
@@ -19,7 +20,7 @@ COBJECTS=$(CSOURCES:$(SRC_PATH)/%.c=%.o)
 TEST_SOURCES := $(SRC_PATH)/main.cpp
 TEST_OBJECTS := $(TEST_SOURCES:$(SRC_PATH)/%.cpp=%.o)
 
-$(info $$SOURCES is [${SOURCES}])
+$(info $$CC is [${CC}])
 $(info $$COBJECTS is [${COBJECTS}])
 $(info $$libdir is [${libdir}])
 

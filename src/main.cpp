@@ -24,8 +24,6 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include <btBulletDynamicsCommon.h>
-
 // 640/480, 800/600, 1366/768
 #define WINDOW_WIDTH 800.f
 #define WINDOW_HEIGHT 600.f
@@ -222,56 +220,6 @@ GLuint setupSkyboxTexture() {
 	return cubemap;
 }
 
-struct game_world;
-
-struct game_entity {
-	btDynamicsWorld *world;
-	btMotionState *motionState;
-	btCollisionShape *shape;
-	btRigidBody *body;
-
-	game_entity(btDynamicsWorld *world, btScalar mass, btMotionState *motionState, btCollisionShape *shape, const btVector3 &inertia) : world(world), motionState(motionState), shape(shape) {
-		btRigidBody::btRigidBodyConstructionInfo rigidBodyCI(mass, motionState, shape, inertia);
-		body = new btRigidBody(rigidBodyCI);
-	}
-
-	~game_entity() {
-		world->removeRigidBody(body);
-		delete motionState;
-		delete shape;
-		delete body;
-	}
-};
-
-struct game_world {
-	btBroadphaseInterface *broadphase;
-	btDefaultCollisionConfiguration *collisionConfiguration;
-	btCollisionDispatcher *dispatcher;
-	btSequentialImpulseConstraintSolver *solver;
-	btDiscreteDynamicsWorld *world;
-
-	void init() {
-		broadphase = new btDbvtBroadphase();
-		collisionConfiguration = new btDefaultCollisionConfiguration();
-		dispatcher = new btCollisionDispatcher(collisionConfiguration);
-		solver = new btSequentialImpulseConstraintSolver();
-		world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-		world->setGravity(btVector3(0, -9.8f, 0));
-	}
-
-	~game_world() {
-		delete broadphase;
-		delete collisionConfiguration;
-		delete dispatcher;
-		delete solver;
-		delete world;
-	}
-
-	void add_entity(game_entity *entity) {
-		world->addRigidBody(entity->body);
-	}
-};
-
 int main(int argc, char* argv[]) {
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -311,23 +259,6 @@ int main(int argc, char* argv[]) {
 	glm::mat4 projection = glm::perspective(glm::radians(45.f), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 3000.f), // 67.f
 		view, vInv,
 		model = glm::scale(glm::mat4(1.f), vec3(100.f));
-
-	// Bullet Physics initialization
-	game_world *world = new game_world;
-	world->init();
-	/* Ground body */
-	btCollisionShape *groundShape = /* new btStaticPlaneShape(btVector3(0, 1, 0), 1) */ new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
-	btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)));
-	game_entity *ground = new game_entity(world->world, 0, groundMotionState, groundShape, btVector3(0, 0, 0));
-	world->add_entity(ground);
-	/* Ball body */
-	btCollisionShape* ballShape = new btSphereShape(1);
-	btDefaultMotionState* ballMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
-	btScalar mass = 1;
-	btVector3 ballInertia(0, 0, 0);
-	ballShape->calculateLocalInertia(mass, ballInertia);
-	game_entity *ball = new game_entity(world->world, mass, ballMotionState, ballShape, ballInertia);
-	world->add_entity(ball);
 
 	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	const float skyboxVertices[] = { -1, -1, 1, -1, 1, 1, -1, 1 };
@@ -392,7 +323,6 @@ int main(int argc, char* argv[]) {
 		glUniform4f(glGetUniformLocation(*phong, "eyeCoords"), position.x, position.y, position.z, 1);
 		*/
 
-		btTransform t;
 		/* Draw ground. */
 		/*ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
@@ -432,15 +362,10 @@ int main(int argc, char* argv[]) {
 		GLenum error;
 		while ((error = glGetError()) != 0) cout << "GL error: " << error << endl;/**/
 		SDL_GL_SwapWindow(win);
-		world->world->stepSimulation(1 / 60.f, 10);
 		if ((1000 / FPS) > (SDL_GetTicks() - start_time)) SDL_Delay((1000 / FPS) - (SDL_GetTicks() - start_time));
 	}
 
 	SDL_HideWindow(win);
-
-	delete ground;
-	delete ball;
-	delete world;
 
 	for (unsigned int i = 0; i < groundMesh->nodeCount; i++) {
 		model_node *node = groundMesh->nodes[i];
