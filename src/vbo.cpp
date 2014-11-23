@@ -5,13 +5,14 @@
 inline f1::vertex_data::~vertex_data() {}
 inline f1::index_data::~index_data() {}
 
-f1::vbo::vbo(attrib attributes[], int len, GLenum usage) : usage(usage), attributes(attributes), attribLen(len), stride(f1::calculateStride(attributes, len)) {
+f1::vbo::vbo(attrib *attributes, int len, GLenum usage) : usage(usage), attributes(attributes), attribLen(len), stride(f1::calculateStride(attributes, len)) {
 	// glGenVertexArrays(1, &vao); // Create a Vertex Array Object
 	// glBindVertexArray(vao);
 	glGenBuffers(1, &id); // Generate a Vertex Buffer Object
 	// glBindBuffer(GL_ARRAY_BUFFER, id);
 
-
+	// TODO attributes are not being changed by calculateStride so the offset never changes
+	
 	// glDeleteBuffers(1, &id); //delete it already, since the VAO still references it
 	// glBindVertexArray(0);
 }
@@ -19,6 +20,7 @@ f1::vbo::vbo(attrib attributes[], int len, GLenum usage) : usage(usage), attribu
 f1::vbo::~vbo() {
 	glDeleteBuffers(1, &id);
 	// glDeleteVertexArrays(1, &vao);
+	delete[] attributes;
 }
 
 void f1::vbo::bind() {
@@ -32,7 +34,8 @@ void f1::vbo::bind(program *program) {
 	for (int i = 0; i < attribLen; i++) {
 		attrib attribute = attributes[i];
 		if ((location = glGetAttribLocation(*program, attribute.name)) < 0) continue;
-		glEnableVertexAttribArray(location = glGetAttribLocation(*program, attribute.name));
+		glEnableVertexAttribArray(location);
+		// std::cout << attribute.offset << " : " << (int) BUFFER_OFFSET(attribute.offset) << std::endl;
 		glVertexAttribPointer(location, attribute.size, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(attribute.offset));
 	}
 }
@@ -69,9 +72,9 @@ void f1::ibo::setIndices(GLsizeiptr size, const GLvoid *indices) {
 int f1::calculateStride(attrib *attributes, int len) {
 	int count = 0;
 	for (int i = 0; i < len; i++) {
-		attrib attribute = attributes[i];
-		attribute.offset = count;
-		count += sizeof(float)* attribute.size;
+		attrib *attribute = &attributes[i];
+		attribute->offset = count;
+		count += sizeof(float)* attribute->size;
 	}
 	return count;
 }
@@ -126,6 +129,8 @@ f1::program::program(const GLchar *vertexShader, const GLchar *fragmentShader) {
 		throw glsl_error(getProgramInfoLog());
 	}
 }
+
+f1::program::program(GLuint id) : id(id) {}
 
 f1::program::~program() {
 	glDeleteProgram(id);

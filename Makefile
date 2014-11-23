@@ -1,44 +1,51 @@
 # Compilers used
-CC = gcc
-CFLAGS += -Wall -I./include
+CC ?= gcc
+override CFLAGS += -m32 -Wall -Iinclude
 CXX ?= g++
-CXXFLAGS += -std=c++11 -Wall -I./include -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
-LDFLAGS += -fPIC -L/usr/lib -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu
-#LDLIBS += -lGL
-LDLIBS += ./libf2.a -lSDL2 -lSDL2main -lSOIL -lassimp -lBulletDynamics -lBulletCollision -lLinearMath -lglew32 -lopengl32
-#PREFIX = /usr/local
+# CXXFLAGS += -I/usr/include -I/usr/include/SDL2 -I/usr/include/SOIL -I/usr/local/include/bullet
+override CXXFLAGS += -m32 -std=c++11 -Wall -Iinclude
+# LDFLAGS += -fPIC -L/usr/lib -L/usr/local/lib -L/usr/lib/x86_64-linux-gnu
+override LDFLAGS += -Wl,--as-needed
+# LDLIBS += -lGL
+LDLIBS += -lSDL2 -lSDL2main -lSOIL -lassimp -lzlibstatic -lBulletDynamics -lBulletCollision -lLinearMath ./libf2.a -lglew32
+PREFIX = /usr/local
 # Path to the source directory, relative to the makefile
 SRC_PATH = src
 SRC_DIR = src
+TEST_DIR = test
 
 # SRCS
-SOURCES := $(filter-out src/main.cpp, $(wildcard $(SRC_PATH)/*.cpp))
+# SOURCES := $(filter-out src/main.cpp, $(wildcard $(SRC_PATH)/*.cpp))
+SOURCES := $(wildcard $(SRC_PATH)/*.cpp)
 CSOURCES=$(wildcard $(SRC_PATH)/*.c)
 OBJECTS=$(SOURCES:$(SRC_PATH)/%.cpp=%.o)
 COBJECTS=$(CSOURCES:$(SRC_PATH)/%.c=%.o)
 
-TEST_SOURCES := $(SRC_PATH)/main.cpp
-TEST_OBJECTS := $(TEST_SOURCES:$(SRC_PATH)/%.cpp=%.o)
+# TEST_SOURCES := $(SRC_PATH)/main.cpp
+TEST_SOURCES := $(wildcard $(TEST_DIR)/*.cpp)
+TEST_OBJECTS := $(TEST_SOURCES:$(TEST_DIR)/%.cpp=%.o)
 
-$(info $$CC is [${CC}])
-$(info $$COBJECTS is [${COBJECTS}])
-$(info $$libdir is [${libdir}])
+$(info $$CFLAGS is [${CFLAGS}])
 
 ifneq ($(BUILD), shared)
 	BUILD = static
 endif
 
 ifeq ($(MSYSTEM), MINGW32)
-  EXE_EXT    = .exe
-  LIB_EXT    = .dll
-  RM=del /F /Q
+    #EXE_EXT    = .exe
+    #LIB_EXT    = .dll
+    #RM=del /F /Q
+    EXECUTABLE = game.exe
 else
+    EXECUTABLE = game
+endif
+#else
   EXE_EXT    =
   LIB_EXT    = .so
   RM=rm -f
-endif
+#endif
 
-all: libf2.a game
+all: libf2.a $(EXECUTABLE)
 
 f2: $(BUILD)
 static: libf2.a
@@ -65,7 +72,7 @@ install-shared: libf2.so
 	$(MKDIR) $(DESTDIR)$(PREFIX)\/lib/
 	$(INSTALL) -pm0755 $< $(DESTDIR)$(PREFIX)/$<
 
-game: $(TEST_OBJECTS) libf2.a
+$(EXECUTABLE): $(TEST_OBJECTS) libf2.a
 	$(CXX) $(LDFLAGS) -o $@ $< $(LDLIBS)
 
 %.o: $(SRC_DIR)/%.c
@@ -74,7 +81,6 @@ game: $(TEST_OBJECTS) libf2.a
 		sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 			-e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 		rm -f $*.d
-
 -include *.P # $(CSOURSES:.c=.P)
 
 %.o: $(SRC_DIR)/%.cpp
@@ -83,11 +89,18 @@ game: $(TEST_OBJECTS) libf2.a
           sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
               -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
           rm -f $*.d
-
 -include *.P # $(SOURCES:.cpp=.P)
+
+%.o: $(TEST_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) -MD -c $< -o $@
+	@cp $*.d $*.P; \
+          sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
+              -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
+          rm -f $*.d
+-include *.P # $(TEST_SOURCES:.cpp=.P)
 
 # Removes all build files
 clean:
-	$(RM) *.o *.a *.so game
+	$(RM) *.o *.P *.a *.so game
 
 .PHONY: all static install shared install-static install-shared clean f2

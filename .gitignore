@@ -3,5 +3,6 @@ build
 *.P
 *.a
 game
-dlls
+game.exe
 *.dll
+dlls

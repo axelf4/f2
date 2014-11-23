@@ -42,6 +42,7 @@ namespace f1 {
 		static GLuint compileShader(GLenum type, const GLchar *source, bool *success);
 	public:
 		program(const char *vertexShader, const char *fragmentShader);
+		program(GLuint id);
 		~program();
 
 		GLint getAttribLoc(const GLchar *name);
