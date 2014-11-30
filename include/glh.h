@@ -57,16 +57,9 @@ GLchar * getProgramInfoLog(GLuint program);
 
 /* MESH */
 
-struct mesh2 {
-	GLuint vbo, ibo;
-	// TODO delete usage member
-	GLenum usage;
-	/** The stride of the VBO data. */
-	GLsizei stride;
-};
+struct mesh2 { GLuint vbo, ibo; };
 
-// TODO add argument as option to specify wether indices or not
-struct mesh2 * create_mesh(GLenum usage /* = GL_STATIC_DRAW */);
+struct mesh2 * create_mesh(int indexed /* = GL_FALSE */);
 
 #define bind_mesh(mesh, attributes, stride, stmt) \
 	do { \
@@ -77,12 +70,21 @@ struct mesh2 * create_mesh(GLenum usage /* = GL_STATIC_DRAW */);
 			glEnableVertexAttribArray(attribute.location); \
 			glVertexAttribPointer(attribute.location, attribute.size, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(attribute.offset)); \
 		} \
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo); \
+		if (mesh->ibo != 0) glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->ibo); \
 		stmt \
 		for (; i > 0; i--) glDisableVertexAttribArray(attributes[i].location); \
 	} while(0)
 
 GLsizei calculate_stride(struct attrib2 *attributes);
+
+// sGLsizei calculate_stride_count, calculate_stride_i;
+#define calculate_stride2(attributes) ( \
+	(calculate_stride_count = 0), \
+	for(i=0;attributes[i].size != 0; i++) { \
+		(attributes)[i]->offset = count; \
+		calculate_stride_count += sizeof(float)* (attributes)[i]->size; \
+	}, calculate_stride_count \
+)
 
 void destroy_mesh(struct mesh2 *mesh);
 

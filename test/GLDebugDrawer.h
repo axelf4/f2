@@ -1,32 +1,37 @@
 #include <LinearMath/btIDebugDraw.h>
 #include "glh.h"
+#include <vector>
 
 // TODO rename to GLDebugDraw.h
 
 class GLDebugDrawer : public btIDebugDraw {
 	int debugMode;
 	const char *vertexShader =
-		"#version 110" \
-		"attribute vec4 position;" \
+		"#version 110\n" \
+		"attribute vec3 position;" \
+		"attribute vec3 color;" \
 		"uniform mat4 mvp;" \
+		"varying vec3 vcolor;" \
 		"void main() {" \
-		"  gl_Position = mvp * position;" \
+		"  gl_Position = mvp * vec4(position, 1.0f);" \
+		"  vcolor = color;"
 		"}";
 
 	const char *fragmentShader =
-		"#version 110" \
-		"uniform vec4 color;" \
+		"#version 110\n" \
+		"varying vec3 vcolor;" \
 		"void main() {" \
-		"  gl_FragColor = color;" \
+		"  gl_FragColor = vec4(vcolor, 1.0);" \
 		"}";
 	GLuint program;
 	GLuint vbo;
+	std::vector<float> vertices;
 
 public:
 	GLDebugDrawer();
 	virtual ~GLDebugDrawer();
 
-	void setMatrices(float modelViewProjection[16]);
+	void end(const float *modelViewProjection);
 
 	virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color);
 
@@ -39,5 +44,4 @@ public:
 	virtual void setDebugMode(int debugMode);
 
 	virtual int getDebugMode() const { return debugMode; }
-
 };

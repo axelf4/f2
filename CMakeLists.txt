@@ -22,7 +22,11 @@ set(TEST_SOURCES
 	test/main.cpp
 	test/shaders.h
 	test/GLDebugDrawer.cpp
-	test/GLDebugDrawer.h)
+	test/GLDebugDrawer.h
+	test/TriangleMeshShape.cpp
+	test/TriangleMeshShape.h
+	test/EntitySystem.cpp
+	test/EntitySystem.h)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${TEST_SOURCES})
@@ -40,6 +44,7 @@ message(${SDL2_INCLUDE_DIR})
 message(${SOIL_INCLUDE_DIRS})
 message(${GLM_INCLUDE_DIRS})
 message(${BULLET_INCLUDE_DIRS})
+message(${BULLET_LIBRARIES})
 message(${ASSIMP_INCLUDE_DIR})
 
 include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})

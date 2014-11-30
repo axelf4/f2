@@ -13,9 +13,9 @@ const char *read_file(const char *filename) {
 		fseek(f, 0, SEEK_SET);
 		buffer = malloc(length);
 		if (buffer) fread(buffer, 1, length, f);
-		fclose (f);
+		fclose(f);
 	}
-	
+
 	return buffer;
 }
 
@@ -31,11 +31,11 @@ GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader) 
 	glAttachShader(id, frag);
 
 	glLinkProgram(id);
-	
+
 	/* We don't need the shaders anymore. */
 	glDeleteShader(vert);
 	glDeleteShader(vert);
-	
+
 	int linked;
 	glGetProgramiv(id, GL_LINK_STATUS, &linked);
 	if (linked == GL_FALSE) {
@@ -72,14 +72,11 @@ GLchar * getProgramInfoLog(GLuint program) {
 	return infoLog;
 }
 
-struct mesh2 * create_mesh(GLenum usage) {
+struct mesh2 * create_mesh(int indexed) {
 	GLuint buffers[2];
-	glGenBuffers(2, buffers);
 	struct mesh2 *mesh = malloc(sizeof(struct mesh2));
-	mesh->vbo = buffers[0];
-	mesh->ibo = buffers[1];
-	mesh->stride = 0;
-	return mesh;
+	indexed = 1;
+	return glGenBuffers(1 + indexed, buffers), (mesh->vbo = buffers[0]), (mesh->ibo = buffers[1]), mesh;
 }
 
 GLsizei calculate_stride(struct attrib2 *attributes) {
