@@ -7,10 +7,12 @@
 
 #include "f1.h"
 #include "glh.h"
+#include <vmath.h>
+
 #include "vbo.h"
 
 #define GLM_FORCE_RADIANS
-#include <glm/mat4x4.hpp>
+#include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -27,6 +29,10 @@
 #include "shaders.h"
 #include "GLDebugDrawer.h"
 
+#include <Windows.h>
+
+// #define WINDOW_TITLE "Point and Click Adventures"
+#define WINDOW_TITLE "Call of Duty: Avancerad Välfärd"
 // 640/480, 800/600, 1366/768
 #define WINDOW_WIDTH 800.f
 #define WINDOW_HEIGHT 600.f
@@ -59,8 +65,17 @@ void walk(glm::vec3 *pos, float yaw, float distance, float direction, btRigidBod
 	btVector3 pos2 = ballTransform.getOrigin();
 	cout << "x: " << pos2.x() << "y: " << pos2.y() << "z: " << pos2.z() << endl;
 
-	// body->setLinearVelocity(btVector3(xaccel * 20, yaccel, zaccel * 20));
-	// body->applyCentralImpulse(btVector3(xaccel * 5, 0, zaccel * 5));
+	// body->setLinearVelocity(btVector3(xaccel * 50, yaccel, zaccel * 50));
+	body->applyCentralImpulse(btVector3(xaccel * 10, 0, zaccel * 10));
+}
+
+void walk2(VEC *pos, float yaw, float distance, float direction, btRigidBody *body) {
+	VEC accel = VectorSet(
+		distance * (float)sin(degreesToRadians(yaw + direction)),
+		0,
+		distance * (float)cos(degreesToRadians(yaw + direction)),
+		0);
+	*pos = VectorAdd(*pos, accel);
 }
 
 typedef struct {
@@ -306,26 +321,42 @@ struct game_entity {
 	}
 };
 
+game_entity *ball;
+
+void myTickCallback(btDynamicsWorld *world, btScalar timeStep) {
+	btVector3 velocity = ball->body->getLinearVelocity(), velocity2(velocity);
+	velocity2.setY(0);
+	btScalar speed = velocity2.length();
+	const float maxSpeed = 150;
+	if (speed > 350) {
+		velocity2 *= 350 / speed;
+		btVector3 velocity(velocity2.x(), velocity.y(), velocity2.z());
+		ball->body->setLinearVelocity(velocity);
+	}
+}
+
 struct game_world {
 	btBroadphaseInterface *broadphase;
 	btDefaultCollisionConfiguration *collisionConfiguration;
 	btCollisionDispatcher *dispatcher;
 	btSequentialImpulseConstraintSolver *solver;
-	btDiscreteDynamicsWorld *world;
+	btDynamicsWorld *world;
 
 	btIDebugDraw *debugDraw;
 
 	void init() {
-		collisionConfiguration = new btDefaultCollisionConfiguration();
-		broadphase = new btDbvtBroadphase();
+		collisionConfiguration = new btDefaultCollisionConfiguration;
+		broadphase = new btDbvtBroadphase;
 		dispatcher = new btCollisionDispatcher(collisionConfiguration);
-		solver = new btSequentialImpulseConstraintSolver();
+		solver = new btSequentialImpulseConstraintSolver;
 		world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
 		world->setGravity(btVector3(0, -9.81f * 100, 0));
 
 		debugDraw = new GLDebugDrawer();
 		// debugDraw->setDebugMode(btIDebugDraw::DBG_DrawAabb | btIDebugDraw::DBG_DrawWireframe);
 		world->setDebugDrawer(debugDraw);
+
+		world->setInternalTickCallback(&myTickCallback);
 	}
 
 	~game_world() {
@@ -361,16 +392,89 @@ protected:
 	btRigidBody* m_me;
 };
 
+void jump(game_entity *ball, btDynamicsWorld *world) {
+	// Jumping
+	btTransform ballTransform;
+	ball->motionState->getWorldTransform(ballTransform);
+	btVector3 pos = ballTransform.getOrigin(), btFrom(pos.x(), pos.y(), pos.z()), btTo(pos.x(), pos.y() - 1, pos.z());
+	ClosestNotMeRayResultCallback res(btFrom, btTo, ball->body);
+	world->rayTest(btFrom, btTo, res);
+	if (res.hasHit()){
+		ball->body->applyCentralImpulse(btVector3(0.0f, 2.5f * 100, 0.f));
+		cout << "jump" << endl;
+	}
+
+	btTransform xform;
+	ball->motionState->getWorldTransform(xform);
+	// btVector3 down = -xform.getBasis()[1];
+	btVector3 down = ballTransform.getOrigin();
+	cout << down.getX() << down.getY() << down.getZ() << endl;
+	// down.normalize();
+	btScalar halfHeight = btScalar(5) / 2;
+	btVector3 from(xform.getOrigin()), to(from + down * halfHeight * btScalar(1.1));
+	ClosestNotMeRayResultCallback rayCallback(from, to, ball->body);
+	rayCallback.m_closestHitFraction = 1.0;
+	world->rayTest(from, to, rayCallback);
+	if (rayCallback.hasHit())
+	{
+		if (rayCallback.m_closestHitFraction < btScalar(1.0)) {
+			cout << "jump" << endl;
+			btTransform xform;
+			ball->motionState->getWorldTransform(xform);
+			// btVector3 up = xform.getBasis()[1];
+			// up.normalize();
+			btScalar magnitude = (btScalar(1.0) / ball->body->getInvMass()) * btScalar(8.0);
+			// ball->body->applyCentralImpulse(up * magnitude);
+			ball->body->applyCentralImpulse(btVector3(0.0f, 10 * magnitude, 0.f));
+		}
+	}
+}
+
+inline void printVector(float *value) {
+	cout << "x: " << value[0] << " y: " << value[1] << " z: " << value[2] << " w: " << value[3] << endl;
+}
+
+inline void printMatrix(float *matrixValue) {
+	cout << "-------------" << endl;
+	for (int i = 0; i < 4; i++) {
+		// cout << matrixValue[i * 4 + 0] << " " << matrixValue[i * 4 + 1] << " " << matrixValue[i * 4 + 2] << " " << matrixValue[i * 4 + 3] << endl;
+		printf("|%2.0f|%2.0f|%2.0f|%2.0f|\n", matrixValue[i * 4 + 0], matrixValue[i * 4 + 1], matrixValue[i * 4 + 2], matrixValue[i * 4 + 3]);
+		cout << "-------------" << endl;
+	}
+}
+
 int main(int argc, char *argv[]) {
+	VEC v1 = VectorSet(10, 3, 5, 0),
+		v2 = VectorReplicate(10);
+	cout << "||v1|| = " << VectorLength(v1) << endl;
+	// v1 = VectorMultiply(v1, v2);
+	// v1 = VectorNormalize(v1);
+
+	MAT m1 = MatrixIdentity();
+	m1 = MatrixSet(3, 4, 7, 1, 0, 3, 12, 14, 5, 6, 23, 11, 8, 9, 2, 0);
+	ALIGN(128) float matrixValue[16];
+	MatrixGet(matrixValue, &m1);
+	printMatrix(MatrixGet(matrixValue, &m1));
+	cout << "--------" << endl;
+	m1 = MatrixTranspose(&m1);
+	printMatrix(MatrixGet(matrixValue, &m1));
+
+	ALIGN(16) float value[4];
+	printVector(VectorGet(value, v1));
+
+	bool boolean = true;
+	if (!boolean)  {
+		system("PAUSE");
+		return 0;
+	}
+
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
 		return 1;
 	}
-
 	SDL_SetRelativeMouseMode(SDL_TRUE); // Capture mouse and use relative coordinates
-
-	SDL_Window *win = SDL_CreateWindow("Point and Click Adventures", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)WINDOW_WIDTH, (int)WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
+	SDL_Window *win = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)WINDOW_WIDTH, (int)WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
 	if (win == 0) {
 		std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
 		SDL_Quit();
@@ -394,10 +498,17 @@ int main(int argc, char *argv[]) {
 	// glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	glm::vec3 position;
-	float yaw = 0.f, pitch = 0.f;
 	glm::mat4 projection = glm::perspective(glm::radians(90.f), WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f), // 3000.f
 		view, vInv,
 		model = glm::scale(glm::mat4(1.f), vec3(1.f));
+
+	VEC position2 = VectorReplicate(0);
+	float yaw = 0.f, pitch = 0.f;
+	MAT projection2 = MatrixPerspective(90.f, WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f),
+		view2, vInv2,
+		model2 = MatrixIdentity();
+	ALIGN(16) float mv[16];
+	ALIGN(128) float vv[4];
 
 	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	const float skyboxVertices[] = { -1, -1, 1, -1, 1, 1, -1, 1 };
@@ -438,21 +549,24 @@ int main(int argc, char *argv[]) {
 	// btCollisionShape *groundShape = /* new btStaticPlaneShape(btVector3(0, 1, 0), 1) */ new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
 	btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)));
 	game_entity *ground = new game_entity(world->world, 0, groundMotionState, groundShape, btVector3(0, 0, 0));
+	ground->body->setFriction(1.0f); // 5.2
 	world->add_entity(ground);
 	/* Ball body */
-	btCollisionShape* ballShape = new btSphereShape(1);
+	// btCollisionShape* ballShape = new btSphereShape(1);
+	btCollisionShape *ballShape = new btBoxShape(btVector3(5, 5, 5));
 	btDefaultMotionState* ballMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
 	btScalar mass = 1;
 	btVector3 ballInertia(0, 0, 0);
 	ballShape->calculateLocalInertia(mass, ballInertia);
-	game_entity *ball = new game_entity(world->world, mass, ballMotionState, ballShape, ballInertia);
+	ball = new game_entity(world->world, mass, ballMotionState, ballShape, ballInertia);
 	ball->body->setSleepingThresholds(btScalar(.0f), btScalar(.0f));
 	ball->body->setAngularFactor(.0f);
+	ball->body->setRestitution(0.f);
 	ball->body->setCcdMotionThreshold(1.0f);
 	ball->body->setCcdSweptSphereRadius(0.2f);
 	world->add_entity(ball);
 
-	bool noclip = true;
+	bool noclip = false;
 
 	bool done = false;
 	SDL_Event event;
@@ -471,39 +585,51 @@ int main(int argc, char *argv[]) {
 		if (state[SDL_SCANCODE_A]) walk(&position, yaw, MOVEMENT_SPEED, 270, ball->body);
 		if (state[SDL_SCANCODE_S]) walk(&position, yaw, MOVEMENT_SPEED, 0, ball->body);
 		if (state[SDL_SCANCODE_D]) walk(&position, yaw, MOVEMENT_SPEED, 90, ball->body);
+		// TODO: optimize
+		if (state[SDL_SCANCODE_W]) walk2(&position2, yaw, MOVEMENT_SPEED, 180, ball->body);
+		if (state[SDL_SCANCODE_A]) walk2(&position2, yaw, MOVEMENT_SPEED, 270, ball->body);
+		if (state[SDL_SCANCODE_S]) walk2(&position2, yaw, MOVEMENT_SPEED, 0, ball->body);
+		if (state[SDL_SCANCODE_D]) walk2(&position2, yaw, MOVEMENT_SPEED, 90, ball->body);
 		if (!(state[SDL_SCANCODE_W] || state[SDL_SCANCODE_A] || state[SDL_SCANCODE_S] || state[SDL_SCANCODE_D])) {
 			ball->body->setLinearVelocity(btVector3(0, ball->body->getLinearVelocity().y(), 0));
 		}
 		if (state[SDL_SCANCODE_SPACE]) {
 			position.y += MOVEMENT_SPEED;
 
-			// Jumping
-			btTransform ballTransform;
-			ball->motionState->getWorldTransform(ballTransform);
-			btVector3 pos = ballTransform.getOrigin(), btFrom(pos.x(), pos.y(), pos.z()), btTo(pos.x(), pos.y() - 1, pos.z());
-			ClosestNotMeRayResultCallback res(btFrom, btTo, ball->body);
-			world->world->rayTest(btFrom, btTo, res);
-			if (res.hasHit()){
-				ball->body->applyCentralImpulse(btVector3(0.0f, 2.5f * 100, 0.f));
-				cout << "jump" << endl;
-			}
+			jump(ball, world->world);
 		}
 		if (state[SDL_SCANCODE_LSHIFT]) position.y -= MOVEMENT_SPEED;
+		if (state[SDL_SCANCODE_SPACE] || state[SDL_SCANCODE_LSHIFT]) {
+			float yaccel = 0;
+			if (state[SDL_SCANCODE_SPACE]) yaccel += MOVEMENT_SPEED;
+			if (state[SDL_SCANCODE_LSHIFT]) yaccel -= MOVEMENT_SPEED;
+			VEC accel = VectorSet(0, yaccel, 0, 0);
+			position2 = VectorAdd(position2, accel);
+		}
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix
 		btTransform t;
 		if (noclip) {
 			view = glm::translate(glm::mat4(1.f), position);
+			VectorGet(vv, position2);
+			view2 = MatrixTranslate(&MatrixIdentity(), vv[0], vv[1], vv[2]);
 		}
 		else {
 			ball->body->getMotionState()->getWorldTransform(t);
 			t.getOpenGLMatrix(glm::value_ptr(view));
+			t.getOpenGLMatrix(mv);
+			view2 = MatrixLoad(mv);
 			/*btTransform ballTransform;
 			ball->motionState->getWorldTransform(ballTransform);
 			btVector3 pos = ballTransform.getOrigin();
 			view = glm::translate(glm::mat4(1.f), glm::vec3(pos.x(), pos.y(), pos.z()));*/
 		}
+		// cout << "pitch: " << pitch << " yaw: " << yaw << endl;
 		view = glm::inverse(vInv = (view * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
+		quat q1 = normalize((quat(vec3(pitch, yaw, 0))));
+		//cout << "GLM: " << endl << "x: " << q1.x << " y: " << q1.y << " z: " << q1.z << " w: " << q1.w << endl << "SSE: " << endl;
+		MAT rotationViewMatrix = QuaternionToMatrix(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
+		view2 = MatrixInverse(&(vInv2 = (MatrixMultiply(&rotationViewMatrix, &view2))));
 
 		glClearColor(0.5f, 0.3f, 0.8f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -511,8 +637,10 @@ int main(int argc, char *argv[]) {
 		/* Draw skybox. */
 		glDisable(GL_DEPTH_TEST);
 		glUseProgram(skyboxProg); // (*skyboxProg)();
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
+		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
+		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&projection2)));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, &MatrixTranspose(&MatrixMultiply(&model2, &view2))));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
@@ -524,17 +652,22 @@ int main(int argc, char *argv[]) {
 		/* Draw everything. */
 		glEnable(GL_DEPTH_TEST);
 		glUseProgram(phong); // (*phong)();
-		glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, glm::value_ptr(projection));
+		/*glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, glm::value_ptr(vInv));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, glm::value_ptr(vInv));*/
+		glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, MatrixGet(mv, &projection2));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, MatrixGet(mv, &view2));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, MatrixGet(mv, &vInv2));
 		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), position.x, position.y, position.z, 1);
 
 		/* Draw ground. */
 		ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
 		model = mat4(1.0f);
-		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));
+		/*glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));*/
+		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, MatrixGet(mv, &model2));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&MatrixMultiply(&model2, &view2))));
 		glActiveTexture(GL_TEXTURE0);
 		glUniform1i(glGetUniformLocation(phong, "tex"), 0);
 		FOR(i, groundMesh->nodeCount) {

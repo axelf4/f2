@@ -16,23 +16,24 @@ set(SOURCES
 	include/f1.h
 	include/glh.h
 	include/vbo.h
-	include/obj_loader.h)
+	include/obj_loader.h
+	include/vmath.h)
 
 set(TEST_SOURCES
 	test/main.cpp
 	test/shaders.h
 	test/GLDebugDrawer.cpp
 	test/GLDebugDrawer.h
-	test/TriangleMeshShape.cpp
-	test/TriangleMeshShape.h
 	test/EntitySystem.cpp
-	test/EntitySystem.h)
+	test/EntitySystem.h
+	test/opencltest.cpp)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${TEST_SOURCES})
 
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(OpenCL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(SOIL REQUIRED)
 find_package(GLM REQUIRED)
@@ -47,10 +48,13 @@ message(${BULLET_INCLUDE_DIRS})
 message(${BULLET_LIBRARIES})
 message(${ASSIMP_INCLUDE_DIR})
 
-include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
-target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
+include_directories(include ${SDL2_INCLUDE_DIR} ${OPENCL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
+target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${OPENCL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -DRESOURCE_DIR="../resource/")
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
 
 # if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
 # 	# list of files for which we add a copy rule
