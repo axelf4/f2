@@ -616,6 +616,10 @@ extern "C" {
 		return MAT{ _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(x, y, z, 1) };
 	}
 
+	VMATH_INLINE MAT MatrixScale(float x, float y, float z) {
+		return MAT{ _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(x, y, z, 1) };
+	}
+
 	VMATH_INLINE MAT QuaternionToMatrix(VEC a) {
 #ifdef _SSE_INTRINSICS_
 		ALIGN(128) float q[4];

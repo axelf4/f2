@@ -1,5 +1,4 @@
 #include <iostream>
-#include <stdlib.h>
 
 #include <SDL.h>
 #include <GL/glew.h>
@@ -7,15 +6,8 @@
 
 #include "f1.h"
 #include "glh.h"
-#include <vmath.h>
-
+#include "vmath.h"
 #include "vbo.h"
-
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 #include <SOIL.h>
 // #include "obj_loader.h"
@@ -32,7 +24,7 @@
 #include <Windows.h>
 
 // #define WINDOW_TITLE "Point and Click Adventures"
-#define WINDOW_TITLE "Call of Duty: Avancerad Välfärd"
+#define WINDOW_TITLE "Call of Duty: Avancerad V\xC3\xA4lf\xC3\xA4rd"
 // 640/480, 800/600, 1366/768
 #define WINDOW_WIDTH 800.f
 #define WINDOW_HEIGHT 600.f
@@ -46,36 +38,19 @@
 
 using namespace std;
 using namespace f1;
-using namespace glm;
 
 void update_camera(float *yaw, float yaw_amount, float *pitch, float pitch_amount) {
 	*yaw -= yaw_amount;
 	*pitch -= pitch_amount;
 }
 
-void walk(glm::vec3 *pos, float yaw, float distance, float direction, btRigidBody *body) {
-	float xaccel = distance * (float)sin(degreesToRadians(yaw + direction)),
-		yaccel = body->getLinearVelocity().y(),
-		zaccel = distance * (float)cos(degreesToRadians(yaw + direction));
-	pos->x += xaccel;
-	pos->z += zaccel;
-
-	btTransform ballTransform;
-	body->getMotionState()->getWorldTransform(ballTransform);
-	btVector3 pos2 = ballTransform.getOrigin();
-	cout << "x: " << pos2.x() << "y: " << pos2.y() << "z: " << pos2.z() << endl;
+void walk(VEC *pos, float yaw, float distance, float direction, btRigidBody *body) {
+	float xaccel = distance * (float)sin(degreesToRadians(yaw + direction)), zaccel = distance * (float)cos(degreesToRadians(yaw + direction));
+	VEC accel = VectorSet(xaccel, 0, zaccel, 0);
+	*pos = VectorAdd(*pos, accel);
 
 	// body->setLinearVelocity(btVector3(xaccel * 50, yaccel, zaccel * 50));
 	body->applyCentralImpulse(btVector3(xaccel * 10, 0, zaccel * 10));
-}
-
-void walk2(VEC *pos, float yaw, float distance, float direction, btRigidBody *body) {
-	VEC accel = VectorSet(
-		distance * (float)sin(degreesToRadians(yaw + direction)),
-		0,
-		distance * (float)cos(degreesToRadians(yaw + direction)),
-		0);
-	*pos = VectorAdd(*pos, accel);
 }
 
 typedef struct {
@@ -497,18 +472,12 @@ int main(int argc, char *argv[]) {
 	// Texturing
 	// glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-	glm::vec3 position;
-	glm::mat4 projection = glm::perspective(glm::radians(90.f), WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f), // 3000.f
-		view, vInv,
-		model = glm::scale(glm::mat4(1.f), vec3(1.f));
-
-	VEC position2 = VectorReplicate(0);
+	VEC position = VectorReplicate(0);
 	float yaw = 0.f, pitch = 0.f;
-	MAT projection2 = MatrixPerspective(90.f, WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f),
-		view2, vInv2,
-		model2 = MatrixIdentity();
-	ALIGN(16) float mv[16];
-	ALIGN(128) float vv[4];
+	MAT projection = MatrixPerspective(90.f, WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f),
+		view, vInv,
+		model = MatrixIdentity();
+	ALIGN(16) float mv[16], vv[4];
 
 	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	const float skyboxVertices[] = { -1, -1, 1, -1, 1, 1, -1, 1 };
@@ -525,12 +494,6 @@ int main(int argc, char *argv[]) {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, skyboxVertices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skybox->ibo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, cubeIndices, GL_STATIC_DRAW);
-	/*attrib *skyboxAttribs = new attrib[1] { { "vertex", 2, 0 } };
-	f1::mesh *skybox = new f1::mesh(true, skyboxAttribs, 1);
-	skybox->getVertices()->bind();
-	skybox->getVertices()->setVertices(sizeof(float) * 2 * 4, skyboxVertices);
-	skybox->getIndices()->bind();
-	skybox->getIndices()->setIndices(sizeof(unsigned int) * 6, cubeIndices);*/
 
 	// f1::program *phong = new program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
 	// cout << "Shader program info log: " << *phong << endl;
@@ -581,55 +544,50 @@ int main(int argc, char *argv[]) {
 		update_camera(&yaw, x * MOUSE_SENSITIVITY, &pitch, y *MOUSE_SENSITIVITY);
 		/* Keyboard */
 		if (state[SDL_SCANCODE_ESCAPE]) done = true;
+		// TODO: optimize
 		if (state[SDL_SCANCODE_W]) walk(&position, yaw, MOVEMENT_SPEED, 180, ball->body);
 		if (state[SDL_SCANCODE_A]) walk(&position, yaw, MOVEMENT_SPEED, 270, ball->body);
 		if (state[SDL_SCANCODE_S]) walk(&position, yaw, MOVEMENT_SPEED, 0, ball->body);
 		if (state[SDL_SCANCODE_D]) walk(&position, yaw, MOVEMENT_SPEED, 90, ball->body);
-		// TODO: optimize
-		if (state[SDL_SCANCODE_W]) walk2(&position2, yaw, MOVEMENT_SPEED, 180, ball->body);
-		if (state[SDL_SCANCODE_A]) walk2(&position2, yaw, MOVEMENT_SPEED, 270, ball->body);
-		if (state[SDL_SCANCODE_S]) walk2(&position2, yaw, MOVEMENT_SPEED, 0, ball->body);
-		if (state[SDL_SCANCODE_D]) walk2(&position2, yaw, MOVEMENT_SPEED, 90, ball->body);
 		if (!(state[SDL_SCANCODE_W] || state[SDL_SCANCODE_A] || state[SDL_SCANCODE_S] || state[SDL_SCANCODE_D])) {
 			ball->body->setLinearVelocity(btVector3(0, ball->body->getLinearVelocity().y(), 0));
 		}
 		if (state[SDL_SCANCODE_SPACE]) {
-			position.y += MOVEMENT_SPEED;
+			position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y += MOVEMENT_SPEED;
 
 			jump(ball, world->world);
 		}
-		if (state[SDL_SCANCODE_LSHIFT]) position.y -= MOVEMENT_SPEED;
+		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
 		if (state[SDL_SCANCODE_SPACE] || state[SDL_SCANCODE_LSHIFT]) {
 			float yaccel = 0;
 			if (state[SDL_SCANCODE_SPACE]) yaccel += MOVEMENT_SPEED;
 			if (state[SDL_SCANCODE_LSHIFT]) yaccel -= MOVEMENT_SPEED;
 			VEC accel = VectorSet(0, yaccel, 0, 0);
-			position2 = VectorAdd(position2, accel);
+			position = VectorAdd(position, accel);
 		}
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix
 		btTransform t;
 		if (noclip) {
-			view = glm::translate(glm::mat4(1.f), position);
-			VectorGet(vv, position2);
-			view2 = MatrixTranslate(&MatrixIdentity(), vv[0], vv[1], vv[2]);
+			// view = glm::translate(glm::mat4(1.f), position);
+			VectorGet(vv, position);
+			view = MatrixTranslate(&MatrixIdentity(), vv[0], vv[1], vv[2]);
 		}
 		else {
 			ball->body->getMotionState()->getWorldTransform(t);
-			t.getOpenGLMatrix(glm::value_ptr(view));
+			// t.getOpenGLMatrix(glm::value_ptr(view));
 			t.getOpenGLMatrix(mv);
-			view2 = MatrixLoad(mv);
+			view = MatrixLoad(mv);
 			/*btTransform ballTransform;
 			ball->motionState->getWorldTransform(ballTransform);
 			btVector3 pos = ballTransform.getOrigin();
 			view = glm::translate(glm::mat4(1.f), glm::vec3(pos.x(), pos.y(), pos.z()));*/
 		}
 		// cout << "pitch: " << pitch << " yaw: " << yaw << endl;
-		view = glm::inverse(vInv = (view * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
-		quat q1 = normalize((quat(vec3(pitch, yaw, 0))));
+		// view = glm::inverse(vInv = (view * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
 		//cout << "GLM: " << endl << "x: " << q1.x << " y: " << q1.y << " z: " << q1.z << " w: " << q1.w << endl << "SSE: " << endl;
 		MAT rotationViewMatrix = QuaternionToMatrix(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
-		view2 = MatrixInverse(&(vInv2 = (MatrixMultiply(&rotationViewMatrix, &view2))));
+		view = MatrixInverse(&(vInv = (MatrixMultiply(&rotationViewMatrix, &view))));
 
 		glClearColor(0.5f, 0.3f, 0.8f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -639,8 +597,8 @@ int main(int argc, char *argv[]) {
 		glUseProgram(skyboxProg); // (*skyboxProg)();
 		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
 		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&projection2)));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, &MatrixTranspose(&MatrixMultiply(&model2, &view2))));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&projection)));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, &MatrixTranspose(&MatrixMultiply(&model, &view))));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
@@ -655,19 +613,20 @@ int main(int argc, char *argv[]) {
 		/*glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, glm::value_ptr(projection));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, glm::value_ptr(vInv));*/
-		glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, MatrixGet(mv, &projection2));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, MatrixGet(mv, &view2));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, MatrixGet(mv, &vInv2));
-		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), position.x, position.y, position.z, 1);
+		glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, MatrixGet(mv, &projection));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, MatrixGet(mv, &view));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, MatrixGet(mv, &vInv));
+		VectorGet(vv, position);
+		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), vv[0], vv[1], vv[2], 1);
 
 		/* Draw ground. */
 		ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
-		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
-		model = mat4(1.0f);
+		t.getOpenGLMatrix(mv); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
+		model = MatrixLoad(mv); // model = mat4(1.0f);
 		/*glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));*/
-		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, MatrixGet(mv, &model2));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&MatrixMultiply(&model2, &view2))));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, MatrixGet(mv, &model));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&MatrixMultiply(&model, &view))));
 		glActiveTexture(GL_TEXTURE0);
 		glUniform1i(glGetUniformLocation(phong, "tex"), 0);
 		FOR(i, groundMesh->nodeCount) {
@@ -679,7 +638,8 @@ int main(int argc, char *argv[]) {
 
 		/* Bullet debug draw. */
 		// world->world->debugDrawWorld();
-		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(glm::value_ptr(projection * view * model));
+		// dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(glm::value_ptr(projection * view * model));
+		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, &MatrixMultiply(&model, &MatrixMultiply(&view, &projection))));
 
 		/* Draw bunny model. */
 		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
