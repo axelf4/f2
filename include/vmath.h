@@ -1,6 +1,5 @@
 /** Vector math library with SIMD acceleration.
-	\file vmath.h
-	*/
+	\file vmath.h */
 
 #ifndef VMATH_H
 #define VMATH_H
@@ -49,11 +48,9 @@ extern "C" {
 #endif
 		scalar;
 	/** \def _ROW_MAJOR_MATRIX
-	\brief Whether ::MAT is row-major order in memory.
-	*/
+	\brief Whether ::MAT is row-major order in memory. */
 	/** \def _COLUMN_MAJOR_MATRIX
-	\brief Whether ::MAT is column-major order in memory.
-	*/
+	\brief Whether ::MAT is column-major order in memory. */
 #if !defined(_ROW_MAJOR_MATRIX) && !defined(_COLUMN_MAJOR_MATRIX)
 #define _ROW_MAJOR_MATRIX
 #endif
@@ -102,8 +99,7 @@ extern "C" {
 	VEC;
 
 	/** Returns a ::VEC, whoose components are solely \a v.
-		@param v The value to use for the components.
-		*/
+		@param v The value to use for the components. */
 	VMATH_INLINE VEC VectorReplicate(float v) {
 #ifdef _SSE_INTRINSICS_
 		return(_mm_set1_ps(v));
@@ -116,8 +112,7 @@ extern "C" {
 		@param x The x component.
 		@param y The y component.
 		@param z The z component.
-		@param w The w component.
-		*/
+		@param w The w component. */
 	VMATH_INLINE VEC VectorSet(float x, float y, float z, float w) {
 #ifdef _SSE_INTRINSICS_
 		return(_mm_setr_ps(x, y, z, w));
@@ -127,8 +122,7 @@ extern "C" {
 	}
 
 	/** Loads and returns a ::VEC from the float array \a v.
-		@param v The float array to load up.
-		*/
+		@param v The float array to load up. */
 	VMATH_INLINE VEC VectorLoad(float *v) {
 #ifdef _SSE_INTRINSICS_
 		return(_mm_load_ps(v));
@@ -142,8 +136,7 @@ extern "C" {
 		@param[out] _V A 4 elements long 16-byte aligned float array to store in.
 		@param[in] _A The vector to be stored.
 
-		This method is to be used when the data of a ::VEC needs to be converted to a more general, usable format.
-		*/
+		This method is to be used when the data of a ::VEC needs to be converted to a more general, usable format. */
 #ifdef _SSE_INTRINSICS_
 #define VectorGet(_V, _A) (_mm_store_ps((_V), (_A)), (_V))
 #else
@@ -153,8 +146,7 @@ extern "C" {
 	/** Adds the two vectors \a a and \a b (a + b).
 		@param a The first vector to add.
 		@param b The second vector to add.
-		@return The sum of the two vectors.
-		*/
+		@return The sum of the two vectors. */
 	VMATH_INLINE VEC VectorAdd(VEC a, VEC b) {
 #ifdef _SSE_INTRINSICS_
 		return(_mm_add_ps(a, b));
@@ -166,8 +158,7 @@ extern "C" {
 	/** Subtracts the vector \a b from \a a (a - b).
 		@param a The vector to be subtracted.
 		@param b The vector to subtract.
-		@return The difference between the two vectors.
-		*/
+		@return The difference between the two vectors. */
 	VMATH_INLINE VEC VectorSubtract(VEC a, VEC b) {
 #ifdef _SSE_INTRINSICS_
 		return(_mm_sub_ps(a, b));
@@ -179,8 +170,7 @@ extern "C" {
 	/** Multiplies the two vectors \a a and \a b (a * b).
 		@param a The first vector to multiply.
 		@param b The second vector to multiply.
-		@return The product of sum of the two vectors.
-		*/
+		@return The product of sum of the two vectors. */
 	VMATH_INLINE VEC VectorMultiply(VEC a, VEC b) {
 #ifdef _SSE_INTRINSICS_
 		return(_mm_mul_ps(a, b));
@@ -192,8 +182,7 @@ extern "C" {
 	/** Divides the vector \a a with \a b (a / b).
 		@param a The dividend.
 		@param b The divisor.
-		@return The quotient of the two vectors.
-		*/
+		@return The quotient of the two vectors. */
 	VMATH_INLINE VEC VectorDivide(VEC a, VEC b) {
 #ifdef _SSE_INTRINSICS_
 		return(_mm_div_ps(a, b));
@@ -238,8 +227,7 @@ extern "C" {
 		@param pitch The pitch in radians.
 		@param yaw The yaw in radians.
 		@param roll The roll in radians.
-		@return A new ::VEC from the supplied angles.
-		*/
+		@return A new ::VEC from the supplied angles. */
 	VMATH_INLINE VEC QuaternionRotationRollPitchYaw(float pitch, float yaw, float roll) {
 		// Assuming the angles are in radians.
 		const float hr = roll * 0.5f;
@@ -283,8 +271,7 @@ extern "C" {
 	}
 
 	/** Loads and returns a ::MAT from the float array \a v.
-		@param v The float array to load up.
-		*/
+		@param v The float array to load up. */
 	VMATH_INLINE MAT MatrixLoad(float *v) {
 		return(MAT{ _mm_load_ps(v), _mm_load_ps(v + 4), _mm_load_ps(v + 8), _mm_load_ps(v + 12) });
 	}
@@ -302,8 +289,7 @@ extern "C" {
 		@param fov The field of vision in degrees.
 		@param aspect The aspect ratio of the screen.
 		@param zNear The near coordinate of the z-plane.
-		@param zFar The far coordinate of the z-plane.
-		*/
+		@param zFar The far coordinate of the z-plane. */
 	VMATH_INLINE MAT MatrixPerspective(float fov, float aspect, float zNear, float zFar) {
 #ifdef _SSE_INTRINSICS_
 		const float h = 1.0f / tan(fov * PI / 360);
@@ -316,8 +302,7 @@ extern "C" {
 		@param[out] _V A 16 elements long 16-byte aligned float array to store in.
 		@param[in] _A The matrix to be stored.
 
-		This method is to be used when the data of a ::MAT needs to be converted to a more general, usable format.
-		*/
+		This method is to be used when the data of a ::MAT needs to be converted to a more general, usable format. */
 #ifdef _SSE_INTRINSICS_
 #define MatrixGet(_V, _A) (_mm_store_ps((_V), (_A)->row0), _mm_store_ps((_V) + 4, (_A)->row1), _mm_store_ps((_V) + 8, (_A)->row2), _mm_store_ps((_V) + 12, (_A)->row3), (_V))
 #else
@@ -336,8 +321,7 @@ extern "C" {
 		@param a The first matrix to multiply.
 		@param b The second matrix to multiply.
 		@return The product of the two matrices.
-		@warning The two matrices must be distinct, the result will be incorrect if \a a or \a b are equal.
-		*/
+		@warning The two matrices must be distinct, the result will be incorrect if \a a or \a b are equal. */
 	VMATH_INLINE MAT MatrixMultiply(MAT *a, MAT *b) {
 #ifdef _SSE_INTRINSICS_
 		__m128 row0, row1, row2, row3;
