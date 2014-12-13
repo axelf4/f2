@@ -4,5 +4,6 @@ build
 *.a
 game
 game.exe
+doc
 *.dll
 dlls
