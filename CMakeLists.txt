@@ -12,12 +12,14 @@ set(SOURCES
 	src/f1.cpp
 	src/glh.c
 	src/vbo.cpp
+	src/net.c
 
 	include/f1.h
 	include/glh.h
 	include/vbo.h
 	include/obj_loader.h
-	include/vmath.h)
+	include/vmath.h
+	include/net.h)
 
 set(TEST_SOURCES
 	test/main.cpp
@@ -26,7 +28,8 @@ set(TEST_SOURCES
 	test/GLDebugDrawer.h
 	test/EntitySystem.cpp
 	test/EntitySystem.h
-	test/opencltest.cpp)
+	test/opencltest.cpp
+	test/nettest.cpp)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${TEST_SOURCES})

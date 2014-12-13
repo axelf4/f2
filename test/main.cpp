@@ -418,7 +418,7 @@ inline void printMatrix(float *matrixValue) {
 	}
 }
 
-int main(int argc, char *argv[]) {
+int main2(int argc, char *argv[]) {
 	VEC v1 = VectorSet(10, 3, 5, 0),
 		v2 = VectorReplicate(10);
 	cout << "||v1|| = " << VectorLength(v1) << endl;
@@ -437,7 +437,7 @@ int main(int argc, char *argv[]) {
 	ALIGN(16) float value[4];
 	printVector(VectorGet(value, v1));
 
-	bool boolean = true;
+	bool boolean = false;
 	if (!boolean)  {
 		system("PAUSE");
 		return 0;
