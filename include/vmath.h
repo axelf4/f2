@@ -54,7 +54,10 @@ extern "C" {
 	typedef float scalar;
 #endif
 	// Wether to use row or column major matrices
-#define MATRIX_ROW_MAJOR
+	// TODO Better name like _ROW_MAJOR_MATRIX
+#if !defined(_ROW_MAJOR_MATRIX) && !defined(_COLUMN_MAJOR_MATRIX)
+#define _ROW_MAJOR_MATRIX
+#endif
 	// Wether using SSE/SSE2 // USE_SSE
 #define _SSE_INTRINSICS_
 
@@ -62,10 +65,10 @@ extern "C" {
 #ifndef _MM_SHUFFLE
 #define _MM_SHUFFLE(z, y, x, w) (((z) << 6) | ((y) << 4) | ((x) << 2) | (w))
 #endif
-#define _mm_replicate_x_ps(v) _mm_shuffle_ps((v), (v), _MM_SHUFFLE(0, 0, 0, 0))
-#define _mm_replicate_y_ps(v) _mm_shuffle_ps((v), (v), _MM_SHUFFLE(1, 1, 1, 1))
-#define _mm_replicate_z_ps(v) _mm_shuffle_ps((v), (v), _MM_SHUFFLE(2, 2, 2, 2))
-#define _mm_replicate_w_ps(v) _mm_shuffle_ps((v), (v), _MM_SHUFFLE(3, 3, 3, 3))
+#define _mm_replicate_x_ps(v) _mm_shuffle_ps((v), (v), 0x00)
+#define _mm_replicate_y_ps(v) _mm_shuffle_ps((v), (v), 0x55)
+#define _mm_replicate_z_ps(v) _mm_shuffle_ps((v), (v), 0xAA)
+#define _mm_replicate_w_ps(v) _mm_shuffle_ps((v), (v), 0xFF)
 #define _mm_madd_ps(a, b, c) _mm_add_ps(_mm_mul_ps((a), (b)), (c))
 #endif
 
@@ -257,149 +260,19 @@ extern "C" {
 #define MatrixGet(_V, _A) (memcpy((_V), (_A)->m, sizeof(float) * 16), (_V))
 #endif
 
+#include <stdio.h>
+
+	void printRow(__m128 row) {
+		ALIGN(16) float v[4];
+		_mm_store_ps(v, row);
+		printf("|%2.0f|%2.0f|%2.0f|%2.0f|\n", v[0], v[1], v[2], v[3]);
+	}
+
 	VMATH_INLINE MAT MatrixMultiply(MAT *a, MAT *b) {
 		/// Performs a matrix-matrix multiplication and stores the product in result.
 		/// Corresponds to the mathematical statement reuslt = matrix1 * matrix2
 		/// @warning The three matrices must be distinct, the result will be incorrect if result is the same object as matrix1 or matrix2.
 #ifdef _SSE_INTRINSICS_
-		/*__m128 row1 = _mm_load_ps(&B[0]);
-		__m128 row2 = _mm_load_ps(&B[4]);
-		__m128 row3 = _mm_load_ps(&B[8]);
-		__m128 row4 = _mm_load_ps(&B[12]);
-		for (int i = 0; i<4; i++) {
-		__m128 brod1 = _mm_set1_ps(A[4 * i + 0]);
-		__m128 brod2 = _mm_set1_ps(A[4 * i + 1]);
-		__m128 brod3 = _mm_set1_ps(A[4 * i + 2]);
-		__m128 brod4 = _mm_set1_ps(A[4 * i + 3]);
-		__m128 row = _mm_add_ps(
-		_mm_add_ps(
-		_mm_mul_ps(brod1, row1),
-		_mm_mul_ps(brod2, row2)),
-		_mm_add_ps(
-		_mm_mul_ps(brod3, row3),
-		_mm_mul_ps(brod4, row4)));
-		_mm_store_ps(&C[4 * i], row);
-		}*/
-
-		/*__m128 row0;
-		__m128 row1;
-		__m128 row2;
-		__m128 row3;
-		__m128 value0;
-
-		// Compute row 0 of the matrix product:
-		value0 = _mm_shuffle_ps(a->m[0], a->m[0], _MM_SHUFFLE(3, 3, 3, 3));
-		row0 = _mm_mul_ps(b->m[0], value0);
-
-		value0 = _mm_shuffle_ps(a->m[0], a->m[0], _MM_SHUFFLE(2, 2, 2, 2));
-		row0 = _mm_add_ps(row0, _mm_mul_ps(b->m[1], value0));
-
-		value0 = _mm_shuffle_ps(a->m[0], a->m[0], _MM_SHUFFLE(1, 1, 1, 1));
-		row0 = _mm_add_ps(row0, _mm_mul_ps(b->m[2], value0));
-
-		value0 = _mm_shuffle_ps(a->m[0], a->m[0], _MM_SHUFFLE(0, 0, 0, 0));
-		row0 = _mm_add_ps(row0, _mm_mul_ps(b->m[3], value0));
-
-		// Compute row 1 of the matrix product:
-		value0 = _mm_shuffle_ps(a->m[1], a->m[1], _MM_SHUFFLE(3, 3, 3, 3));
-		row1 = _mm_mul_ps(b->m[0], value0);
-
-		value0 = _mm_shuffle_ps(a->m[1], a->m[1], _MM_SHUFFLE(2, 2, 2, 2));
-		row1 = _mm_add_ps(row1, _mm_mul_ps(b->m[1], value0));
-
-		value0 = _mm_shuffle_ps(a->m[1], a->m[1], _MM_SHUFFLE(1, 1, 1, 1));
-		row1 = _mm_add_ps(row1, _mm_mul_ps(b->m[2], value0));
-
-		value0 = _mm_shuffle_ps(a->m[1], a->m[1], _MM_SHUFFLE(0, 0, 0, 0));
-		row1 = _mm_add_ps(row1, _mm_mul_ps(b->m[3], value0));
-
-		// Compute row 2 of the matrix product:
-		value0 = _mm_shuffle_ps(a->m[2], a->m[2], _MM_SHUFFLE(3, 3, 3, 3));
-		row2 = _mm_mul_ps(b->m[0], value0);
-
-		value0 = _mm_shuffle_ps(a->m[2], a->m[2], _MM_SHUFFLE(2, 2, 2, 2));
-		row2 = _mm_add_ps(row2, _mm_mul_ps(b->m[1], value0));
-
-		value0 = _mm_shuffle_ps(a->m[2], a->m[2], _MM_SHUFFLE(1, 1, 1, 1));
-		row2 = _mm_add_ps(row2, _mm_mul_ps(b->m[2], value0));
-
-		value0 = _mm_shuffle_ps(a->m[2], a->m[2], _MM_SHUFFLE(0, 0, 0, 0));
-		row2 = _mm_add_ps(row2, _mm_mul_ps(b->m[3], value0));
-
-		// Compute row 3 of the matrix product:
-		value0 = _mm_shuffle_ps(a->m[3], a->m[3], _MM_SHUFFLE(3, 3, 3, 3));
-		row3 = _mm_mul_ps(b->m[0], value0);
-
-		value0 = _mm_shuffle_ps(a->m[3], a->m[3], _MM_SHUFFLE(2, 2, 2, 2));
-		row3 = _mm_add_ps(row3, _mm_mul_ps(b->m[1], value0));
-
-		value0 = _mm_shuffle_ps(a->m[3], a->m[3], _MM_SHUFFLE(1, 1, 1, 1));
-		row3 = _mm_add_ps(row3, _mm_mul_ps(b->m[2], value0));
-
-		value0 = _mm_shuffle_ps(a->m[3], a->m[3], _MM_SHUFFLE(0, 0, 0, 0));
-		row3 = _mm_add_ps(row3, _mm_mul_ps(b->m[3], value0));
-
-		// Write results back to memory:
-		return(MAT{ { row0, row1, row2, row3 } });*/
-
-		/*const __m128 a = a2->m[0];
-		const __m128 b = a2->m[1];
-		const __m128 c = a2->m[2];
-		const __m128 d = a2->m[3];
-
-		ALIGN(16) float m[16];
-		MatrixGet(m, b2);
-
-		__m128 t1, t2;
-
-		MAT result;
-
-		t1 = _mm_set1_ps(m[M00]);
-		t2 = _mm_mul_ps(a, t1);
-		t1 = _mm_set1_ps(m[M01]);
-		t2 = _mm_add_ps(_mm_mul_ps(b, t1), t2);
-		t1 = _mm_set1_ps(m[M02]);
-		t2 = _mm_add_ps(_mm_mul_ps(c, t1), t2);
-		t1 = _mm_set1_ps(m[M03]);
-		t2 = _mm_add_ps(_mm_mul_ps(d, t1), t2);
-
-		result.m[0] = t2; // _mm_store_ps(&m[0], t2);
-
-		t1 = _mm_set1_ps(m[M10]);
-		t2 = _mm_mul_ps(a, t1);
-		t1 = _mm_set1_ps(m[M11]);
-		t2 = _mm_add_ps(_mm_mul_ps(b, t1), t2);
-		t1 = _mm_set1_ps(m[M12]);
-		t2 = _mm_add_ps(_mm_mul_ps(c, t1), t2);
-		t1 = _mm_set1_ps(m[M13]);
-		t2 = _mm_add_ps(_mm_mul_ps(d, t1), t2);
-
-		result.m[1] = t2; // _mm_store_ps(&m[4], t2);
-
-		t1 = _mm_set1_ps(m[M20]);
-		t2 = _mm_mul_ps(a, t1);
-		t1 = _mm_set1_ps(m[M21]);
-		t2 = _mm_add_ps(_mm_mul_ps(b, t1), t2);
-		t1 = _mm_set1_ps(m[M22]);
-		t2 = _mm_add_ps(_mm_mul_ps(c, t1), t2);
-		t1 = _mm_set1_ps(m[M23]);
-		t2 = _mm_add_ps(_mm_mul_ps(d, t1), t2);
-
-		result.m[2] = t2; // _mm_store_ps(&m[8], t2);
-
-		t1 = _mm_set1_ps(m[M30]);
-		t2 = _mm_mul_ps(a, t1);
-		t1 = _mm_set1_ps(m[M31]);
-		t2 = _mm_add_ps(_mm_mul_ps(b, t1), t2);
-		t1 = _mm_set1_ps(m[M32]);
-		t2 = _mm_add_ps(_mm_mul_ps(c, t1), t2);
-		t1 = _mm_set1_ps(m[M33]);
-		t2 = _mm_add_ps(_mm_mul_ps(d, t1), t2);
-
-		result.m[3] = t2; // _mm_store_ps(&m[12], t2);
-
-		return result;*/
-
 		__m128 row0, row1, row2, row3;
 
 		row0 = _mm_mul_ps(b->row0, _mm_replicate_x_ps(a->row0));
@@ -423,53 +296,6 @@ extern "C" {
 		row3 = _mm_madd_ps(b->row3, _mm_replicate_w_ps(a->row3), row3);
 
 		return(MAT{ row0, row1, row2, row3 });
-
-		/*// load matrices a and b as column-major order of OpenGL ES
-	__m128 ma_col_0 = _mm_load_ps(a);
-	__m128 ma_col_1 = _mm_load_ps(a + 4);
-	__m128 ma_col_2 = _mm_load_ps(a + 8);
-	__m128 ma_col_3 = _mm_load_ps(a + 12);
-
-	__m128 mb_col_0 = _mm_load_ps(b);
-	__m128 mb_col_1 = _mm_load_ps(b + 4);
-	__m128 mb_col_2 = _mm_load_ps(b + 8);
-	__m128 mb_col_3 = _mm_load_ps(b + 12);
-
-	// get ready to store the result
-	__m128 result0;
-	__m128 result1;
-	__m128 result2;
-	__m128 result3;
-
-	// result = first column of B x first row of A
-	result0 = _mm_mul_ps(mb_col_0, _mm_replicate_x_ps(ma_col_0));
-	result1 = _mm_mul_ps(mb_col_0, _mm_replicate_x_ps(ma_col_1));
-	result2 = _mm_mul_ps(mb_col_0, _mm_replicate_x_ps(ma_col_2));
-	result3 = _mm_mul_ps(mb_col_0, _mm_replicate_x_ps(ma_col_3));
-
-	// result += second column of B x second row of A
-	result0 = _mm_madd_ps(mb_col_1, _mm_replicate_y_ps(ma_col_0), result0);
-	result1 = _mm_madd_ps(mb_col_1, _mm_replicate_y_ps(ma_col_1), result1);
-	result2 = _mm_madd_ps(mb_col_1, _mm_replicate_y_ps(ma_col_2), result2);
-	result3 = _mm_madd_ps(mb_col_1, _mm_replicate_y_ps(ma_col_3), result3);
-
-	// result += third column of B x third row of A
-	result0 = _mm_madd_ps(mb_col_2, _mm_replicate_z_ps(ma_col_0), result0);
-	result1 = _mm_madd_ps(mb_col_2, _mm_replicate_z_ps(ma_col_1), result1);
-	result2 = _mm_madd_ps(mb_col_2, _mm_replicate_z_ps(ma_col_2), result2);
-	result3 = _mm_madd_ps(mb_col_2, _mm_replicate_z_ps(ma_col_3), result3);
-
-	// result += last column of B x last row of A
-	result0 = _mm_madd_ps(mb_col_3, _mm_replicate_w_ps(ma_col_0), result0);
-	result1 = _mm_madd_ps(mb_col_3, _mm_replicate_w_ps(ma_col_1), result1);
-	result2 = _mm_madd_ps(mb_col_3, _mm_replicate_w_ps(ma_col_2), result2);
-	result3 = _mm_madd_ps(mb_col_3, _mm_replicate_w_ps(ma_col_3), result3);
-
-	// store the result to memory
-	_mm_store_ps(output, result0);
-	_mm_store_ps(output+4, result1);
-	_mm_store_ps(output+8, result2);
-	_mm_store_ps(output+12, result3);*/
 #else
 		// FIXME
 		MAT result;
@@ -501,7 +327,10 @@ extern "C" {
 #endif
 	}
 
-#include <stdio.h>
+	VMATH_INLINE MAT MatrixTranspose(MAT *a) {
+		__m128 tmp0 = _mm_unpacklo_ps(a->row0, a->row1), tmp2 = _mm_unpacklo_ps(a->row2, a->row3), tmp1 = _mm_unpackhi_ps(a->row0, a->row1), tmp3 = _mm_unpackhi_ps(a->row2, a->row3);
+		return(MAT{ _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) });
+	}
 
 	/* Using Cramer's rule */
 	VMATH_INLINE MAT MatrixInverse(MAT *a) {
@@ -509,29 +338,13 @@ extern "C" {
 		__m128 minor0, minor1, minor2, minor3,
 			row0, row1, row2, row3,
 			det, tmp1;
-		ALIGN(128) float src[16];
-		MatrixGet(src, a);
-		tmp1 = row0 = row1 = row2 = row3 = _mm_set1_ps(0);
-		tmp1 = _mm_loadh_pi(_mm_loadl_pi(tmp1, (__m64*)(src)), (__m64*)(src + 4));
-		row1 = _mm_loadh_pi(_mm_loadl_pi(row1, (__m64*)(src + 8)), (__m64*)(src + 12));
-
-		/*ALIGN(16) float value[4];
-		VectorGet(value, row1);
-		printf("inverse: vector row1: |%2.0f|%2.0f|%2.0f|%2.0f|\n", value[0], value[0], value[0], value[0]);
-		VectorGet(value, a->row1);
-		printf("inverse: matrix row1: |%2.0f|%2.0f|%2.0f|%2.0f|\n", value[0], value[0], value[0], value[0]);*/
-
-		row0 = _mm_shuffle_ps(tmp1, row1, 0x88);
-		row1 = _mm_shuffle_ps(row1, tmp1, 0xDD);
-		tmp1 = _mm_loadh_pi(_mm_loadl_pi(tmp1, (__m64*)(src + 2)), (__m64*)(src + 6));
-		row3 = _mm_loadh_pi(_mm_loadl_pi(row3, (__m64*)(src + 10)), (__m64*)(src + 14));
-		row2 = _mm_shuffle_ps(tmp1, row3, 0x88);
-		row3 = _mm_shuffle_ps(row3, tmp1, 0xDD);
-
-		/*row0 = a->row0;
-		row1 = a->row1;
+#ifdef _ROW_MAJOR_MATRIX
+		a = &MatrixTranspose(a);
+#endif
+		row0 = a->row0;
+		row1 = _mm_shuffle_ps(a->row1, a->row1, 0x4E);
 		row2 = a->row2;
-		row3 = a->row3;*/
+		row3 = _mm_shuffle_ps(a->row3, a->row3, 0x4E);
 		// -----------------------------------------------
 		tmp1 = _mm_mul_ps(row2, row3);
 		tmp1 = _mm_shuffle_ps(tmp1, tmp1, 0xB1);
@@ -591,25 +404,8 @@ extern "C" {
 		tmp1 = _mm_rcp_ss(det);
 		det = _mm_sub_ss(_mm_add_ss(tmp1, tmp1), _mm_mul_ss(det, _mm_mul_ss(tmp1, tmp1)));
 		det = _mm_shuffle_ps(det, det, 0x00);
-		minor0 = _mm_mul_ps(det, minor0);
-		// _mm_storel_pi((__m64*)(src), minor0);
-		// _mm_storeh_pi((__m64*)(src + 2), minor0);
-		minor1 = _mm_mul_ps(det, minor1);
-		// _mm_storel_pi((__m64*)(src + 4), minor1);
-		// _mm_storeh_pi((__m64*)(src + 6), minor1);
-		minor2 = _mm_mul_ps(det, minor2);
-		// _mm_storel_pi((__m64*)(src + 8), minor2);
-		//_mm_storeh_pi((__m64*)(src + 10), minor2);
-		minor3 = _mm_mul_ps(det, minor3);
-		//_mm_storel_pi((__m64*)(src + 12), minor3);
-		//_mm_storeh_pi((__m64*)(src + 14), minor3);
-		return(MAT{ minor0, minor1, minor2, minor3 });
+		return(MAT{ _mm_mul_ps(det, minor0), _mm_mul_ps(det, minor1), _mm_mul_ps(det, minor2), _mm_mul_ps(det, minor3) });
 #endif
-	}
-
-	VMATH_INLINE MAT MatrixTranspose(MAT *a) {
-		__m128 tmp0 = _mm_unpacklo_ps(a->row0, a->row1), tmp2 = _mm_unpacklo_ps(a->row2, a->row3), tmp1 = _mm_unpackhi_ps(a->row0, a->row1), tmp3 = _mm_unpackhi_ps(a->row2, a->row3);
-		return(MAT{ _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) });
 	}
 
 	VMATH_INLINE MAT MatrixTranslate(MAT *a, float x, float y, float z) {

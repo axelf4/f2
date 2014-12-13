@@ -419,26 +419,30 @@ inline void printMatrix(float *matrixValue) {
 }
 
 int main(int argc, char *argv[]) {
+	ALIGN(16) float value[4], matrixValue[16];
 	VEC v1 = VectorSet(10, 3, 5, 0),
 		v2 = VectorReplicate(10);
-	cout << "||v1|| = " << VectorLength(v1) << endl;
+	// cout << "||v1|| = " << VectorLength(v1) << endl;
 	// v1 = VectorMultiply(v1, v2);
 	// v1 = VectorNormalize(v1);
 
 	MAT m1 = MatrixIdentity();
-	m1 = MatrixSet(3, 4, 7, 1, 0, 3, 12, 14, 5, 6, 23, 11, 8, 9, 2, 0);
-	ALIGN(128) float matrixValue[16];
-	MatrixGet(matrixValue, &m1);
+	m1 = MatrixSet(
+		3, 4, 7, 1,
+		0, 3, 12, 14,
+		5, 6, 23, 11,
+		8, 9, 2, 0);
 	printMatrix(MatrixGet(matrixValue, &m1));
-	cout << "--------" << endl;
+	m1 = MatrixInverse(&m1);
+	printMatrix(MatrixGet(matrixValue, &m1));
+	/*cout << "--------" << endl;
 	m1 = MatrixTranspose(&m1);
-	printMatrix(MatrixGet(matrixValue, &m1));
+	printMatrix(MatrixGet(matrixValue, &m1));*/
 
-	ALIGN(16) float value[4];
-	printVector(VectorGet(value, v1));
+	// printVector(VectorGet(value, v1));
 
-	bool boolean = true;
-	if (!boolean)  {
+	bool boolean = false;
+	if (boolean)  {
 		system("PAUSE");
 		return 0;
 	}
