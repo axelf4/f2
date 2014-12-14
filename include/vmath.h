@@ -1,6 +1,9 @@
 /** Vector math library with SIMD acceleration.
 	\file vmath.h */
 
+// TODO rename __SSE__ to SIMD_INTRINSICS
+// TODO make cmake set the variables __SSE__, __SSE2__, __SSE3, __SSE4__
+
 #ifndef VMATH_H
 #define VMATH_H
 
@@ -39,7 +42,8 @@ extern "C" {
 #define ALIGN(i)  __attribute__ ((aligned (i)))
 #endif
 	// if __ARM_NEON__ or __SSE__
-#define VMATH_INLINE inline
+#define VMATH_INLINE inline /**< Inlining. */
+	/** A scalar that can be be used for multiplying vectors. */
 	typedef
 #ifdef USE_DOUBLE_PRECISION
 		double
@@ -47,17 +51,25 @@ extern "C" {
 		float
 #endif
 		scalar;
-	/** \def _ROW_MAJOR_MATRIX
+	/** \def ROW_MAJOR_MATRIX
 	\brief Whether ::MAT is row-major order in memory. */
-	/** \def _COLUMN_MAJOR_MATRIX
+	/** \def COLUMN_MAJOR_MATRIX
 	\brief Whether ::MAT is column-major order in memory. */
-#if !defined(_ROW_MAJOR_MATRIX) && !defined(_COLUMN_MAJOR_MATRIX)
-#define _ROW_MAJOR_MATRIX
+#if !defined(ROW_MAJOR_MATRIX) && !defined(COLUMN_MAJOR_MATRIX)
+#define ROW_MAJOR_MATRIX
 #endif
-	// Wether using SSE/SSE2 // USE_SSE
-#define _SSE_INTRINSICS_
+#ifdef __DOXYGEN__
+#define COLUMN_MAJOR_MATRIX
+#define NO_SIMD_INTRINSICS /**< If defined compiled code won't be SIMD accelerated, even if availible. */
+#endif
 
-#ifdef _SSE_INTRINSICS_
+#ifdef NO_SIMD_INTRINSICS
+#undef __SSE__
+#undef __SSE2__
+#undef __SSE3__
+#undef __SSE4_1__
+#undef __SSE4_2__
+#else
 #ifndef _MM_SHUFFLE
 #define _MM_SHUFFLE(z, y, x, w) (((z) << 6) | ((y) << 4) | ((x) << 2) | (w))
 #endif
@@ -65,7 +77,7 @@ extern "C" {
 #define _mm_replicate_y_ps(v) _mm_shuffle_ps((v), (v), 0x55)
 #define _mm_replicate_z_ps(v) _mm_shuffle_ps((v), (v), 0xAA)
 #define _mm_replicate_w_ps(v) _mm_shuffle_ps((v), (v), 0xFF)
-#define _mm_madd_ps(a, b, c) _mm_add_ps(_mm_mul_ps((a), (b)), (c))
+#define _mm_madd_ps(a, b, c) _mm_add_ps(_mm_mul_ps((a), (b)), (c)) /** (a * b + c) */
 #endif
 
 #define PI 3.141592654f /**< An optimal approximation of the constant pi. */
@@ -91,17 +103,25 @@ extern "C" {
 
 	/** A type representing a four-dimensional vector. */
 	typedef
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		__m128
 #else
-	union { float v[4]; struct { float x, y, z, w; } }
+	union {
+		float v[4]; /**< A 4 elements long float vector containing the components. */
+		struct {
+			float x, /**< The x component of the vector. */
+				y, /**< The y component of the vector. */
+				z, /**< The z component of the vector. */
+				w; /**< The w component of the vector. */
+		}
+	}
 #endif
 	VEC;
 
 	/** Returns a ::VEC, whoose components are solely \a v.
 		@param v The value to use for the components. */
 	VMATH_INLINE VEC VectorReplicate(float v) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(_mm_set1_ps(v));
 #else
 		return((VEC) { { v, v, v, v } });
@@ -114,7 +134,7 @@ extern "C" {
 		@param z The z component.
 		@param w The w component. */
 	VMATH_INLINE VEC VectorSet(float x, float y, float z, float w) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(_mm_setr_ps(x, y, z, w));
 #else
 		return((VEC) { w, z, y, x });
@@ -124,7 +144,7 @@ extern "C" {
 	/** Loads and returns a ::VEC from the float array \a v.
 		@param v The float array to load up. */
 	VMATH_INLINE VEC VectorLoad(float *v) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(_mm_load_ps(v));
 #else
 		return((VEC) { v[0], v[1], v[2], v[3] });
@@ -137,7 +157,7 @@ extern "C" {
 		@param[in] _A The vector to be stored.
 
 		This method is to be used when the data of a ::VEC needs to be converted to a more general, usable format. */
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 #define VectorGet(_V, _A) (_mm_store_ps((_V), (_A)), (_V))
 #else
 #define VectorGet(_V, _A) (memcpy((_V), (_A).v, sizeof(float) * 4), (_V))
@@ -148,7 +168,7 @@ extern "C" {
 		@param b The second vector to add.
 		@return The sum of the two vectors. */
 	VMATH_INLINE VEC VectorAdd(VEC a, VEC b) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(_mm_add_ps(a, b));
 #else
 		return((VEC) { a.v[0] + b.v[0], a.v[1] + b.v[1], a.v[2] + b.v[2], a.v[3] + b.v[3] });
@@ -160,7 +180,7 @@ extern "C" {
 		@param b The vector to subtract.
 		@return The difference between the two vectors. */
 	VMATH_INLINE VEC VectorSubtract(VEC a, VEC b) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(_mm_sub_ps(a, b));
 #else
 		return((VEC) { a.v[0] - b.v[0], a.v[1] - b.v[1], a.v[2] - b.v[2], a.v[3] - b.v[3] });
@@ -172,7 +192,7 @@ extern "C" {
 		@param b The second vector to multiply.
 		@return The product of sum of the two vectors. */
 	VMATH_INLINE VEC VectorMultiply(VEC a, VEC b) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(_mm_mul_ps(a, b));
 #else
 		return((VEC) { a.v[0] * b.v[0], a.v[1] * b.v[1], a.v[2] * b.v[2], a.v[3] * b.v[3] });
@@ -184,7 +204,7 @@ extern "C" {
 		@param b The divisor.
 		@return The quotient of the two vectors. */
 	VMATH_INLINE VEC VectorDivide(VEC a, VEC b) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(_mm_div_ps(a, b));
 #else
 		return((VEC) { a.v[0] / b.v[0], a.v[1] / b.v[1], a.v[2] / b.v[2], a.v[3] / b.v[3] });
@@ -193,14 +213,14 @@ extern "C" {
 
 	/** Returns the scalar length of the vector \a v (||a||). */
 	VMATH_INLINE float VectorLength(VEC v) {
-		// TODO this code is using SSE4, add replacement! and check using __SSE4__ if availible
+#ifdef __SSE4_1__
 		return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71)));
+#endif
 	}
 
 	/** Normalizes the vector \a v. */
 	VMATH_INLINE VEC VectorNormalize(VEC v) {
-#define SSE4
-#ifdef SSE4
+#ifdef __SSE4_1__
 		// return _mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x77)));
 		return _mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F)));
 #else
@@ -256,16 +276,19 @@ extern "C" {
 
 	/** A type representing a 4x4 matrix. */
 	typedef struct {
-#ifdef _SSE_INTRINSICS_
-		__m128 row0, row1, row2, row3;
+#ifdef __SSE__
+		__m128 row0, /**< The first row/column. */
+			row1, /**< The second row/column. */
+			row2, /**< The third row/column. */
+			row3; /**< The fourth row/column. */
 #else
-		float m[16];
+		float m[16]; /**< A 16 elements long float vector containing the components. */
 #endif
 	} MAT;
 
 	/** Returns a new ::MAT from the specified components. */
 	VMATH_INLINE MAT MatrixSet(float m00, float m01, float m02, float m03, float m10, float m11, float m12, float m13, float m20, float m21, float m22, float m23, float m30, float m31, float m32, float m33) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(MAT{ _mm_setr_ps(m00, m01, m02, m03), _mm_setr_ps(m10, m11, m12, m13), _mm_setr_ps(m20, m21, m22, m23), _mm_setr_ps(m30, m31, m32, m33) });
 #endif
 	}
@@ -278,7 +301,7 @@ extern "C" {
 
 	/** Returns the identity matrix (I). */
 	VMATH_INLINE MAT MatrixIdentity() {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		return(MAT{ _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(0, 0, 0, 1) });
 #else
 		return 0;
@@ -291,7 +314,7 @@ extern "C" {
 		@param zNear The near coordinate of the z-plane.
 		@param zFar The far coordinate of the z-plane. */
 	VMATH_INLINE MAT MatrixPerspective(float fov, float aspect, float zNear, float zFar) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		const float h = 1.0f / tan(fov * PI / 360);
 		return(MAT{ _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) });
 #endif
@@ -303,7 +326,7 @@ extern "C" {
 		@param[in] _A The matrix to be stored.
 
 		This method is to be used when the data of a ::MAT needs to be converted to a more general, usable format. */
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 #define MatrixGet(_V, _A) (_mm_store_ps((_V), (_A)->row0), _mm_store_ps((_V) + 4, (_A)->row1), _mm_store_ps((_V) + 8, (_A)->row2), _mm_store_ps((_V) + 12, (_A)->row3), (_V))
 #else
 #define MatrixGet(_V, _A) (memcpy((_V), (_A)->m, sizeof(float) * 16), (_V))
@@ -323,7 +346,7 @@ extern "C" {
 		@return The product of the two matrices.
 		@warning The two matrices must be distinct, the result will be incorrect if \a a or \a b are equal. */
 	VMATH_INLINE MAT MatrixMultiply(MAT *a, MAT *b) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		__m128 row0, row1, row2, row3;
 
 		row0 = _mm_mul_ps(b->row0, _mm_replicate_x_ps(a->row0));
@@ -386,11 +409,11 @@ extern "C" {
 
 	/** Inverses the matrix \a a using Cramer's rule (a<sup>-1</sup>). */
 	VMATH_INLINE MAT MatrixInverse(MAT *a) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		__m128 minor0, minor1, minor2, minor3,
 			row0, row1, row2, row3,
 			det, tmp1;
-#ifdef _ROW_MAJOR_MATRIX
+#ifdef ROW_MAJOR_MATRIX
 		a = &MatrixTranspose(a);
 #endif
 		row0 = a->row0;
@@ -472,7 +495,7 @@ extern "C" {
 
 	/** Returns a matrix based on the quaternion \a a. */
 	VMATH_INLINE MAT QuaternionToMatrix(VEC a) {
-#ifdef _SSE_INTRINSICS_
+#ifdef __SSE__
 		ALIGN(128) float q[4];
 		VectorGet(q, a);
 		float qxx = q[0] * q[0];

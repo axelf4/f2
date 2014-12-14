@@ -7,7 +7,6 @@
 #include "f1.h"
 #include "glh.h"
 #include "vmath.h"
-#include "vbo.h"
 
 #include <SOIL.h>
 // #include "obj_loader.h"
@@ -77,8 +76,8 @@ struct model_node {
 	// material material;
 	GLuint texture;
 	// f1::mesh *mesh;
-	struct mesh2 *mesh;
-	struct attrib2 *attributes;
+	struct mesh *mesh;
+	struct attrib *attributes;
 	GLsizei stride;
 	GLsizei vertexCount;
 	GLsizei indexCount;
@@ -216,7 +215,7 @@ model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape,
 		}
 
 		size_t j = 0;
-		node->attributes = (struct attrib2 *) malloc(sizeof(struct attrib2) * (2 + mesh->HasTextureCoords(0) + mesh->HasNormals()));
+		node->attributes = (struct attrib *) malloc(sizeof(struct attrib) * (2 + mesh->HasTextureCoords(0) + mesh->HasNormals()));
 		if (mesh->HasPositions()) node->attributes[j++] = { glGetAttribLocation(program, "vertex"), 3, 0 };
 		if (mesh->HasTextureCoords(0)) node->attributes[j++] = { glGetAttribLocation(program, "texCoord"), 2, 0 };
 		if (mesh->HasNormals()) node->attributes[j++] = { glGetAttribLocation(program, "normal"), 3, 0 };
@@ -491,8 +490,8 @@ int main(int argc, char *argv[]) {
 	GLchar *infoLog = getProgramInfoLog(skyboxProg);
 	cout << "Skybox program info log: " << infoLog << endl;
 	free(infoLog);
-	struct attrib2 skyboxAttribs[] = { { glGetAttribLocation(skyboxProg, "vertex"), 2, 0 }, NULL_ATTRIB };
-	struct mesh2 *skybox = create_mesh(GL_STATIC_DRAW);
+	struct attrib skyboxAttribs[] = { { glGetAttribLocation(skyboxProg, "vertex"), 2, 0 }, NULL_ATTRIB };
+	struct mesh *skybox = create_mesh(GL_STATIC_DRAW);
 	cout << "Stride: " << calculate_stride(skyboxAttribs) << endl;
 	glBindBuffer(GL_ARRAY_BUFFER, skybox->vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, skyboxVertices, GL_STATIC_DRAW);
