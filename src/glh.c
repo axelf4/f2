@@ -72,24 +72,24 @@ GLchar * getProgramInfoLog(GLuint program) {
 	return infoLog;
 }
 
-struct mesh2 * create_mesh(int indexed) {
+struct mesh * create_mesh(int indexed) {
 	GLuint buffers[2];
-	struct mesh2 *mesh = malloc(sizeof(struct mesh2));
-	indexed = 1;
+	struct mesh *mesh = malloc(sizeof(struct mesh));
+	indexed = 1; // TODO remove and enforce
 	return glGenBuffers(1 + indexed, buffers), (mesh->vbo = buffers[0]), (mesh->ibo = buffers[1]), mesh;
 }
 
-GLsizei calculate_stride(struct attrib2 *attributes) {
+GLsizei calculate_stride(struct attrib *attributes) {
 	GLsizei count = 0, i;
 	for (i = 0; attributes[i].size != 0; i++) {
-		struct attrib2 *attribute = &attributes[i];
+		struct attrib *attribute = &attributes[i];
 		attribute->offset = count;
 		count += sizeof(float)* attribute->size;
 	}
 	return count;
 }
 
-void destroy_mesh(struct mesh2 *mesh) {
+void destroy_mesh(struct mesh *mesh) {
 	GLuint buffers[] = { mesh->vbo, mesh->ibo };
 	glDeleteBuffers(1, buffers);
 	free(mesh);
