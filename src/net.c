@@ -1,5 +1,7 @@
 #include "net.h"
+#include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 void net_initialize() {
 #ifdef _WIN32
@@ -12,228 +14,116 @@ void net_initialize() {
 #endif
 }
 
-struct HOST * net_host_bind(struct addr addr) {
+struct peer * net_peer_create(struct addr *address, unsigned short maxConnections) {
 	int iResult;
 
-	struct addrinfo *result = NULL, *ptr = NULL, hints = { .ai_family = AF_INET, .ai_socktype = SOCK_STREAM, .ai_protocol = IPPROTO_TCP, .ai_flags = AI_PASSIVE };
-
-	int iSendResult;
-	char recvbuf[DEFAULT_BUFLEN];
-	int recvbuflen = DEFAULT_BUFLEN;
-
-	// Resolve the server address and port
-	iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
-	if (iResult != 0) {
-		printf("getaddrinfo failed with error: %d\n", iResult);
+	SOCKET Socket;
+	// IPPROTO_UDP
+	if ((Socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
+		printf("socket failed with error: %d\n", WSAGetLastError());
 		WSACleanup();
 		return 0;
 	}
-
-	// Create a SOCKET for connecting to server
-	SOCKET ListenSocket;
-	if ((ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol)) == INVALID_SOCKET) {
-		printf("socket failed with error: %ld\n", WSAGetLastError());
-		freeaddrinfo(result);
-		WSACleanup();
-		return 0;
+	u_long mode = 1;
+	if (ioctlsocket(Socket, FIONBIO, &mode) == SOCKET_ERROR) {
+		printf("ioctlsocket failed with error: %d\n", WSAGetLastError());
 	}
 
-	// Setup the TCP listening socket
-	if (bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen) == SOCKET_ERROR) {
-		printf("bind failed with error: %d\n", WSAGetLastError());
-		freeaddrinfo(result);
-		closesocket(ListenSocket);
-		WSACleanup();
-		return 0;
-	}
-	freeaddrinfo(result);
+	if (address != 0) {
+		struct sockaddr_in RecvAddr;
+		RecvAddr.sin_family = AF_INET;
+		RecvAddr.sin_port = htons(6622); // TODO the address field for is not an ushort
+		// RecvAddr.sin_port = htons(address->port);
+		// RecvAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+		RecvAddr.sin_addr.s_addr = INADDR_ANY;
 
-	if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-		printf("listen failed with error: %d\n", WSAGetLastError());
-		closesocket(ListenSocket);
-		WSACleanup();
-		return 0;
+		iResult = bind(Socket, (struct sockaddr *) &RecvAddr, sizeof(RecvAddr));
+		if (iResult != 0) {
+			printf("bind failed with error %d\n", WSAGetLastError());
+			return 0;
+		}
 	}
 
-	struct HOST *host = malloc(sizeof(struct HOST));
-	host->s = ListenSocket;
-	return host;
+	struct peer *peer = (struct peer *) malloc(sizeof(struct peer));
+	peer->socket = Socket;
+	peer->connections = malloc(sizeof(struct conn *) * maxConnections);
+	peer->numConnections = 0;
+	return peer;
 }
 
-int net_server_socket2() {
-	int iResult;
-
-	struct addrinfo *result = NULL, *ptr = NULL, hints = { .ai_family = AF_INET, .ai_socktype = SOCK_STREAM, .ai_protocol = IPPROTO_TCP, .ai_flags = AI_PASSIVE };
-
-	int iSendResult;
-	char recvbuf[DEFAULT_BUFLEN];
-	int recvbuflen = DEFAULT_BUFLEN;
-
-	// Resolve the server address and port
-	iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
-	if (iResult != 0) {
-		printf("getaddrinfo failed with error: %d\n", iResult);
+void net_peer_dispose(struct peer *peer) {
+	int iResult = closesocket(peer->socket);
+	if (iResult == SOCKET_ERROR) {
+		wprintf(L"closesocket failed with error: %d\n", WSAGetLastError());
 		WSACleanup();
-		return 1;
+		return;
 	}
 
-	// Create a SOCKET for connecting to server
-	SOCKET ListenSocket;
-	if ((ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol)) == INVALID_SOCKET) {
-		printf("socket failed with error: %ld\n", WSAGetLastError());
-		freeaddrinfo(result);
-		WSACleanup();
-		return 1;
+	for (int i = 0; i < peer->numConnections; i++) {
+		free(peer->connections[i]);
 	}
+	free(peer->connections);
 
-	// Setup the TCP listening socket
-	if (bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen) == SOCKET_ERROR) {
-		printf("bind failed with error: %d\n", WSAGetLastError());
-		freeaddrinfo(result);
-		closesocket(ListenSocket);
-		WSACleanup();
-		return 1;
+	WSACleanup();
+
+	free(peer);
+}
+
+void net_update(struct peer *peer) {
+	// TODO first write this berkeley code then optimize for windows with WSA*.
+	char buf[1024];
+	struct sockaddr_in from;
+	int fromlen = sizeof(from), result;
+	if ((result = recvfrom(peer->socket, buf, sizeof(buf), 0, (struct sockaddr *)&from, &fromlen)) == SOCKET_ERROR) {
+		int err = WSAGetLastError();
+		if (err != WSAEWOULDBLOCK) printf("recvfrom failed with error %d\n", result);
 	}
-	freeaddrinfo(result);
-
-	if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-		printf("listen failed with error: %d\n", WSAGetLastError());
-		closesocket(ListenSocket);
-		WSACleanup();
-		return 1;
-	}
-
-	// THIS IS IT
-	// NOW USE SELECT OR WHATEVER FOR NON-BLOCKING IO SKIP CODE BELOW
-
-	// Accept a client socket
-	SOCKET ClientSocket = INVALID_SOCKET;
-	if ((ClientSocket = accept(ListenSocket, NULL, NULL)) == INVALID_SOCKET) {
-		printf("accept failed with error: %d\n", WSAGetLastError());
-		closesocket(ListenSocket);
-		WSACleanup();
-		return 1;
-	}
-
-	// No longer need server socket
-	closesocket(ListenSocket);
-
-	// Receive until the peer shuts down the connection
-	do {
-		iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
-		if (iResult > 0) {
-			printf("Bytes received: %d\n", iResult);
-
-			// Echo the buffer back to the sender
-			iSendResult = send(ClientSocket, recvbuf, iResult, 0);
-			if (iSendResult == SOCKET_ERROR) {
-				printf("send failed with error: %d\n", WSAGetLastError());
-				closesocket(ClientSocket);
-				WSACleanup();
-				return 1;
+	else if (result > 0) {
+		int newConnection = 1;
+		for (int i = 0; i < peer->numConnections; i++) {
+			struct sockaddr_in connAddr = peer->connections[i]->addr;
+			// if (memcmp(&from, &connAddr, sizeof(struct sockaddr_in)) == 0) {
+			if (SOCK_ADDR_EQ_ADDR(&from, &connAddr) && SOCK_ADDR_EQ_PORT(&from, &connAddr)) {
+				newConnection = 0;
 			}
-			printf("Bytes sent: %d\n", iSendResult);
 		}
-		else if (iResult == 0)
-			printf("Connection closing...\n");
-		else  {
-			printf("recv failed with error: %d\n", WSAGetLastError());
-			closesocket(ClientSocket);
-			WSACleanup();
-			return 1;
+		if (newConnection) {
+			struct conn *conn = malloc(sizeof(struct conn));
+			conn->addr = from;
+			peer->connections[peer->numConnections++] = conn;
+
+			printf("New connection.\n");
 		}
+		else printf("Existing connection.\n");
 
-	} while (iResult > 0);
+		printf("Is first char in received message set? %c\n", *buf);
+		printf("Is first char in received message set? %u\n", *buf << 7);
+		printf("Received: %d bytes or %s\n", result, buf + 1);
 
-	// shutdown the connection since we're done
-	iResult = shutdown(ClientSocket, SD_SEND);
-	if (iResult == SOCKET_ERROR) {
-		printf("shutdown failed with error: %d\n", WSAGetLastError());
-		closesocket(ClientSocket);
-		WSACleanup();
-		return 1;
+		sendto(peer->socket, buf, result, 0, (struct sockaddr *)&from, fromlen);
 	}
 
-	// cleanup
-	closesocket(ClientSocket);
-	WSACleanup();
-
-	return 0;
+	/*struct conn *conn = malloc(sizeof(struct conn));
+	conn->socket = ClientSocket;
+	peer->connections[peer->numConnections++] = conn;*/
 }
 
-int net_client_socket2(const char *address) {
-	SOCKET ConnectSocket = INVALID_SOCKET;
-	struct addrinfo *result = NULL, *ptr = NULL, hints = { .ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM, .ai_protocol = IPPROTO_TCP };
-	char *sendbuf = "this is a test";
-	char recvbuf[DEFAULT_BUFLEN];
-	int iResult;
-	int recvbuflen = DEFAULT_BUFLEN;
+void net_send(struct peer *peer, const char *buf, int len) {
+	printf("sending bytes\n");
+	struct sockaddr_in to = { .sin_family = AF_INET, .sin_port = htons(DEFAULT_PORT), .sin_addr.s_addr = inet_addr("127.0.0.1") };
+	int tolen = sizeof(to);
 
-	// Resolve the server address and port
-	iResult = getaddrinfo(address, DEFAULT_PORT, &hints, &result);
-	if (iResult != 0) {
-		printf("getaddrinfo failed with error: %d\n", iResult);
+	int result = sendto(peer->socket, buf - 1, len + 1, 0, (struct sockaddr *)&to, tolen);
+	if (result == SOCKET_ERROR) {
+		printf("sendto failed with error: %d\n", WSAGetLastError());
+		closesocket(peer->socket);
 		WSACleanup();
-		return 1;
+		return;
 	}
+}
 
-	// Attempt to connect to an address until one succeeds
-	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
-		// Create a SOCKET for connecting to server
-		if ((ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol)) == INVALID_SOCKET) {
-			printf("socket failed with error: %ld\n", WSAGetLastError());
-			WSACleanup();
-			return 1;
-		}
-
-		// Connect to server.
-		if (connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen) == SOCKET_ERROR) {
-			closesocket(ConnectSocket);
-			ConnectSocket = INVALID_SOCKET;
-			continue;
-		}
-		break;
-	}
-	freeaddrinfo(result);
-	if (ConnectSocket == INVALID_SOCKET) {
-		printf("Unable to connect to server!\n");
-		WSACleanup();
-		return 1;
-	}
-
-	// Send an initial buffer
-	if (send(ConnectSocket, sendbuf, (int)strlen(sendbuf), 0) == SOCKET_ERROR) {
-		printf("send failed with error: %d\n", WSAGetLastError());
-		closesocket(ConnectSocket);
-		WSACleanup();
-		return 1;
-	}
-	printf("Bytes Sent: %ld\n", iResult);
-
-	// shutdown the connection since no more data will be sent
-	iResult = shutdown(ConnectSocket, SD_SEND);
-	if (iResult == SOCKET_ERROR) {
-		printf("shutdown failed with error: %d\n", WSAGetLastError());
-		closesocket(ConnectSocket);
-		WSACleanup();
-		return 1;
-	}
-
-	// Receive until the peer closes the connection
-	do {
-		iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
-		if (iResult > 0)
-			printf("Bytes received: %d\n", iResult);
-		else if (iResult == 0)
-			printf("Connection closed\n");
-		else
-			printf("recv failed with error: %d\n", WSAGetLastError());
-
-	} while (iResult > 0);
-
-	// cleanup
-	closesocket(ConnectSocket);
-	WSACleanup();
-
-	return 0;
+char * net_packet(int len) {
+	char *buf = (char *)malloc(len + 1);
+	*buf = 0x80;
+	return buf + 1;
 }

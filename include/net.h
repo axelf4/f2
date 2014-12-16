@@ -17,20 +17,62 @@ extern "C" {
 	// TODO put socket in non-blocking mode and use select
 #endif
 
-#define DEFAULT_PORT "6622"
+#define DEFAULT_PORT 6622
 #ifndef DEFAULT_BUFLEN
 #define DEFAULT_BUFLEN 512
 #endif
 
-	struct addr { const char *address, *port; };
+#define SOCK_ADDR_FAMILY(ptr)	((struct sockaddr *)(ptr))->sa_family
+#define SOCK_ADDR_IN_FAMILY(sa)	((struct sockaddr_in *)(sa))->sin_family
+#define SOCK_ADDR_IN_PORT(sa)	((struct sockaddr_in *)(sa))->sin_port
+#define SOCK_ADDR_IN_ADDR(sa)	((struct sockaddr_in *)(sa))->sin_addr
+#ifdef HAS_IPV6
+#define SOCK_ADDR_IN6_PORT(sa)	((struct sockaddr_in6 *)(sa))->sin6_port
+#define SOCK_ADDR_IN6_ADDR(sa)	((struct sockaddr_in6 *)(sa))->sin6_addr
+#define SOCK_ADDR_EQ_ADDR(sa, sb) \
+    ((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+      && SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr) \
+     || (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
+         && memcmp((char *) &(SOCK_ADDR_IN6_ADDR(sa)), \
+                   (char *) &(SOCK_ADDR_IN6_ADDR(sb)), \
+                   sizeof(SOCK_ADDR_IN6_ADDR(sa))) == 0))
 
-	struct HOST {
-#ifdef _WIN32
-		SOCKET s;
+#define SOCK_ADDR_EQ_PORT(sa, sb) \
+    ((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+      && SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb)) \
+     || (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
+         && SOCK_ADDR_IN6_PORT(sa) == SOCK_ADDR_IN6_PORT(sb)))
+#else
+#define SOCK_ADDR_EQ_ADDR(sa, sb) \
+    (SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+     && SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr)
+
+#define SOCK_ADDR_EQ_PORT(sa, sb) \
+    (SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+     && SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb))
 #endif
-		// Send buffer
-		char buffer[DEFAULT_BUFLEN];
-		int position;
+
+	struct addr { const char *address; unsigned short port; };
+
+	struct conn {
+		struct sockaddr_in addr;
+	};
+
+	struct packet {
+		/** The packet id. 1st byte internal information such as whether this is an ack packet. If this is an ack pakcet then the blob only contains the sequence. */
+		unsigned int sequence;
+
+		char *blob;
+	};
+
+	struct peer {
+#ifdef _WIN32
+		SOCKET socket;
+#endif
+		struct conn **connections;
+		int numConnections;
+
+		void(*accepted)(struct peer *);
 	};
 
 	// TODO implement support for BSD sockets and winsock2
@@ -38,17 +80,20 @@ extern "C" {
 
 	extern void net_initialize();
 
-	extern struct HOST * net_host_bind(struct addr addr);
+	extern struct peer * net_peer_bind(struct addr addr);
 
-	// OLD CODE BELOW
+	/**
+	@param address the address at which peers may connect to this peer */
+	extern struct peer * net_peer_create(struct addr *address, unsigned short maxConnections);
 
-	extern void net_client_socket(const char *addr, const char *port);
+	extern void net_peer_dispose(struct peer *peer);
 
-	extern void net_server_socket();
+	// TODO add milliseconds timeout
+	extern void net_update(struct peer *peer);
 
-	extern int net_client_socket2(const char *address);
+	extern void net_send(struct peer *peer, const char *buf, int len);
 
-	extern int net_server_socket2();
+	extern char * net_packet(int len);
 
 #ifdef __cplusplus
 }
