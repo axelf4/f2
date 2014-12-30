@@ -2,7 +2,7 @@ language: c
 compiler:
   - gcc
 before_install:
-  - sudo apt-get update -q
+  - sudo add-apt-repository ppa:zoogie/sdl2-snapshots
   - sudo apt-get install -y libsdl2-dev
   - sudo apt-get install -y libglew-dev
   - sudo apt-get install -y libsoil-dev
