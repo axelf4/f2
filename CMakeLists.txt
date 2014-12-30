@@ -16,7 +16,6 @@ set(SOURCES
 	include/f1.h
 	include/glh.h
 	include/vbo.h
-	include/obj_loader.h
 	include/vmath.h)
 
 set(TEST_SOURCES
