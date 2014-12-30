@@ -25,22 +25,21 @@ set(TEST_SOURCES
 	test/GLDebugDrawer.cpp
 	test/GLDebugDrawer.h
 	test/EntitySystem.cpp
-	test/EntitySystem.h
-	test/opencltest.cpp)
+	test/EntitySystem.h)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${TEST_SOURCES})
 
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(OpenCL REQUIRED)
+# find_package(OpenCL REQUIRED) ${OPENCL_INCLUDE_DIRS} ${OPENCL_LIBRARIES}
 find_package(GLEW REQUIRED)
 find_package(SOIL REQUIRED)
 find_package(Bullet REQUIRED)
 find_package(Assimp REQUIRED)
 
-include_directories(include ${SDL2_INCLUDE_DIR} ${OPENCL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
-target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${OPENCL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
+include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
+target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -D__SSE__ -D__SSE2__ - D__SSE3__ -D__SSE4_1__ -D__SSE4_2__ -DRESOURCE_DIR="../resource/")
 
