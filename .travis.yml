@@ -2,16 +2,17 @@ language: c
 compiler:
   - gcc
 before_install:
-  # SDL2
-  - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
-  - tar -xzvf SDL2-2.0.3.tar.gz
-  - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
-  - sudo apt-get install -y libglew-dev
-  - sudo apt-get install -y libsoil-dev
-  - sudo apt-get install -y libassimp-dev
   # Bullet Physics
   - curl -O https://github.com/bulletphysics/bullet3/archive/master.zip
+  - ls
   - unzip bullet3-master.zip
   - (cd bullet3-master/build3 && ./premake4_linux64 gmake && cd gmake && make && sudo make install)
   # - sudo apt-get install -y libbullet-dev
+  # SDL2
+  #- curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
+  #- tar -xzvf SDL2-2.0.3.tar.gz
+  #- (cd SDL2-2.0.3 && ./configure && make && sudo make install)
+  #- sudo apt-get install -y libglew-dev
+  #- sudo apt-get install -y libsoil-dev
+  - sudo apt-get install -y libassimp-dev
 script: mkdir build && cd build && cmake .. -G "Unix Makefiles" && make && ./game
