@@ -39,20 +39,22 @@ find_package(SOIL REQUIRED)
 find_package(Bullet REQUIRED)
 find_package(Assimp REQUIRED)
 
-message(${GLEW_INCLUDE_DIR})
-message(${SDL2_INCLUDE_DIR})
-message(${SOIL_INCLUDE_DIRS})
-message(${BULLET_INCLUDE_DIRS})
-message(${BULLET_LIBRARIES})
-message(${ASSIMP_INCLUDE_DIR})
-
 include_directories(include ${SDL2_INCLUDE_DIR} ${OPENCL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
 target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${OPENCL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -D__SSE__ -D__SSE2__ - D__SSE3__ -D__SSE4_1__ -D__SSE4_2__ -DRESOURCE_DIR="../resource/")
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+if (MSVC)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
+else
+	if (CMAKE_COMPILER_IS_GNUCC)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse -msse2 -msse3 -msse4.1 -msse4.2")
+	endif
+	if (CMAKE_COMPILER_IS_GNUCXX)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse -msse2 -msse3 -msse4.1 -msse4.2")
+	endif
+endif
 
 # if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
 # 	# list of files for which we add a copy rule
