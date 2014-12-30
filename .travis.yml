@@ -4,7 +4,7 @@ compiler:
 before_install:
   - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   - tar -xzvf SDL2-2.0.3.tar.gz
-  - (cd SDL2-2.0.3 && ./configure && make && make install)
+  - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
   - sudo apt-get install -y libglew-dev
   - sudo apt-get install -y libsoil-dev
   - sudo apt-get install -y libassimp-dev
