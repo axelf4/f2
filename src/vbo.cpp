@@ -86,7 +86,7 @@ f1::mesh::mesh(bool indexed, attrib *attributes, int len, GLenum usage) {
 
 f1::mesh::~mesh() {
 	delete vertices;
-	if (indices != nullptr) delete indices;
+	if (indices != 0) delete indices;
 }
 
 void f1::mesh::bind(program *program) {
@@ -163,7 +163,7 @@ GLchar * f1::program::getProgramInfoLog() {
 	GLint len; // = 512
 	glGetProgramiv(id, GL_INFO_LOG_LENGTH, &len);
 	GLchar *infoLog = new GLchar[len];
-	glGetProgramInfoLog(id, sizeof(infoLog), nullptr, infoLog);
+	glGetProgramInfoLog(id, sizeof(infoLog), 0, infoLog);
 	return infoLog;
 }
 
@@ -172,7 +172,7 @@ namespace f1 {
 		GLsizei len;
 		glGetProgramiv(p, GL_INFO_LOG_LENGTH, &len);
 		GLchar *infoLog = new GLchar[len];
-		glGetProgramInfoLog(p, sizeof(infoLog), nullptr, infoLog);
+		glGetProgramInfoLog(p, sizeof(infoLog), 0, infoLog);
 		os << infoLog;
 		delete[] infoLog;
 		return os;
