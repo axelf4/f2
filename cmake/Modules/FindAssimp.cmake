@@ -7,7 +7,7 @@
 
 include( FindPackageHandleStandardArgs )
 
-FIND_PATH( ASSIMP_INCLUDE_DIR assimp/mesh.h
+FIND_PATH( ASSIMP_INCLUDE_DIR NAMES postprocess.h scene.h version.h config.h cimport.h
 	${ASSIMP_ROOT_DIR}/include
   /usr/include
   /usr/local/include
@@ -22,7 +22,7 @@ FIND_LIBRARY( ASSIMP_LIBRARIES assimp
   /opt/local/lib
 )
 
-find_package_handle_standard_args(ASSIMP DEFAULT_MSG ASSIMP_LIBRARIES ASSIMP_INCLUDE_DIR )
+find_package_handle_standard_args(Assimp DEFAULT_MSG ASSIMP_LIBRARIES ASSIMP_INCLUDE_DIR )
 IF(ASSIMP_INCLUDE_DIR AND ASSIMP_LIBRARIES)
   SET( ASSIMP_FOUND TRUE )
 ENDIF(ASSIMP_INCLUDE_DIR AND ASSIMP_LIBRARIES)
