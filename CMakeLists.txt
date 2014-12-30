@@ -44,17 +44,17 @@ target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${OPENCL_LIBRA
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -D__SSE__ -D__SSE2__ - D__SSE3__ -D__SSE4_1__ -D__SSE4_2__ -DRESOURCE_DIR="../resource/")
 
-if (MSVC)
+if(MSVC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
-else
-	if (CMAKE_COMPILER_IS_GNUCC)
+else(MSVC)
+	if(CMAKE_COMPILER_IS_GNUCC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse -msse2 -msse3 -msse4.1 -msse4.2")
-	endif
-	if (CMAKE_COMPILER_IS_GNUCXX)
+	endif(CMAKE_COMPILER_IS_GNUCC)
+	if(CMAKE_COMPILER_IS_GNUCXX)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse -msse2 -msse3 -msse4.1 -msse4.2")
-	endif
-endif
+	endif(CMAKE_COMPILER_IS_GNUCXX)
+endif(MSVC)
 
 # if (NOT CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_CURRENT_BINARY_DIR)
 # 	# list of files for which we add a copy rule
