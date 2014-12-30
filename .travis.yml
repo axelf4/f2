@@ -6,7 +6,7 @@ before_install:
   - wget https://github.com/bulletphysics/bullet3/archive/master.zip
   - unzip master.zip && ls
   #- (cd bullet3-master/build3 && ./premake4_linux64 gmake && cd gmake && make && sudo make install)
-  - (cd bullet3-master && cmake . -G "Unix Makefiles" && make && make install)
+  - (cd bullet3-master && cmake . -G "Unix Makefiles" && make && sudo make install)
   # - sudo apt-get install -y libbullet-dev
   # SDL2
   #- curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
