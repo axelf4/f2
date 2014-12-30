@@ -1,4 +1,11 @@
 language: c
 compiler:
   - gcc
+before_install:
+  - sudo apt-get update -q
+  - sudo apt-get install -y libsdl2-dev
+  - sudo apt-get install -y libglew-dev
+  - sudo apt-get install -y libsoil-dev
+  - sudo apt-get install -y libassimp-dev
+  - sudo apt-get install -y libbullet-dev
 script: mkdir build && cd build && cmake .. -G "Unix Makefiles" && make && ./game
