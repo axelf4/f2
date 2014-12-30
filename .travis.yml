@@ -3,7 +3,7 @@ compiler:
   - gcc
 before_install:
   # Bullet Physics
-  - curl -O https://github.com/bulletphysics/bullet3/archive/master.zip
+  - wget https://github.com/bulletphysics/bullet3/archive/master.zip
   - ls
   - unzip master.zip
   - ls
