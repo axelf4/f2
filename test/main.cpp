@@ -469,7 +469,7 @@ int main(int argc, char *argv[]) {
 
 	VEC position = VectorReplicate(0);
 	float yaw = 0.f, pitch = 0.f;
-	MAT projection = MatrixPerspective(90.f, WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f),
+	MAT a, b, projection = MatrixPerspective(90.f, WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f),
 		view, vInv,
 		model = MatrixIdentity();
 	ALIGN(16) float mv[16], vv[4];
@@ -566,7 +566,8 @@ int main(int argc, char *argv[]) {
 		if (noclip) {
 			// view = glm::translate(glm::mat4(1.f), position);
 			VectorGet(vv, position);
-			view = MatrixTranslate(&MatrixIdentity(), vv[0], vv[1], vv[2]);
+			a = MatrixIdentity();
+			view = MatrixTranslate(&a, vv[0], vv[1], vv[2]);
 		}
 		else {
 			ball->body->getMotionState()->getWorldTransform(t);
@@ -582,7 +583,9 @@ int main(int argc, char *argv[]) {
 		// view = glm::inverse(vInv = (view * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
 		//cout << "GLM: " << endl << "x: " << q1.x << " y: " << q1.y << " z: " << q1.z << " w: " << q1.w << endl << "SSE: " << endl;
 		MAT rotationViewMatrix = QuaternionToMatrix(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
-		view = MatrixInverse(&(vInv = (MatrixMultiply(&rotationViewMatrix, &view))));
+		vInv = (MatrixMultiply(&rotationViewMatrix, &view));
+		view = MatrixInverse(&vInv);
+		MAT inverseProjection = MatrixInverse(&projection), modelView = MatrixMultiply(&model, &view), inverseModelView = MatrixInverse(&modelView), viewProjection = MatrixMultiply(&view, &projection);
 
 		glClearColor(0.5f, 0.3f, 0.8f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -592,8 +595,8 @@ int main(int argc, char *argv[]) {
 		glUseProgram(skyboxProg); // (*skyboxProg)();
 		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
 		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&projection)));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, &MatrixTranspose(&MatrixMultiply(&model, &view))));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, inverseProjection));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, &MatrixTranspose(&modelView)));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
@@ -621,7 +624,7 @@ int main(int argc, char *argv[]) {
 		/*glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, glm::value_ptr(model));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));*/
 		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, MatrixGet(mv, &model));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, &MatrixInverse(&MatrixMultiply(&model, &view))));
+		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, &inverseModelView));
 		glActiveTexture(GL_TEXTURE0);
 		glUniform1i(glGetUniformLocation(phong, "tex"), 0);
 		FOR(i, groundMesh->nodeCount) {
@@ -634,7 +637,7 @@ int main(int argc, char *argv[]) {
 		/* Bullet debug draw. */
 		// world->world->debugDrawWorld();
 		// dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(glm::value_ptr(projection * view * model));
-		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, &MatrixMultiply(&model, &MatrixMultiply(&view, &projection))));
+		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, &MatrixMultiply(&model, &viewProjection)));
 
 		/* Draw bunny model. */
 		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
