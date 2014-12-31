@@ -7,7 +7,7 @@
 
 include( FindPackageHandleStandardArgs )
 
-FIND_PATH( ASSIMP_INCLUDE_DIR NAMES postprocess.h scene.h version.h config.h cimport.h
+FIND_PATH( ASSIMP_INCLUDE_DIR assimp/mesh.h
 	${ASSIMP_ROOT_DIR}/include
   /usr/include
   /usr/local/include
