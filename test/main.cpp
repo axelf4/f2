@@ -585,7 +585,7 @@ int main(int argc, char *argv[]) {
 		MAT rotationViewMatrix = QuaternionToMatrix(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
 		vInv = (MatrixMultiply(&rotationViewMatrix, &view));
 		view = MatrixInverse(&vInv);
-		MAT inverseProjection = MatrixInverse(&projection), modelView = MatrixMultiply(&model, &view), inverseModelView = MatrixInverse(&modelView), viewProjection = MatrixMultiply(&view, &projection);
+		MAT inverseProjection = MatrixInverse(&projection), trnModelView = MatrixTranspose(&modelView), modelView = MatrixMultiply(&model, &view), inverseModelView = MatrixInverse(&modelView), viewProjection = MatrixMultiply(&view, &projection), mvp = MatrixMultiply(&model, &viewProjection); // TODO cleanup
 
 		glClearColor(0.5f, 0.3f, 0.8f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -595,8 +595,8 @@ int main(int argc, char *argv[]) {
 		glUseProgram(skyboxProg); // (*skyboxProg)();
 		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, glm::value_ptr(inverse(projection)));
 		// glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, glm::value_ptr(transpose(model * view)));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, inverseProjection));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, &MatrixTranspose(&modelView)));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, &inverseProjection));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, &trnModelView));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
@@ -637,7 +637,7 @@ int main(int argc, char *argv[]) {
 		/* Bullet debug draw. */
 		// world->world->debugDrawWorld();
 		// dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(glm::value_ptr(projection * view * model));
-		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, &MatrixMultiply(&model, &viewProjection)));
+		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, mvp));
 
 		/* Draw bunny model. */
 		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
