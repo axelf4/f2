@@ -5,23 +5,6 @@
 // TODO rename to GLDebugDraw.h
 
 class GLDebugDrawer : public btIDebugDraw {
-	static const char *vertexShader =
-		"#version 110\n" \
-		"attribute vec3 position;" \
-		"attribute vec3 color;" \
-		"uniform mat4 mvp;" \
-		"varying vec3 vcolor;" \
-		"void main() {" \
-		"  gl_Position = mvp * vec4(position, 1.0f);" \
-		"  vcolor = color;"
-		"}";
-	static const char *fragmentShader =
-		"#version 110\n" \
-		"varying vec3 vcolor;" \
-		"void main() {" \
-		"  gl_FragColor = vec4(vcolor, 1.0);" \
-		"}";
-	
 	int debugMode;
 	GLuint program;
 	GLuint vbo;

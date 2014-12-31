@@ -223,11 +223,11 @@ model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape,
 
 		if (setShape) {
 			btIndexedMesh indexedMesh;
-			indexedMesh.m_vertexType = PHY_ScalarType::PHY_FLOAT;
+			indexedMesh.m_vertexType = PHY_FLOAT;
 			indexedMesh.m_numVertices = vertexCount;
 			indexedMesh.m_vertexBase = (const unsigned char*)vertices;
 			indexedMesh.m_vertexStride = node->stride;
-			indexedMesh.m_indexType = PHY_ScalarType::PHY_INTEGER;
+			indexedMesh.m_indexType = PHY_INTEGER;
 			indexedMesh.m_numTriangles = indexCount / 3;
 			indexedMesh.m_triangleIndexBase = (const unsigned char*)indices;
 			indexedMesh.m_triangleIndexStride = 3 * sizeof(unsigned int);
@@ -585,7 +585,7 @@ int main(int argc, char *argv[]) {
 		MAT rotationViewMatrix = QuaternionToMatrix(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
 		vInv = (MatrixMultiply(&rotationViewMatrix, &view));
 		view = MatrixInverse(&vInv);
-		MAT inverseProjection = MatrixInverse(&projection), trnModelView = MatrixTranspose(&modelView), modelView = MatrixMultiply(&model, &view), inverseModelView = MatrixInverse(&modelView), viewProjection = MatrixMultiply(&view, &projection), mvp = MatrixMultiply(&model, &viewProjection); // TODO cleanup
+		MAT inverseProjection = MatrixInverse(&projection), modelView = MatrixMultiply(&model, &view), trnModelView = MatrixTranspose(&modelView), inverseModelView = MatrixInverse(&modelView), viewProjection = MatrixMultiply(&view, &projection), mvp = MatrixMultiply(&model, &viewProjection); // TODO cleanup
 
 		glClearColor(0.5f, 0.3f, 0.8f, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -637,7 +637,7 @@ int main(int argc, char *argv[]) {
 		/* Bullet debug draw. */
 		// world->world->debugDrawWorld();
 		// dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(glm::value_ptr(projection * view * model));
-		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, mvp));
+		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, &mvp));
 
 		/* Draw bunny model. */
 		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'

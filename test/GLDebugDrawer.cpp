@@ -2,6 +2,22 @@
 #include <iostream>
 
 GLDebugDrawer::GLDebugDrawer() : debugMode(btIDebugDraw::DBG_DrawWireframe) {
+	const char *vertexShader =
+		"#version 110\n" \
+		"attribute vec3 position;" \
+		"attribute vec3 color;" \
+		"uniform mat4 mvp;" \
+		"varying vec3 vcolor;" \
+		"void main() {" \
+		"  gl_Position = mvp * vec4(position, 1.0f);" \
+		"  vcolor = color;"
+		"}";
+	const char *fragmentShader =
+		"#version 110\n" \
+		"varying vec3 vcolor;" \
+		"void main() {" \
+		"  gl_FragColor = vec4(vcolor, 1.0);" \
+		"}";
 	program = create_program(vertexShader, fragmentShader);
 	glUseProgram(program);
 
