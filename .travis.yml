@@ -5,7 +5,7 @@ before_install:
   # SDL2
   - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   - tar -xzvf SDL2-2.0.3.tar.gz
-  - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
+  - cd SDL2-2.0.3 && ./configure && make && sudo make install
   # OpenGL Extension Wrangler
   - sudo apt-get install -y libglew-dev
   # Simple OpenGL Image Library
@@ -13,9 +13,11 @@ before_install:
   # Assimp
   - wget -N https://github.com/assimp/assimp/archive/master.zip
   - unzip master.zip
-  - (cd assimp-master && cmake . -G "Unix Makefiles" && make && sudo make install)
+  - cd assimp-master && cmake . -G "Unix Makefiles" && make && sudo make install
   # Bullet Physics
   - wget -N https://github.com/bulletphysics/bullet3/archive/master.zip
   - unzip master.zip
-  - (cd bullet3-master && cmake -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
-script: mkdir build && cd build && cmake .. -G "Unix Makefiles" && make && ./game
+  - cd bullet3-master && cmake -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install
+script:
+  - mkdir build && cd build && cmake .. -G "Unix Makefiles" && make
+  - ./game
