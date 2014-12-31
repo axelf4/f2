@@ -20,8 +20,6 @@
 #include "shaders.h"
 #include "GLDebugDrawer.h"
 
-#include <Windows.h>
-
 // #define WINDOW_TITLE "Point and Click Adventures"
 #define WINDOW_TITLE "Call of Duty: Avancerad V\xC3\xA4lf\xC3\xA4rd"
 // 640/480, 800/600, 1366/768
@@ -439,12 +437,6 @@ int main(int argc, char *argv[]) {
 	printMatrix(MatrixGet(matrixValue, &m1));*/
 
 	// printVector(VectorGet(value, v1));
-
-	bool boolean = false;
-	if (boolean)  {
-		system("PAUSE");
-		return 0;
-	}
 
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
