@@ -414,7 +414,8 @@ extern "C" {
 			row0, row1, row2, row3,
 			det, tmp1;
 #ifdef ROW_MAJOR_MATRIX
-		a = &MatrixTranspose(a);
+		MAT tmp = MatrixTranspose(a);
+		a = &tmp;
 #endif
 		row0 = a->row0;
 		row1 = _mm_shuffle_ps(a->row1, a->row1, 0x4E);
