@@ -3,11 +3,9 @@ compiler:
   - gcc
 before_install:
   # Assimp
-  - sudo apt-get install -y libassimp3
-  - cd /usr/include/
-  - ls
-  - cd assimp
-  - ls
+  - wget -N https://github.com/assimp/assimp/archive/master.zip
+  - unzip master.zip
+  - (cd assimp-master && cmake . -G "Unix Makefiles" && make && make install)
   # SDL2
   #- curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   #- tar -xzvf SDL2-2.0.3.tar.gz
@@ -17,8 +15,7 @@ before_install:
   # Simple OpenGL Image Library
   #- sudo apt-get install -y libsoil-dev
   # Bullet Physics
-  #- wget https://github.com/bulletphysics/bullet3/archive/master.zip
-  #- unzip master.zip && ls
+  #- wget -N https://github.com/bulletphysics/bullet3/archive/master.zip
+  #- unzip master.zip
   #- (cd bullet3-master && cmake -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
-  # - sudo apt-get install -y libbullet-dev
 script: mkdir build && cd build && cmake .. -G "Unix Makefiles" && make && ./game
