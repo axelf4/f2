@@ -5,7 +5,7 @@ before_install:
   # Assimp
   - wget -N https://github.com/assimp/assimp/archive/master.zip
   - unzip master.zip
-  - (cd assimp-master && cmake . -G "Unix Makefiles" && make && make install)
+  - (cd assimp-master && cmake . -G "Unix Makefiles" && make && sudo make install)
   # SDL2
   #- curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   #- tar -xzvf SDL2-2.0.3.tar.gz
