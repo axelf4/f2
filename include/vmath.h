@@ -323,13 +323,13 @@ extern "C" {
 	/** Stores a representation of the matrix \a _A in the float array \a _V and returns \a _V.
 		@def MatrixGet(_V, _A)
 		@param[out] _V A 16 elements long 16-byte aligned float array to store in.
-		@param[in] _A The matrix to be stored.
+		@param[in] _A The matrix to be stored. Note: not a pointer as the rest of the matrix functions.
 
 		This method is to be used when the data of a ::MAT needs to be converted to a more general, usable format. */
 #ifdef __SSE__
-#define MatrixGet(_V, _A) (_mm_store_ps((_V), (_A)->row0), _mm_store_ps((_V) + 4, (_A)->row1), _mm_store_ps((_V) + 8, (_A)->row2), _mm_store_ps((_V) + 12, (_A)->row3), (_V))
+#define MatrixGet(_V, _A) (_mm_store_ps((_V), (_A).row0), _mm_store_ps((_V) + 4, (_A).row1), _mm_store_ps((_V) + 8, (_A).row2), _mm_store_ps((_V) + 12, (_A).row3), (_V))
 #else
-#define MatrixGet(_V, _A) (memcpy((_V), (_A)->m, sizeof(float) * 16), (_V))
+#define MatrixGet(_V, _A) (memcpy((_V), (_A).m, sizeof(float) * 16), (_V))
 #endif
 
 #include <stdio.h>
