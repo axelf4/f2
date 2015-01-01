@@ -221,7 +221,7 @@ extern "C" {
 	/** Normalizes the vector \a v. */
 	VMATH_INLINE VEC VectorNormalize(VEC v) {
 #ifdef __SSE4_1__
-		return(_mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F /* 0x77 */)));
+		return(_mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F /* 0x77 */))));
 #else
 		__m128 vec0, vec1;
 		// vec0 = _mm_and_ps(v, vector4::vector4_clearW);
