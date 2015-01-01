@@ -214,15 +214,14 @@ extern "C" {
 	/** Returns the scalar length of the vector \a v (||a||). */
 	VMATH_INLINE float VectorLength(VEC v) {
 #ifdef __SSE4_1__
-		return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71)));
+		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71))));
 #endif
 	}
 
 	/** Normalizes the vector \a v. */
 	VMATH_INLINE VEC VectorNormalize(VEC v) {
 #ifdef __SSE4_1__
-		// return _mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x77)));
-		return _mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F)));
+		return(_mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F /* 0x77 */)));
 #else
 		__m128 vec0, vec1;
 		// vec0 = _mm_and_ps(v, vector4::vector4_clearW);
@@ -240,7 +239,9 @@ extern "C" {
 
 	/** Returns the cross product of the two vectors \a a and \a b. */
 	VMATH_INLINE VEC VectorCross(VEC a, VEC b) {
-		return _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))), _mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1))));
+#ifdef __SSE__
+		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))), _mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
+#endif
 	}
 
 	/** Constructs a new ::VEC from the Euler angles \a pitch, \a yaw and \a roll in radians.
@@ -289,20 +290,23 @@ extern "C" {
 	/** Returns a new ::MAT from the specified components. */
 	VMATH_INLINE MAT MatrixSet(float m00, float m01, float m02, float m03, float m10, float m11, float m12, float m13, float m20, float m21, float m22, float m23, float m30, float m31, float m32, float m33) {
 #ifdef __SSE__
-		return(MAT{ _mm_setr_ps(m00, m01, m02, m03), _mm_setr_ps(m10, m11, m12, m13), _mm_setr_ps(m20, m21, m22, m23), _mm_setr_ps(m30, m31, m32, m33) });
+		MAT m = { _mm_setr_ps(m00, m01, m02, m03), _mm_setr_ps(m10, m11, m12, m13), _mm_setr_ps(m20, m21, m22, m23), _mm_setr_ps(m30, m31, m32, m33) };
+		return m;
 #endif
 	}
 
 	/** Loads and returns a ::MAT from the float array \a v.
 		@param v The float array to load up. */
 	VMATH_INLINE MAT MatrixLoad(float *v) {
-		return(MAT{ _mm_load_ps(v), _mm_load_ps(v + 4), _mm_load_ps(v + 8), _mm_load_ps(v + 12) });
+		MAT m = { _mm_load_ps(v), _mm_load_ps(v + 4), _mm_load_ps(v + 8), _mm_load_ps(v + 12) };
+		return m;
 	}
 
 	/** Returns the identity matrix (I). */
 	VMATH_INLINE MAT MatrixIdentity() {
 #ifdef __SSE__
-		return(MAT{ _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(0, 0, 0, 1) });
+		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(0, 0, 0, 1) };
+		return m;
 #else
 		return 0;
 #endif
@@ -316,7 +320,8 @@ extern "C" {
 	VMATH_INLINE MAT MatrixPerspective(float fov, float aspect, float zNear, float zFar) {
 #ifdef __SSE__
 		const float h = 1.0f / tan(fov * PI / 360);
-		return(MAT{ _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) });
+		MAT m = { _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) };
+		return m;
 #endif
 	}
 
@@ -369,7 +374,8 @@ extern "C" {
 		row2 = _mm_madd_ps(b->row3, _mm_replicate_w_ps(a->row2), row2);
 		row3 = _mm_madd_ps(b->row3, _mm_replicate_w_ps(a->row3), row3);
 
-		return(MAT{ row0, row1, row2, row3 });
+		MAT m = { row0, row1, row2, row3 };
+		return m;
 #else
 		// FIXME
 		MAT result;
@@ -404,7 +410,8 @@ extern "C" {
 	/** Transposes the matrix \a a. */
 	VMATH_INLINE MAT MatrixTranspose(MAT *a) {
 		__m128 tmp0 = _mm_unpacklo_ps(a->row0, a->row1), tmp2 = _mm_unpacklo_ps(a->row2, a->row3), tmp1 = _mm_unpackhi_ps(a->row0, a->row1), tmp3 = _mm_unpackhi_ps(a->row2, a->row3);
-		return(MAT{ _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) });
+		MAT m = { _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) };
+		return m;
 	}
 
 	/** Inverses the matrix \a a using Cramer's rule (a<sup>-1</sup>). */
@@ -480,18 +487,21 @@ extern "C" {
 		tmp1 = _mm_rcp_ss(det);
 		det = _mm_sub_ss(_mm_add_ss(tmp1, tmp1), _mm_mul_ss(det, _mm_mul_ss(tmp1, tmp1)));
 		det = _mm_shuffle_ps(det, det, 0x00);
-		return(MAT{ _mm_mul_ps(det, minor0), _mm_mul_ps(det, minor1), _mm_mul_ps(det, minor2), _mm_mul_ps(det, minor3) });
+		MAT m = { _mm_mul_ps(det, minor0), _mm_mul_ps(det, minor1), _mm_mul_ps(det, minor2), _mm_mul_ps(det, minor3) };
+		return m;
 #endif
 	}
 
 	/** Returns a translation matrix. */
 	VMATH_INLINE MAT MatrixTranslate(MAT *a, float x, float y, float z) {
-		return MAT{ _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(x, y, z, 1) };
+		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(x, y, z, 1) };
+		return m;
 	}
 
 	/** Returns a scale transformation matrix. */
 	VMATH_INLINE MAT MatrixScale(float x, float y, float z) {
-		return MAT{ _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(x, y, z, 1) };
+		MAT m = { _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(x, y, z, 1) };
+		return m;
 	}
 
 	/** Returns a matrix based on the quaternion \a a. */
@@ -509,11 +519,11 @@ extern "C" {
 		float qwy = q[3] * q[1];
 		float qwz = q[3] * q[2];
 
-		return(MAT{
-			_mm_setr_ps(1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0),
+		MAT m = { _mm_setr_ps(1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0),
 			_mm_setr_ps(2 * (qxy - qwz), 1 - 2 * (qxx + qzz), 2 * (qyz + qwx), 0),
 			_mm_setr_ps(2 * (qxz + qwy), 2 * (qyz - qwx), 1 - 2 * (qxx + qyy), 0),
-			_mm_setr_ps(0, 0, 0, 1) });
+			_mm_setr_ps(0, 0, 0, 1) };
+		return m;
 #endif
 	}
 
