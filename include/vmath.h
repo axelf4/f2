@@ -218,7 +218,7 @@ extern "C" {
 #endif
 	}
 
-	/** Normalizes the vector \a v. */
+	/** Normalizes the vector \a v (â). */
 	VMATH_INLINE VEC VectorNormalize(VEC v) {
 #ifdef __SSE4_1__
 		return(_mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F /* 0x77 */))));
