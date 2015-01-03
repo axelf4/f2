@@ -59,8 +59,8 @@ GLuint compile_shader(GLenum type, const GLchar *source) {
 
 	glCompileShader(shader);
 	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, status); // Check shader compile status
-	if (*status == GL_FALSE) {
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status); // Check shader compile status
+	if (status == GL_FALSE) {
 		GLint i;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &i);
 		GLchar *infoLog = malloc(sizeof(GLchar) * i);
