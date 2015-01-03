@@ -45,15 +45,13 @@ extern "C" {
 
 	/* SHADER PROGRAM */
 
-	// struct program { GLuint id; }; // maybe dont use struct as the shaders gets deleted immediatlelty after linking leaving only the id which doesn't need to be stored in struct
-
 	const char *read_file(const char *filename);
 
 	// TODO add support for geometry shaders
 	/** Links the program. */
 	GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader);
 
-	GLuint compile_shader(GLenum type, const GLchar *source, GLint *status);
+	GLuint compile_shader(GLenum type, const GLchar *source);
 
 	/** Returns the info log for the shader program \a program.
 		@warning Need to free return value. */

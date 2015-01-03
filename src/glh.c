@@ -20,13 +20,12 @@ const char *read_file(const char *filename) {
 }
 
 GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader) {
-	GLint vertStatus, fragStatus;
-	GLuint vert = compile_shader(GL_VERTEX_SHADER, vertexShader, &vertStatus);
-	GLuint frag = compile_shader(GL_FRAGMENT_SHADER, fragmentShader, &fragStatus);
-	if (!vertStatus || !fragStatus) return 0; // TODO shaders aren't getting cleaned up in this case
+	GLuint vert, frag, id, status;
+	if (!(vert = compile_shader(GL_VERTEX_SHADER, vertexShader))) goto deleteVertex;
+	if (!(frag = compile_shader(GL_FRAGMENT_SHADER, fragmentShader))) goto deleteFragment;
 
-	GLuint id = glCreateProgram();
-	if (id == 0) return 0; // TODO shaders aren't getting cleaned up in this case
+	id = glCreateProgram();
+	if (id == 0) goto deleteFragment;
 	glAttachShader(id, vert);
 	glAttachShader(id, frag);
 
@@ -34,19 +33,27 @@ GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader) 
 
 	/* We don't need the shaders anymore. */
 	glDeleteShader(vert);
-	glDeleteShader(vert);
+	glDeleteShader(frag);
 
-	int linked;
-	glGetProgramiv(id, GL_LINK_STATUS, &linked);
-	if (linked == GL_FALSE) {
-		glDeleteProgram(id);
-		return 0;
-	}
+	glGetProgramiv(id, GL_LINK_STATUS, &status);
+	if (status == GL_FALSE) goto deleteProgram;
 	return id;
+	
+deleteProgram:
+	glDeleteProgram(id);
+deleteFragment:
+	glDeleteShader(frag);
+deleteVertex:
+	glDeleteShader(vert);
+	return 0;
 }
 
-GLuint compile_shader(GLenum type, const GLchar *source, GLint *status) {
+GLuint compile_shader(GLenum type, const GLchar *source) {
 	GLuint shader = glCreateShader(type);
+	if (shader == 0) {
+		fprintf(stderr, "Error creating shader.\n");
+		return 0;
+	}
 	glShaderSource(shader, 1, &source, NULL);
 
 	glCompileShader(shader);
@@ -59,6 +66,7 @@ GLuint compile_shader(GLenum type, const GLchar *source, GLint *status) {
 		const char *typeName = type == GL_VERTEX_SHADER ? "GL_VERTEX_SHADER" : (type == GL_FRAGMENT_SHADER ? "GL_FRAGMENT_SHADER" : "unknown");
 		fprintf(stderr, "%s: %s\n", typeName, infoLog);
 		free(infoLog);
+		return 0;
 	}
 
 	return shader;
