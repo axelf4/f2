@@ -19,5 +19,9 @@ before_install:
   - wget -N https://github.com/bulletphysics/bullet3/archive/master.zip
   - unzip master.zip
   - (cd bullet3-master && cmake -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
+  - sudo pip install cpp-coveralls
 script:
   - mkdir build && cd build && cmake .. -G "Unix Makefiles" && make
+after_success:
+  - coveralls --gcov-options '\-lp'
+
