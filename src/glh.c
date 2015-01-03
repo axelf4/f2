@@ -20,7 +20,7 @@ const char *read_file(const char *filename) {
 }
 
 GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader) {
-	GLuint vert, frag, id, status;
+	GLuint vert, frag, id;
 	if (!(vert = compile_shader(GL_VERTEX_SHADER, vertexShader))) goto deleteVertex;
 	if (!(frag = compile_shader(GL_FRAGMENT_SHADER, fragmentShader))) goto deleteFragment;
 
@@ -35,6 +35,7 @@ GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader) 
 	glDeleteShader(vert);
 	glDeleteShader(frag);
 
+	GLint status;
 	glGetProgramiv(id, GL_LINK_STATUS, &status);
 	if (status == GL_FALSE) goto deleteProgram;
 	return id;
@@ -57,6 +58,7 @@ GLuint compile_shader(GLenum type, const GLchar *source) {
 	glShaderSource(shader, 1, &source, NULL);
 
 	glCompileShader(shader);
+	GLint status;
 	glGetShaderiv(shader, GL_COMPILE_STATUS, status); // Check shader compile status
 	if (*status == GL_FALSE) {
 		GLint i;
