@@ -49,6 +49,30 @@ deleteVertex:
 	return 0;
 }
 
+GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader) {
+	GLuint vert, frag, id;
+	if ((vert = compile_shader(GL_VERTEX_SHADER, vertexShader)) == 0) goto deleteVertex;
+	if ((frag = compile_shader(GL_FRAGMENT_SHADER, fragmentShader)) == 0) goto deleteFragment;
+	if ((id = glCreateProgram()) == 0) goto deleteFragment;
+	glAttachShader(id, vert);
+	glAttachShader(id, frag);
+
+	glLinkProgram(id);
+	GLint status;
+	glGetProgramiv(id, GL_LINK_STATUS, &status);
+	if (status == GL_FALSE) goto deleteProgram;
+	goto deleteFragment; // We don't need the shaders anymore
+	
+deleteProgram:
+	glDeleteProgram(id);
+	id = 0;
+deleteFragment:
+	glDeleteShader(frag);
+deleteVertex:
+	glDeleteShader(vert);
+	return id;
+}
+
 GLuint compile_shader(GLenum type, const GLchar *source) {
 	GLuint shader = glCreateShader(type);
 	if (shader == 0) {
