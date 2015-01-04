@@ -81,7 +81,15 @@ option(BUILD_UNIT_TESTS "Build unit tests" OFF)
 if(BUILD_UNIT_TESTS)
 	# This must be set in the top-level CMakeLists.txt for the tests to be run by 'make test' or ctest.
 	enable_testing()
-	add_subdirectory(test)
+	# add_subdirectory(test)
+
+	add_subdirectory(test/gtest-1.7.0)
+	# Include the gtest library. gtest_SOURCE_DIR is available due to 'project(gtest)' above.
+	include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+
+	add_executable(runUnitTests test/tests.cpp)
+	target_link_libraries(runUnitTests gtest gtest_main ${LIBRARIES})
+	add_test(runUnitTests runUnitTests)
 endif()
 
 
