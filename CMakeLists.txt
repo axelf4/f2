@@ -79,6 +79,7 @@ endif()
 
 option(BUILD_UNIT_TESTS "Build unit tests" OFF)
 if(BUILD_UNIT_TESTS)
+	include(CTest)
 	enable_testing()
 	add_subdirectory(test)
 endif()
