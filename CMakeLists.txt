@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8)
-project (game)
+project(game C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
@@ -75,5 +75,8 @@ endif()
 # 			COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/resource/${item}" "${CMAKE_CURRENT_BINARY_DIR}/${item}")
 # 	endforeach()
 # endif()
+
+option(BUILD_UNIT_TESTS "Build unit tests" OFF)
+
 
 # cmake -G "Visual Studio 12 2013" ..
