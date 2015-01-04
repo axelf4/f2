@@ -3,7 +3,6 @@
 
 using namespace std;
 
-namespace {
 	TEST(SampleTest, AssertionTrue) {
 		cout << "test" << endl;
 		ASSERT_EQ(1, 1);
@@ -15,4 +14,3 @@ namespace {
 		// return RUN_ALL_TESTS();
 		return 1;
 	}
-}
