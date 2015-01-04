@@ -79,7 +79,6 @@ endif()
 
 option(BUILD_UNIT_TESTS "Build unit tests" OFF)
 if(BUILD_UNIT_TESTS)
-	include(CTest)
 	# This must be set in the top-level CMakeLists.txt for the tests to be run by 'make test' or ctest.
 	enable_testing()
 	add_subdirectory(test)
