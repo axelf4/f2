@@ -25,6 +25,7 @@ script:
   - make test
   - ctest
   - ctest ..
+  - ctest ../test
 after_success:
   - coveralls --include include --include src --gcov-options '\-lp'
 

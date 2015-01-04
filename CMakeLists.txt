@@ -89,7 +89,7 @@ if(BUILD_UNIT_TESTS)
 
 	add_executable(runUnitTests test/tests.cpp)
 	target_link_libraries(runUnitTests gtest gtest_main ${LIBRARIES})
-	add_test(runUnitTests runUnitTests)
+	add_test(NAME runUnitTests COMMAND runUnitTests)
 endif()
 
 
