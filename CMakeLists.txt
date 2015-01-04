@@ -20,14 +20,14 @@ set(SOURCES
 	include/objloader.h
 	include/vbo.h)
 
-set(TEST_SOURCES
-	test/main.cpp
-	test/shaders.h
-	test/GLDebugDrawer.cpp
-	test/GLDebugDrawer.h)
+set(DEMO_SOURCES
+	demo/main.cpp
+	demo/shaders.h
+	demo/GLDebugDrawer.cpp
+	demo/GLDebugDrawer.h)
 
 add_library (f1 STATIC ${SOURCES})
-add_executable (game ${TEST_SOURCES})
+add_executable (game ${DEMO_SOURCES})
 
 enable_testing()
 add_test(game ${EXECUTABLE_OUTPUT_PATH}/game)
