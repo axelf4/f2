@@ -29,14 +29,6 @@ set(DEMO_SOURCES
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${DEMO_SOURCES})
 
-enable_testing()
-add_test(game ${EXECUTABLE_OUTPUT_PATH}/game)
-if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_COMPILER_IS_GNUCC)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
-endif()
-
 find_package(SDL2 REQUIRED)
 find_package(OpenGL REQUIRED)
 # find_package(OpenCL REQUIRED) ${OPENCL_INCLUDE_DIRS} ${OPENCL_LIBRARIES}
@@ -76,6 +68,12 @@ endif()
 # 			COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/resource/${item}" "${CMAKE_CURRENT_BINARY_DIR}/${item}")
 # 	endforeach()
 # endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_COMPILER_IS_GNUCC)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage -lgcov")
+endif()
 
 option(BUILD_UNIT_TESTS "Build unit tests" OFF)
 if(BUILD_UNIT_TESTS)
