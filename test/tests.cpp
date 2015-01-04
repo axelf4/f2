@@ -12,6 +12,7 @@ namespace {
 	int main(int argc, char **argv) {
 		cout << "main" << endl;
 		::testing::InitGoogleTest(&argc, argv);
-		return RUN_ALL_TESTS();
+		// return RUN_ALL_TESTS();
+		return 1;
 	}
 }
