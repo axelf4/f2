@@ -46,7 +46,8 @@ find_package(Bullet REQUIRED)
 find_package(Assimp REQUIRED)
 
 include_directories(include ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
-target_link_libraries(game f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
+set(LIBRARIES f1 ${SDL2_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES})
+target_link_libraries(game ${LIBRARIES})
 
 add_definitions(-D_CRT_SECURE_NO_WARNINGS -D__SSE__ -D__SSE2__ -D__SSE3__ -D__SSE4_1__ -D__SSE4_2__ -DRESOURCE_DIR="../resource/")
 
@@ -77,6 +78,9 @@ endif()
 # endif()
 
 option(BUILD_UNIT_TESTS "Build unit tests" OFF)
+if(BUILD_UNIT_TESTS)
+	add_subdirectory(test)
+endif()
 
 
 # cmake -G "Visual Studio 12 2013" ..
