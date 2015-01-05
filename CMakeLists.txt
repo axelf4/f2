@@ -84,7 +84,7 @@ if(BUILD_UNIT_TESTS)
 	# Include the gtest library. gtest_SOURCE_DIR is available due to 'project(gtest)' above.
 	include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
-	add_executable(runUnitTests test/test-all.cpp test/test-vector.cpp)
+	add_executable(runUnitTests test/test-vector.cpp)
 	target_link_libraries(runUnitTests gtest gtest_main ${LIBRARIES})
 	add_test(NAME runUnitTests COMMAND runUnitTests)
 endif()
