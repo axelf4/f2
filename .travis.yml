@@ -8,7 +8,7 @@ before_install:
   - tar -xzvf SDL2-2.0.3.tar.gz
   - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
   # OpenGL Extension Wrangler & Simple OpenGL Image Library & lcov
-  - sudo apt-get install -y libglew-dev libsoil-dev lcov
+  - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
   - gem install coveralls-lcov
   # Assimp
   - wget -N https://github.com/assimp/assimp/archive/master.zip
