@@ -13,12 +13,12 @@ namespace {
 		EXPECT_FLOAT_EQ(w, values[3]);
 	}
 
-	TEST(VEC, Getting) {
+	TEST(Vector, Getting) {
 		VEC vector = VectorSet(10, 3, 5, 0);
 		vectorCompare(10, 3, 5, 0);
 	}
 	
-	TEST(VEC, Arithmetic) {
+	TEST(Vector, Arithmetic) {
 		float x1, y1, z1, w1, x2, y2, z2, w2;
 		x1 = rand();
 		y1 = rand();
