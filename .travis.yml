@@ -24,4 +24,3 @@ script:
   - (mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make && ./runUnitTests)
 after_success:
   - coveralls --exclude demo --exclude src --exclude test --gcov-options '\-lp'
-
