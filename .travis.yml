@@ -7,8 +7,8 @@ before_install:
   - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   - tar -xzvf SDL2-2.0.3.tar.gz
   - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
-  # OpenGL Extension Wrangler & Simple OpenGL Image Library & lcov
-  - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
+  # OpenGL Extension Wrangler & Simple OpenGL Image Library & lcov # libgtest-dev
+  - sudo apt-get install -y libglew-dev libsoil-dev lcov
   - gem install coveralls-lcov
   # Assimp
   - wget -N https://github.com/assimp/assimp/archive/master.zip
@@ -23,4 +23,3 @@ script:
 after_success:
   - lcov --compat-libtool --directory . --capture --output-file coverage.info
   - coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
-  # - coveralls --exclude demo --exclude src --exclude test --gcov-options '\-lp'
