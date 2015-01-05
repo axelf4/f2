@@ -41,7 +41,7 @@ extern "C" {
 #elif defined __GNUC__
 #define ALIGN(i)  __attribute__ ((aligned (i)))
 #endif
-	// if __ARM_NEON__ or __SSE__
+	// if __ARM_NEON__ or __SSE__ or __ALTIVEC__
 #define VMATH_INLINE inline /**< Inlining. */
 	/** A scalar that can be be used for multiplying vectors. */
 	typedef
@@ -241,6 +241,14 @@ extern "C" {
 	VMATH_INLINE VEC VectorCross(VEC a, VEC b) {
 #ifdef __SSE__
 		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))), _mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
+#endif
+	}
+	
+	VMATH_INLINE int VectorEqual(VEC a, VEC b) {
+#ifdef __SSE__
+		return _mm_movemask_ps(_mm_cmpeq_ps(a, b));
+#else
+		return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3]; // TODO rewrite for floating point comparison
 #endif
 	}
 
