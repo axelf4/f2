@@ -21,8 +21,7 @@ before_install:
   - (cd bullet3-master && cmake -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
   - sudo pip install cpp-coveralls
 script:
-  - mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make
-  - ./runUnitTests
+  - (mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make && ./runUnitTests)
 after_success:
-  - coveralls --include include --include src --gcov-options '\-lp'
+  - coveralls --exclude demo --exclude src --exclude test --gcov-options '\-lp'
 
