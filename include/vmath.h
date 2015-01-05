@@ -337,14 +337,6 @@ extern "C" {
 #define MatrixGet(_V, _A) (memcpy((_V), (_A).m, sizeof(float) * 16), (_V))
 #endif
 
-#include <stdio.h>
-
-	static void printRow(__m128 row) {
-		ALIGN(16) float v[4];
-		_mm_store_ps(v, row);
-		printf("|%2.0f|%2.0f|%2.0f|%2.0f|\n", v[0], v[1], v[2], v[3]);
-	}
-
 	/** Multiplies the two matrices \a a and \a b (a * b).
 		@param a The first matrix to multiply.
 		@param b The second matrix to multiply.
