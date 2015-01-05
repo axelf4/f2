@@ -14,8 +14,9 @@ namespace {
 	}
 
 	TEST(Vector, Getting) {
-		VEC vector = VectorSet(10, 3, 5, 0);
-		vectorCompare(10, 3, 5, 0);
+		float x = rand(), y = rand(), z = rand(), w = rand();
+		VEC vector = VectorSet(x, y, z, w);
+		vectorCompare(vector, x, y, z, w);
 	}
 	
 	TEST(Vector, Arithmetic) {
