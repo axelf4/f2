@@ -221,9 +221,9 @@ extern "C" {
 	/** Returns the scalar length of the vector \a a (||a||). */
 	VMATH_INLINE float VectorLength(VEC a) {
 #ifdef __SSE4_1__
-		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71))));
+		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(a, a, 0x71))));
 #else
-		return((float) sqrt(v.v[0] * v.v[0] + v.v[1] * v.v[1] + v.v[2] * v.v[2] + v.v[3] * v.v[3]));
+		return((float) sqrt(a.v[0] * a.v[0] + a.v[1] * a.v[1] + a.v[2] * a.v[2]));
 #endif
 	}
 
