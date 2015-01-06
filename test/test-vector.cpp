@@ -64,8 +64,8 @@ namespace {
 	TEST(Vector, LengthAndNormalization) {
 		float x = frand() + 0.1, y = frand() + 0.1, z = frand() + 0.1, w = frand() + 0.1;
 		VEC vector = VectorSet(x, y, z, w);
-		float length = (float) sqrt(x * x + y * y + z * z + w * w), tmp;
-		EXPECT_NEAR(length, tmp = VectorLength(vector), 1.f) << "VectorLength isn't correct";
+		float length = (float) sqrt(x * x + y * y + z * z), tmp;
+		EXPECT_NEAR(length, tmp = VectorLength(vector), 1.f) << "The length of the vector [" << x1 << ", " << y1 << ", " << z1 << "] isn't " << length;
 		length = tmp;
 		
 		vectorCompareNear(VectorNormalize(vector), x / length, y / length, z / length, w / length, 1.f);

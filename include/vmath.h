@@ -218,8 +218,8 @@ extern "C" {
 #endif
 	}
 
-	/** Returns the scalar length of the vector \a v (||a||). */
-	VMATH_INLINE float VectorLength(VEC v) {
+	/** Returns the scalar length of the vector \a a (||a||). */
+	VMATH_INLINE float VectorLength(VEC a) {
 #ifdef __SSE4_1__
 		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71))));
 #else
