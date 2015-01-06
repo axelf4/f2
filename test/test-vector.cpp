@@ -65,10 +65,10 @@ namespace {
 		float x = frand() + 0.1, y = frand() + 0.1, z = frand() + 0.1, w = frand() + 0.1;
 		VEC vector = VectorSet(x, y, z, w);
 		float length = (float) sqrt(x * x + y * y + z * z + w * w), tmp;
-		EXPECT_NEAR(length, tmp = VectorLength(vector), 0.05f) << "VectorLength isn't correct";
+		EXPECT_NEAR(length, tmp = VectorLength(vector), 1.f) << "VectorLength isn't correct";
 		length = tmp;
 		
-		vectorCompareNear(VectorNormalize(vector), x / length, y / length, z / length, w / length, 0.05f);
+		vectorCompareNear(VectorNormalize(vector), x / length, y / length, z / length, w / length, 1.f);
 	}
 	
 	TEST(Vector, DotAndCrossProducts) {
