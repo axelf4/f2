@@ -250,7 +250,7 @@ extern "C" {
 #endif
 	}
 	
-	/** Returns the dot product, a.k.a. the scalar product, of the two vectors \a a and \a b (a . b). */
+	/** Returns the dot product, a.k.a. the scalar product, of the two vectors \a a and \a b (a · b). */
 	VMATH_INLINE float VectorDot(VEC a, VEC b) {
 #if defined(__SSE4_1__)
 		return(_mm_cvtss_f32(_mm_dp_ps(a, b, 0x71)));
