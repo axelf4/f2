@@ -236,19 +236,41 @@ extern "C" {
 		return(_mm_mul_ps(vec0, v));
 #endif
 	}
+	
+	/** Returns the dot product, a.k.a. the scalar product, of the two vectors \a a and \a b (a . b). */
+	VMATH_INLINE float VectorDot(VEC a, VEC b) {
+#if defined(__SSE4_1__)
+		return(_mm_cvtss_f32(_mm_dp_ps(a, b, 0x71)));
+#elif defined(__SSE3__)
+		__m128 r1 = _mm_mul_ps(a, b), r2 = _mm_hadd_ps(r1, r1), r3 = _mm_hadd_ps(r2, r2);
+		return(_mm_cvtss_f32(r3));
+#elif defined(__SSE__)
+		__m128 m = _mm_mul_ps(v1, v2), t = _mm_add_ps(m, _mm_shuffle_ps(m, m, _MM_SHUFFLE(2, 3, 0, 1)));
+		return(_mm_cvtss_f32(_mm_add_ps(t, _mm_shuffle_ps(t, t, _MM_SHUFFLE(1, 0, 3, 2)))));
+#else
+		return(a.v[0] * b.v[0] + a.v[1] * b.v[1] + a.v[2] * b.v[2] + a.v[3] * b.v[3]);
+#endif
+	}
 
-	/** Returns the cross product of the two vectors \a a and \a b (a × b). */
+	/** Returns the cross product, a.k.a. the vector product, of the two vectors \a a and \a b (a × b). */
 	VMATH_INLINE VEC VectorCross(VEC a, VEC b) {
 #ifdef __SSE__
-		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))), _mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
+		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))),_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
+#else
+		VEC v = { a.v[1] * b.v[2] - a.v[2] * b.v[1],
+			a.v[2] * b.v[0] - a.v[0] * b.v[2],
+			a.v[0] * b.v[1] - a.v[1] * b.v[0],
+			0};
+		return v;
 #endif
 	}
 	
+	/** Returns `0` if, and only if, any component of the two vectors \a a and \a b mismatch. */
 	VMATH_INLINE int VectorEqual(VEC a, VEC b) {
 #ifdef __SSE__
 		return _mm_movemask_ps(_mm_cmpeq_ps(a, b));
 #else
-		return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3]; // TODO rewrite for floating point comparison
+		return a.v[0] == b.v[0] && a.v[1] == b.v[1] && a.v[2] == b.v[2] && a.v[3] == b.v[3]; // TODO rewrite for floating point comparison
 #endif
 	}
 
