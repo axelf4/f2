@@ -237,7 +237,7 @@ extern "C" {
 #endif
 	}
 
-	/** Returns the cross product of the two vectors \a a and \a b. */
+	/** Returns the cross product of the two vectors \a a and \a b (a × b). */
 	VMATH_INLINE VEC VectorCross(VEC a, VEC b) {
 #ifdef __SSE__
 		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))), _mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
