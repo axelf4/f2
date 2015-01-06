@@ -74,8 +74,8 @@ namespace {
 	TEST(Vector, DotAndCrossProducts) {
 		float x1 = frand(), y1 = frand(), z1 = frand(), w1 = frand(), x2 = frand(), y2 = frand(), z2 = frand(), w2 = frand();
 		VEC v1 = VectorSet(x1, y1, z1, w1), v2 = VectorSet(x2, y2, z2, w2);
-		float dot = x1 * x2 + y1 * y2 + z1 * z2 + w1 * w2;
-		EXPECT_FLOAT_EQ(dot, VectorDot(v1, v2)) << "The dot product of the two vectors [" << x1 << ", " << y1 << ", " << z1 << ", " << w1 << "] and [" << x2 << ", " << y2 << ", " << z2 << ", " << w2 << "] doesn't equal " << dot;
+		float dot = x1 * x2 + y1 * y2 + z1 * z2;
+		EXPECT_NEAR(dot, VectorDot(v1, v2), 0.05) << "The dot product of the two vectors [" << x1 << ", " << y1 << ", " << z1 << "] and [" << x2 << ", " << y2 << ", " << z2 << "] doesn't equal " << dot;
 		
 		vectorCompare(VectorCross(v1, v2), y1 * z2 - z1 * y2,
 			z1 * x2 - x1 * z2,

@@ -261,7 +261,7 @@ extern "C" {
 		__m128 m = _mm_mul_ps(v1, v2), t = _mm_add_ps(m, _mm_shuffle_ps(m, m, _MM_SHUFFLE(2, 3, 0, 1)));
 		return(_mm_cvtss_f32(_mm_add_ps(t, _mm_shuffle_ps(t, t, _MM_SHUFFLE(1, 0, 3, 2)))));
 #else
-		return(a.v[0] * b.v[0] + a.v[1] * b.v[1] + a.v[2] * b.v[2] + a.v[3] * b.v[3]);
+		return(a.v[0] * b.v[0] + a.v[1] * b.v[1] + a.v[2] * b.v[2]);
 #endif
 	}
 
