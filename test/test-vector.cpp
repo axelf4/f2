@@ -39,15 +39,7 @@ namespace {
 	}
 	
 	TEST(Vector, Arithmetic) {
-		float x1, y1, z1, w1, x2, y2, z2, w2;
-		x1 = frand();
-		y1 = frand();
-		z1 = frand();
-		w1 = frand();
-		x2 = frand();
-		y2 = frand();
-		z2 = frand();
-		w2 = frand();
+		float x1 = frand(), y1 = frand(), z1 = frand(), w1 = frand(), x2 = frand(), y2 = frand(), z2 = frand(), w2 = frand();
 		VEC v1 = VectorSet(x1, y1, z1, w1), v2 = VectorSet(x2, y2, z2, w2);
 		vectorCompare(VectorAdd(v1, v2), x1 + x2, y1 + y2, z1 + z2, w1 + w2);
 		vectorCompare(VectorSubtract(v1, v2), x1 - x2, y1 - y2, z1 - z2, w1 - w2);
