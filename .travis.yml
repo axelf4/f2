@@ -3,15 +3,15 @@ compiler:
   - gcc
   - clang
 before_install:
+  # OpenGL Extension Wrangler & Simple OpenGL Image Library & Google Test & lcov
+  - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
+  # GTest
+  - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo make install)
+  - gem install coveralls-lcov
   # SDL2
   - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   - tar -xzvf SDL2-2.0.3.tar.gz
   - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
-  # OpenGL Extension Wrangler & Simple OpenGL Image Library & Google Test & lcov
-  - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
-  # GTest
-  - (cd /usr/src/gtest && sudo cmake && sudo make && sudo make install)
-  - gem install coveralls-lcov
   # Assimp
   - wget -N https://github.com/assimp/assimp/archive/master.zip
   - unzip master.zip
