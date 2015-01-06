@@ -20,7 +20,7 @@ namespace {
 	}
 
 	TEST(Vector, SettingAndGetting) {
-		srand (static_cast <unsigned> (time(0)))
+		srand (static_cast <unsigned> (time(0)));
 		float x = frand(), y = frand(), z = frand(), w = frand();
 		VEC vector = VectorSet(x, y, z, w);
 		vectorCompare(vector, x, y, z, w);
