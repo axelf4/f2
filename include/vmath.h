@@ -227,10 +227,10 @@ extern "C" {
 #endif
 	}
 
-	/** Normalizes the vector \a v (â). */
-	VMATH_INLINE VEC VectorNormalize(VEC v) {
+	/** Returns the normalized vector \a a (â). */
+	VMATH_INLINE VEC VectorNormalize(VEC a) {
 #ifdef __SSE4_1__
-		return(_mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F /* 0x77 */))));
+		return(_mm_mul_ps(a, _mm_rsqrt_ps(_mm_dp_ps(a, a, 0x7F /* 0x77 */))));
 #elif defined(__SSE__)
 		__m128 vec0, vec1;
 		// vec0 = _mm_and_ps(v, vector4::vector4_clearW);
@@ -242,10 +242,10 @@ extern "C" {
 		vec1 = _mm_shuffle_ps(vec1, vec1, _MM_SHUFFLE(1, 0, 3, 2));
 		vec0 = _mm_add_ps(vec0, vec1);
 		vec0 = _mm_rsqrt_ps(vec0);
-		return(_mm_mul_ps(vec0, v));
+		return(_mm_mul_ps(vec0, a));
 #else
-		float length = VectorLength(v);
-		VEC v = { v.v[0] / length, v.v[1] / length, v.v[2] / length, v.v[3] / length };
+		float length = VectorLength(a);
+		VEC v = { a.v[0] / length, a.v[1] / length, a.v[2] / length, a.v[3] / length };
 		return v;
 #endif
 	}
