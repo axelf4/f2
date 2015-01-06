@@ -88,7 +88,7 @@ if(BUILD_UNIT_TESTS)
 
 	add_executable(runUnitTests test/test-vector.cpp)
 	# target_link_libraries(runUnitTests gtest gtest_main ${LIBRARIES})
-	target_link_libraries(runUnitTests ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(runUnitTests ${GTEST_BOTH_LIBRARIES} pthread)
 	add_test(NAME runUnitTests COMMAND runUnitTests)
 endif()
 
