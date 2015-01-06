@@ -21,5 +21,4 @@ before_install:
 script:
   - (mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make && ./runUnitTests)
 after_success:
-  - lcov --compat-libtool --directory . --capture --output-file coverage.info
-  - coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
+  - lcov --compat-libtool --directory . --capture --output-file coverage.info && coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
