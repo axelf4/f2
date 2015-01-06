@@ -19,6 +19,11 @@ before_install:
   - unzip master.zip
   - (cd bullet3-master && cmake -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
 script:
-  - (mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make && ./runUnitTests)
+  - (mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make)
 after_success:
-  - lcov --compat-libtool --directory . --capture --output-file coverage.info && coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
+  # - lcov --directory . --capture --output-file coverage.info --no-external && coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
+  - lcov -c -i -d . -o app_base.info
+  - ./runUnitTests
+  - lcov -c -d . -o app_test.info
+  - lcov -a app_base.info -a app_test.info -o coverage.info
+  - coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
