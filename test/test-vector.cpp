@@ -56,11 +56,6 @@ namespace {
 		vectorCompare(VectorDivide(v1, v2), x1 / x2, y1 / y2, z1 / z2, w1 / w2);
 	}
 	
-	TEST(Vector, Length) {
-		VEC vector = VectorSet(3, 4, 6, 0);
-		EXPECT_FLOAT_EQ(std::sqrt(61), VectorLength(vector)) << "The vector's length doesn't equal the square root of 61";
-	}
-	
 	TEST(Vector, LengthAndNormalization) {
 		float x = frand() + 0.1, y = frand() + 0.1, z = frand() + 0.1, w = frand() + 0.1;
 		VEC vector = VectorSet(x, y, z, w);
