@@ -81,6 +81,7 @@ extern "C" {
 #endif
 
 #define PI 3.141592654f /**< An optimal approximation of the constant pi. */
+#define NULL_VECTOR VectorReplicate(0) /**< A null vector (or zero vector) whose length is zero, with the components [0, 0, 0, 0] (*0*). */
 
 #define M00 0 /**< XX. */
 #define M01 4 /**< XY. */
@@ -218,7 +219,7 @@ extern "C" {
 #endif
 	}
 
-	/** Returns the scalar length of the vector \a a (||a||). */
+	/** Returns the length or magnitude or norm of the vector \a a (||a||). */
 	VMATH_INLINE float VectorLength(VEC a) {
 #ifdef __SSE4_1__
 		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(a, a, 0x71))));
@@ -245,7 +246,7 @@ extern "C" {
 		return(_mm_mul_ps(vec0, a));
 #else
 		float length = VectorLength(a);
-		VEC v = { a.v[0] / length, a.v[1] / length, a.v[2] / length, a.v[3] };
+		VEC v = { a.v[0] / length, a.v[1] / length, a.v[2] / length, a.v[3] / length };
 		return v;
 #endif
 	}
