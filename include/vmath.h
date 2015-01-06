@@ -245,7 +245,7 @@ extern "C" {
 		return(_mm_mul_ps(vec0, a));
 #else
 		float length = VectorLength(a);
-		VEC v = { a.v[0] / length, a.v[1] / length, a.v[2] / length, a.v[3] / length };
+		VEC v = { a.v[0] / length, a.v[1] / length, a.v[2] / length, a.v[3] };
 		return v;
 #endif
 	}
