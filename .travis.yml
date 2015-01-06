@@ -5,8 +5,8 @@ compiler:
 before_install:
   # OpenGL Extension Wrangler & Simple OpenGL Image Library & Google Test & lcov
   - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
-  # GTest
-  - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo make install)
+  # GTest copy or symlink libgtest.a and libgtest_main.a to your /usr/lib folder
+  - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp *.a /usr/lib)
   - gem install coveralls-lcov
   # SDL2
   - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
