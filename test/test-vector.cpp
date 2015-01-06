@@ -52,6 +52,27 @@ namespace {
 		EXPECT_FLOAT_EQ(std::sqrt(61), VectorLength(vector)) << "The vector's length doesn't equal the square root of 61";
 	}
 	
+	TEST(Vector, LengthAndNormalization) {
+		float x = frand() + 0.1, y = frand() + 0.1, z = frand() + 0.1, w = frand() + 0.1;
+		VEC vector = VectorSet(x, y, z, w);
+		float length = (float) sqrt(x * x + y * y + z * z + w * w);
+		EXPECT_FLOAT_EQ(length, VectorLength(vector)) << "VectorLength isn't correct";
+		
+		vectorCompare(VectorNormalize(vector), x / length, y / length, z / length, w / length);
+	}
+	
+	TEST(Vector, DotAndCrossProducts) {
+		float x1 = frand(), y1 = frand(), z1 = frand(), w1 = frand(), x2 = frand(), y2 = frand(), z2 = frand(), w2 = frand();
+		VEC v1 = VectorSet(x1, y1, z1, w1), v2 = VectorSet(x2, y2, z2, w2);
+		float dot = x1 * x1 + y1 * y1 + z1 * z1 + w1 * w1;
+		EXPECT_FLOAT_EQ(dot, VectorDot(v1)) << "Dot product doesn't work";
+		
+		vectorCompare(VectorCross(v1, v2), y1 * z2 - z1 * y2,
+			z1 * x2 - x1 * z2,
+			x1 * y2 - y1 * x2,
+			0);
+	}
+	
 	TEST(Vector, Comparison) {
 		float x = frand(), y = frand(), z = frand(), w = frand();
 		VEC v1 = VectorSet(x, y, z, w), v2 = VectorSet(x, y, z, w), v3 = VectorSet(-x, -y, -z, -w);
