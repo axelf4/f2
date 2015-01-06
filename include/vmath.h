@@ -124,7 +124,8 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_set1_ps(v));
 #else
-		return((VEC) { { v, v, v, v } });
+		VEC v = { v, v, v, v };
+		return(v);
 #endif
 	}
 
@@ -137,7 +138,8 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_setr_ps(x, y, z, w));
 #else
-		return((VEC) { w, z, y, x });
+		VEC v = { w, z, y, x };
+		return(v);
 #endif
 	}
 
@@ -147,7 +149,8 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_load_ps(v));
 #else
-		return((VEC) { v[0], v[1], v[2], v[3] });
+		VEC v = { v[0], v[1], v[2], v[3] };
+		return(v);
 #endif
 	}
 
@@ -171,7 +174,8 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_add_ps(a, b));
 #else
-		return((VEC) { a.v[0] + b.v[0], a.v[1] + b.v[1], a.v[2] + b.v[2], a.v[3] + b.v[3] });
+		VEC v = { a.v[0] + b.v[0], a.v[1] + b.v[1], a.v[2] + b.v[2], a.v[3] + b.v[3] };
+		return(v);
 #endif
 	}
 
@@ -183,7 +187,8 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_sub_ps(a, b));
 #else
-		return((VEC) { a.v[0] - b.v[0], a.v[1] - b.v[1], a.v[2] - b.v[2], a.v[3] - b.v[3] });
+		VEC v = { a.v[0] - b.v[0], a.v[1] - b.v[1], a.v[2] - b.v[2], a.v[3] - b.v[3] };
+		return(v);
 #endif
 	}
 
@@ -195,7 +200,8 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_mul_ps(a, b));
 #else
-		return((VEC) { a.v[0] * b.v[0], a.v[1] * b.v[1], a.v[2] * b.v[2], a.v[3] * b.v[3] });
+		VEC v = { a.v[0] * b.v[0], a.v[1] * b.v[1], a.v[2] * b.v[2], a.v[3] * b.v[3] };
+		return(v);
 #endif
 	}
 
@@ -207,7 +213,8 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_div_ps(a, b));
 #else
-		return((VEC) { a.v[0] / b.v[0], a.v[1] / b.v[1], a.v[2] / b.v[2], a.v[3] / b.v[3] });
+		VEC v = { a.v[0] / b.v[0], a.v[1] / b.v[1], a.v[2] / b.v[2], a.v[3] / b.v[3] };
+		return(v);
 #endif
 	}
 
@@ -215,6 +222,8 @@ extern "C" {
 	VMATH_INLINE float VectorLength(VEC v) {
 #ifdef __SSE4_1__
 		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(v, v, 0x71))));
+#else
+		return((float) sqrt(v.v[0] * v.v[0] + v.v[1] * v.v[1] + v.v[2] * v.v[2] + v.v[3] * v.v[3]));
 #endif
 	}
 
@@ -222,7 +231,7 @@ extern "C" {
 	VMATH_INLINE VEC VectorNormalize(VEC v) {
 #ifdef __SSE4_1__
 		return(_mm_mul_ps(v, _mm_rsqrt_ps(_mm_dp_ps(v, v, 0x7F /* 0x77 */))));
-#else
+#elif defined(__SSE__)
 		__m128 vec0, vec1;
 		// vec0 = _mm_and_ps(v, vector4::vector4_clearW);
 		vec0 = _mm_mul_ps(vec0, vec0);
@@ -234,6 +243,10 @@ extern "C" {
 		vec0 = _mm_add_ps(vec0, vec1);
 		vec0 = _mm_rsqrt_ps(vec0);
 		return(_mm_mul_ps(vec0, v));
+#else
+		float length = VectorLength(v);
+		VEC v = { v.v[0] / length, v.v[1] / length, v.v[2] / length, v.v[3] / length };
+		return v;
 #endif
 	}
 	
