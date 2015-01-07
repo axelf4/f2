@@ -31,5 +31,7 @@ after_success:
   # create test coverage data file
   - lcov -c -d . -o app_test.info --no-external
   # combine baseline and test coverage data
-  - lcov -a app_base.info -a app_test.info -o coverage.info
+  - lcov -a app_base.info -a app_test.info -o app_all.info
+  # remove output for external libraries
+  - lcov --remove app_all.info "/usr*" -o coverage.info
   - coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
