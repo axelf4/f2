@@ -25,11 +25,11 @@ script:
 after_success:
   # - lcov --directory . --capture --output-file coverage.info --no-external && coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
   # create baseline coverage data file
-  - lcov -c -i -d . -o app_base.info
+  - lcov -c -i -d . -o app_base.info --no-external
   # perform test
   - build/runUnitTests
   # create test coverage data file
-  - lcov -c -d . -o app_test.info
+  - lcov -c -d . -o app_test.info --no-external
   # combine baseline and test coverage data
   - lcov -a app_base.info -a app_test.info -o coverage.info
   - coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
