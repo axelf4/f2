@@ -24,6 +24,7 @@ script:
   - (mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make)
 after_success:
   # - lcov --directory . --capture --output-file coverage.info --no-external && coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
+  - lcov -d . --zerocounters
   # create baseline coverage data file
   - lcov -c -i -d . -o app_base.info
   # perform test
