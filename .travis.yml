@@ -34,5 +34,5 @@ after_success:
   - lcov -a app_base.info -a app_test.info -o app_all.info
   # remove output for external libraries
   # - lcov --remove app_all.info "/usr*" -o coverage.info
-  - lcov --extract app_all.info "*/include/*" -o coverage.info
+  - lcov --extract app_all.info "$PWD/include/*" -o coverage.info
   - coveralls-lcov --source-encoding=ISO-8859-1 coverage.info
