@@ -43,6 +43,17 @@ extern "C" {
 #define NULL_ATTRIB (attrib { 0, 0, 0 })
 #endif
 
+	GLsizei calculate_stride(struct attrib *attributes);
+
+	// sGLsizei calculate_stride_count, calculate_stride_i;
+#define calculate_stride2(attributes) ( \
+	(calculate_stride_count = 0), \
+	for(i=0;attributes[i].size != 0; i++) { \
+		(attributes)[i]->offset = count; \
+		calculate_stride_count += sizeof(float)* (attributes)[i]->size; \
+	}, calculate_stride_count \
+)
+
 	/* SHADER PROGRAM */
 
 	const char *read_file(const char *filename);
@@ -78,17 +89,6 @@ extern "C" {
 		stmt \
 		for (; i > 0; i--) glDisableVertexAttribArray(attributes[i].location); \
 	} while(0)
-
-	GLsizei calculate_stride(struct attrib *attributes);
-
-	// sGLsizei calculate_stride_count, calculate_stride_i;
-#define calculate_stride2(attributes) ( \
-	(calculate_stride_count = 0), \
-	for(i=0;attributes[i].size != 0; i++) { \
-		(attributes)[i]->offset = count; \
-		calculate_stride_count += sizeof(float)* (attributes)[i]->size; \
-	}, calculate_stride_count \
-)
 
 #ifdef __cplusplus
 }

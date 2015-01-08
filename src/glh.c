@@ -2,6 +2,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+GLsizei calculate_stride(struct attrib *attributes) {
+	GLsizei count = 0, i;
+	for (i = 0; attributes[i].size != 0; i++) {
+		struct attrib *attribute = &attributes[i];
+		attribute->offset = count;
+		count += sizeof(float)* attribute->size;
+	}
+	return count;
+}
+
 const char *read_file(const char *filename) {
 	char *buffer = 0;
 	long length;
@@ -81,16 +91,6 @@ struct mesh * create_mesh(int indexed) {
 	struct mesh *mesh = malloc(sizeof(struct mesh));
 	indexed = 1; // TODO remove and enforce
 	return glGenBuffers(1 + indexed, buffers), (mesh->vbo = buffers[0]), (mesh->ibo = buffers[1]), mesh;
-}
-
-GLsizei calculate_stride(struct attrib *attributes) {
-	GLsizei count = 0, i;
-	for (i = 0; attributes[i].size != 0; i++) {
-		struct attrib *attribute = &attributes[i];
-		attribute->offset = count;
-		count += sizeof(float)* attribute->size;
-	}
-	return count;
 }
 
 void destroy_mesh(struct mesh *mesh) {
