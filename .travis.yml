@@ -5,9 +5,6 @@ compiler:
 before_install:
   # OpenGL Extension Wrangler & Simple OpenGL Image Library & Google Test & lcov
   - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
-  # GTest copy libgtest.a and libgtest_main.a to /usr/lib
-  - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp *.a /usr/lib)
-  - gem install coveralls-lcov
   # SDL2
   - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   - tar -xzvf SDL2-2.0.3.tar.gz
@@ -20,6 +17,9 @@ before_install:
   - wget -N https://github.com/bulletphysics/bullet3/archive/master.zip
   - unzip master.zip
   - (cd bullet3-master && cmake -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
+  # GTest (copying libgtest.a and libgtest_main.a to /usr/lib) & Coveralls::Lcov
+  - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp *.a /usr/lib)
+  - gem install coveralls-lcov
 script:
   - (mkdir build && cd build && cmake -DBUILD_UNIT_TESTS=ON .. -G "Unix Makefiles" && make)
 after_success:

@@ -80,16 +80,12 @@ if(BUILD_UNIT_TESTS)
 	# This must be set in the top-level CMakeLists.txt for the tests to be run by 'make test' or ctest.
 	# enable_testing()
 
-	# add_subdirectory(test/gtest-1.7.0)
-	# Include the gtest library. gtest_SOURCE_DIR is available due to 'project(gtest)' above.
-	# include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 	find_package(GTest REQUIRED)
 	include_directories(${GTEST_INCLUDE_DIRS})
 
-	add_executable(runUnitTests test/test-vector.cpp)
-	# target_link_libraries(runUnitTests gtest gtest_main ${LIBRARIES})
-	target_link_libraries(runUnitTests ${GTEST_BOTH_LIBRARIES} pthread)
-	add_test(NAME runUnitTests COMMAND runUnitTests)
+	add_executable(runUnitTests test/test_vector.cpp test/test_graphics.cpp test/test_objloader.cpp)
+	target_link_libraries(runUnitTests ${GTEST_BOTH_LIBRARIES} pthread ${LIBRARIES})
+	# add_test(NAME runUnitTests COMMAND runUnitTests)
 endif()
 
 
