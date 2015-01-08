@@ -75,17 +75,17 @@ endif()
 # 	endforeach()
 # endif()
 
-option(BUILD_UNIT_TESTS "Build unit tests" OFF)
-if(BUILD_UNIT_TESTS)
+option(BUILD_TESTS "Build unit tests" OFF)
+if(BUILD_TESTS)
 	# This must be set in the top-level CMakeLists.txt for the tests to be run by 'make test' or ctest.
 	# enable_testing()
 
 	find_package(GTest REQUIRED)
 	include_directories(${GTEST_INCLUDE_DIRS})
 
-	add_executable(runUnitTests test/test_vector.cpp test/test_graphics.cpp test/test_objloader.cpp)
-	target_link_libraries(runUnitTests ${GTEST_BOTH_LIBRARIES} pthread ${LIBRARIES})
-	# add_test(NAME runUnitTests COMMAND runUnitTests)
+	add_executable(runTests test/test_vector.cpp test/test_graphics.cpp test/test_objloader.cpp)
+	target_link_libraries(runTests ${GTEST_BOTH_LIBRARIES} pthread ${LIBRARIES})
+	# add_test(NAME runTests COMMAND runTests)
 endif()
 
 
