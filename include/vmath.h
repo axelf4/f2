@@ -223,6 +223,8 @@ extern "C" {
 	VMATH_INLINE float VectorLength(VEC a) {
 #ifdef __SSE4_1__
 		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(a, a, 0x71))));
+#elif defined(__SSE__)
+
 #else
 		return((float) sqrt(a.v[0] * a.v[0] + a.v[1] * a.v[1] + a.v[2] * a.v[2]));
 #endif
@@ -259,7 +261,7 @@ extern "C" {
 		__m128 r1 = _mm_mul_ps(a, b), r2 = _mm_hadd_ps(r1, r1), r3 = _mm_hadd_ps(r2, r2);
 		return(_mm_cvtss_f32(r3));
 #elif defined(__SSE__)
-		__m128 m = _mm_mul_ps(v1, v2), t = _mm_add_ps(m, _mm_shuffle_ps(m, m, _MM_SHUFFLE(2, 3, 0, 1)));
+		__m128 m = _mm_mul_ps(a, b), t = _mm_add_ps(m, _mm_shuffle_ps(m, m, _MM_SHUFFLE(2, 3, 0, 1)));
 		return(_mm_cvtss_f32(_mm_add_ps(t, _mm_shuffle_ps(t, t, _MM_SHUFFLE(1, 0, 3, 2)))));
 #else
 		return(a.v[0] * b.v[0] + a.v[1] * b.v[1] + a.v[2] * b.v[2]);
