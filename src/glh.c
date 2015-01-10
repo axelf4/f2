@@ -89,7 +89,6 @@ GLchar * getProgramInfoLog(GLuint program) {
 struct mesh * create_mesh(int indexed) {
 	GLuint buffers[2];
 	struct mesh *mesh = malloc(sizeof(struct mesh));
-	indexed = 1; // TODO remove and enforce
 	return glGenBuffers(1 + indexed, buffers), (mesh->vbo = buffers[0]), (mesh->ibo = buffers[1]), mesh;
 }
 
