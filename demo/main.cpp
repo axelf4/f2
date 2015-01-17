@@ -372,7 +372,7 @@ struct game_world {
 		dispatcher = new btCollisionDispatcher(collisionConfiguration);
 		solver = new btSequentialImpulseConstraintSolver;
 		world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-		world->setGravity(btVector3(0, -9.81f * 100, 0));
+		world->setGravity(btVector3(0, -9.81f * 70, 0));
 
 		debugDraw = new GLDebugDrawer();
 		// debugDraw->setDebugMode(btIDebugDraw::DBG_DrawAabb | btIDebugDraw::DBG_DrawWireframe);
@@ -464,8 +464,6 @@ inline void printMatrix(float *matrixValue) {
 		cout << "-------------" << endl;
 	}
 }
-
-#include <Windows.h>
 
 int main(int argc, char *argv[]) {
 	/*obj_model *obj = load_obj_model(RESOURCE_DIR "cs_office/cs_office.obj");
@@ -702,7 +700,7 @@ int main(int argc, char *argv[]) {
 		GLenum error;
 		while ((error = glGetError()) != 0) cout << "GL error: " << error << endl;/**/
 		SDL_GL_SwapWindow(win);
-		world->world->stepSimulation(1 / 100.f, 100); // 60 10
+		world->world->stepSimulation(1 / 60.f, 100); // 60 10
 		if ((1000 / FPS) > (SDL_GetTicks() - start_time)) SDL_Delay((1000 / FPS) - (SDL_GetTicks() - start_time));
 	}
 
