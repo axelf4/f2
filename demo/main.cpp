@@ -527,8 +527,6 @@ int main(int argc, char *argv[]) {
 	// Culling
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	// Texturing
-	// glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	VEC position = VectorReplicate(0);
 	float yaw = 0.f, pitch = 0.f;
