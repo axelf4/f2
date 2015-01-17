@@ -9,12 +9,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 #SET (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /SAFESEH:NO")
 
 set(SOURCES
-	src/f1.cpp
 	src/glh.c
 	src/objloader.c
 	src/vbo.cpp
 
-	include/f1.h
 	include/glh.h
 	include/vmath.h
 	include/objloader.h
@@ -77,6 +75,7 @@ option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
 	# This must be set in the top-level CMakeLists.txt for the tests to be run by 'make test' or ctest.
 	# enable_testing()
+	# add_custom_target(check COMMAND ctest -V)
 
 	find_package(GTest REQUIRED)
 	include_directories(${GTEST_INCLUDE_DIRS})

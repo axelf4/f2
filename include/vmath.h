@@ -530,20 +530,39 @@ extern "C" {
 #endif
 	}
 
-	/** Returns a translation matrix. */
-	VMATH_INLINE MAT MatrixTranslate(MAT *a, float x, float y, float z) {
+	/** Builds a translation matrix from the specified offsets.
+		@param x The translation along the x-axis
+		@param y The translation along the x-axis
+		@param z The translation along the x-axis
+		@return The translation matrix */
+	VMATH_INLINE MAT MatrixTranslation(float x, float y, float z) {
 		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(x, y, z, 1) };
 		return m;
 	}
 
-	/** Returns a scale transformation matrix. */
-	VMATH_INLINE MAT MatrixScale(float x, float y, float z) {
-		MAT m = { _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(x, y, z, 1) };
+	/** Builds a translation matrix from a vector.
+		@param v 3D vector describing the translations along the x-axis, y-axis, and z-axis
+		@return The translation matrix */
+	VMATH_INLINE MAT MatrixTranslationFromVector(VEC v) {
+		__m128 t = _mm_move_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)), _mm_set1_ps(1));
+		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_shuffle_ps(t, t, _MM_SHUFFLE(0, 3, 2, 1)) };
 		return m;
 	}
 
-	/** Returns a matrix based on the quaternion \a a. */
-	VMATH_INLINE MAT QuaternionToMatrix(VEC a) {
+	/** Builds a matrix that scales along the x-axis, y-axis, and z-axis.
+		@param x Scaling factor along the x-axis
+		@param y Scaling factor along the x-axis
+		@param z Scaling factor along the x-axis
+		@return The scaling	matrix */
+	VMATH_INLINE MAT MatrixScaling(float x, float y, float z) {
+		MAT m = { _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(0, 0, 0, 1) };
+		return m;
+	}
+
+	/** Builds a rotation matrix from the quaternion \a a.
+		@param a Quaternion defining the rotation.
+		@return The rotation matrix */
+	VMATH_INLINE MAT MatrixRotationQuaternion(VEC a) {
 #ifdef __SSE__
 		ALIGN(128) float q[4];
 		VectorGet(q, a);

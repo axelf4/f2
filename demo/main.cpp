@@ -4,9 +4,9 @@
 #include <GL/glew.h>
 #include <SDL_opengl.h>
 
-#include "f1.h"
-#include "glh.h"
-#include "vmath.h"
+#include <glh.h>
+#include <vmath.h>
+#include <objloader.h>
 
 #include <SOIL.h>
 // #include "obj_loader.h"
@@ -33,8 +33,12 @@
 #define RESOURCE_DIR "resource/"
 #endif
 
+// Converts degrees to radians.
+#define degreesToRadians(angleDegrees) (angleDegrees * M_PI / 180.0)
+// Converts radians to degrees.
+#define radiansToDegrees(angleRadians) (angleRadians * 180.0 / M_PI)
+
 using namespace std;
-using namespace f1;
 
 void update_camera(float *yaw, float yaw_amount, float *pitch, float pitch_amount) {
 	*yaw -= yaw_amount;
@@ -97,12 +101,12 @@ void destroy_model(struct model *model) {
 		destroy_mesh(node->mesh);
 		free(node->attributes);
 
-		delete[] node->vertices;
-		delete[] node->indices;
+		if (node->vertices != 0) delete[] node->vertices;
+		if (node->indices != 0) delete[] node->indices;
 
 		delete node;
 	}
-	delete model->tiva;
+	if (model->tiva != 0) model->tiva;
 	delete[] model->nodes;
 	delete model;
 }
@@ -145,6 +149,52 @@ GLuint create_null_texture(int width, int height) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, &pixels[0]);
 
 	return texture;
+}
+
+model * loadMeshUsingObjLoader(const char *filename, GLuint program) {
+	struct obj_model *scene = load_obj_model(filename);
+	if (!scene) {
+		std::cerr << "Error loading model: " << filename << std::endl;
+		return 0;
+	}
+	model *model = new struct model;
+	model->nodes = new model_node*[scene->numParts];
+	model->nodeCount = scene->numParts;
+
+	GLuint *textures = new GLuint[scene->numMaterials];
+	for (unsigned int i = 0; i < scene->numMaterials; i++) {
+		struct mtl_material *material = scene->materials[i];
+		if (material->texPath != 0) {
+			// Material has texture
+			string fullpath(filename);
+			fullpath = fullpath.substr(0, fullpath.rfind('/') + 1).append(material->texPath);
+			textures[i] = load_texture(fullpath.c_str());
+		}
+		else textures[i] = 0;
+	}
+
+	for (unsigned int i = 0; i < scene->numParts; i++) {
+		struct obj_model_part *part = scene->parts[i];
+		model_node *node = model->nodes[i] = new model_node;
+
+		size_t k = 0;
+		node->attributes = (struct attrib *) malloc(sizeof(struct attrib) * (2 + scene->hasUVs + scene->hasNorms));
+		node->attributes[k++] = { glGetAttribLocation(program, "vertex"), 3, 0 };
+		if (scene->hasUVs) node->attributes[k++] = { glGetAttribLocation(program, "texCoord"), 2, 0 };
+		if (scene->hasNorms) node->attributes[k++] = { glGetAttribLocation(program, "normal"), 3, 0 };
+		node->attributes[k++] = NULL_ATTRIB;
+		node->mesh = create_mesh(0);
+		node->stride = calculate_stride(node->attributes);
+
+		glBindBuffer(GL_ARRAY_BUFFER, node->mesh->vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * (node->vertexCount = part->vertexCount), part->vertices, GL_STATIC_DRAW);
+		node->vertices = (float *)(node->indices = 0);
+		node->texture = textures[part->materialIndex];
+	}
+
+	delete[] textures;
+	destroy_obj_model(scene);
+	return model;
 }
 
 model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape, btBvhTriangleMeshShape *&shape) {
@@ -218,7 +268,7 @@ model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape,
 		if (mesh->HasTextureCoords(0)) node->attributes[j++] = { glGetAttribLocation(program, "texCoord"), 2, 0 };
 		if (mesh->HasNormals()) node->attributes[j++] = { glGetAttribLocation(program, "normal"), 3, 0 };
 		node->attributes[j++] = NULL_ATTRIB;
-		node->mesh = create_mesh(GL_STATIC_DRAW);
+		node->mesh = create_mesh(1);
 		node->stride = calculate_stride(node->attributes);
 
 		if (setShape) {
@@ -380,7 +430,7 @@ void jump(game_entity *ball, btDynamicsWorld *world) {
 	ball->motionState->getWorldTransform(xform);
 	// btVector3 down = -xform.getBasis()[1];
 	btVector3 down = ballTransform.getOrigin();
-	cout << down.getX() << down.getY() << down.getZ() << endl;
+	// cout << down.getX() << down.getY() << down.getZ() << endl;
 	// down.normalize();
 	btScalar halfHeight = btScalar(5) / 2;
 	btVector3 from(xform.getOrigin()), to(from + down * halfHeight * btScalar(1.1));
@@ -415,7 +465,22 @@ inline void printMatrix(float *matrixValue) {
 	}
 }
 
+#include <Windows.h>
+
 int main(int argc, char *argv[]) {
+	/*obj_model *obj = load_obj_model(RESOURCE_DIR "cs_office/cs_office.obj");
+	for (unsigned int i = 0; i < obj->numParts; i++) {
+	obj_model_part *part = obj->parts[i];
+
+	for (unsigned int j = 0; j < part->vertexCount; j += 8) {
+	cout << part->vertices[j] << " " << part->vertices[j + 1] << " " << part->vertices[j + 2] << " " << part->vertices[j + 3] << " " << part->vertices[j + 4] << " " << part->vertices[j + 5] << " " << part->vertices[j + 6] << " " << part->vertices[j + 7] << endl;
+	}
+	}
+	destroy_obj_model(obj);
+
+	system("pause");*/
+	// return 0;
+
 	ALIGN(16) float value[4], matrixValue[16];
 	VEC v1 = VectorSet(10, 3, 5, 0),
 		v2 = VectorReplicate(10);
@@ -469,13 +534,11 @@ int main(int argc, char *argv[]) {
 
 	VEC position = VectorReplicate(0);
 	float yaw = 0.f, pitch = 0.f;
-	MAT a, b, projection = MatrixPerspective(90.f, WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f),
-		view, vInv,
-		model = MatrixIdentity();
-	ALIGN(16) float mv[16], vv[4];
+	MAT projection = MatrixPerspective(90.f, WINDOW_WIDTH / WINDOW_HEIGHT, 1.f, 3000.f), view, model = MatrixIdentity();
+	ALIGN(16) float vv[4], mv[16];
 
-	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	const float skyboxVertices[] = { -1, -1, 1, -1, 1, 1, -1, 1 };
+	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	GLuint skyboxTex = setupSkyboxTexture();
 	GLuint skyboxProg = create_program(shaders::skyboxVertexSrc, shaders::skyboxFragmentSrc);
 	glUseProgram(skyboxProg);
@@ -483,7 +546,7 @@ int main(int argc, char *argv[]) {
 	cout << "Skybox program info log: " << infoLog << endl;
 	free(infoLog);
 	struct attrib skyboxAttribs[] = { { glGetAttribLocation(skyboxProg, "vertex"), 2, 0 }, NULL_ATTRIB };
-	struct mesh *skybox = create_mesh(GL_STATIC_DRAW);
+	struct mesh *skybox = create_mesh(1);
 	cout << "Stride: " << calculate_stride(skyboxAttribs) << endl;
 	glBindBuffer(GL_ARRAY_BUFFER, skybox->vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, skyboxVertices, GL_STATIC_DRAW);
@@ -498,7 +561,8 @@ int main(int argc, char *argv[]) {
 	free(infoLog);
 	// mesh *mesh = f1::getObjModel("bunny.obj");
 	btBvhTriangleMeshShape *groundShape;
-	struct model *groundMesh = loadMeshUsingAssimp(RESOURCE_DIR "cs_office/cs_office.obj", phong, true, groundShape);
+	struct model *groundMesh2 = loadMeshUsingAssimp(RESOURCE_DIR "cs_office/cs_office.obj", phong, true, groundShape); // "cube_texture.obj/cube_texture.obj"
+	struct model *groundMesh = loadMeshUsingObjLoader(RESOURCE_DIR "cs_office/cs_office.obj", phong);
 
 	// Bullet Physics initialization
 	game_world *world = new game_world;
@@ -524,7 +588,7 @@ int main(int argc, char *argv[]) {
 	ball->body->setCcdSweptSphereRadius(0.2f);
 	world->add_entity(ball);
 
-	bool noclip = false;
+	bool noclip = true;
 
 	bool done = false;
 	SDL_Event event;
@@ -552,22 +616,13 @@ int main(int argc, char *argv[]) {
 
 			jump(ball, world->world);
 		}
-		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
-		if (state[SDL_SCANCODE_SPACE] || state[SDL_SCANCODE_LSHIFT]) {
-			float yaccel = 0;
-			if (state[SDL_SCANCODE_SPACE]) yaccel += MOVEMENT_SPEED;
-			if (state[SDL_SCANCODE_LSHIFT]) yaccel -= MOVEMENT_SPEED;
-			VEC accel = VectorSet(0, yaccel, 0, 0);
-			position = VectorAdd(position, accel);
-		}
+		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, -MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix
 		btTransform t;
 		if (noclip) {
-			// view = glm::translate(glm::mat4(1.f), position);
-			VectorGet(vv, position);
-			a = MatrixIdentity();
-			view = MatrixTranslate(&a, vv[0], vv[1], vv[2]);
+			// VectorGet(vv, position); view = MatrixTranslation(vv[0], vv[1], vv[2]);
+			view = MatrixTranslationFromVector(position);
 		}
 		else {
 			ball->body->getMotionState()->getWorldTransform(t);
@@ -579,11 +634,8 @@ int main(int argc, char *argv[]) {
 			btVector3 pos = ballTransform.getOrigin();
 			view = glm::translate(glm::mat4(1.f), glm::vec3(pos.x(), pos.y(), pos.z()));*/
 		}
-		// cout << "pitch: " << pitch << " yaw: " << yaw << endl;
-		// view = glm::inverse(vInv = (view * toMat4(normalize(quat(vec3(pitch, yaw, 0))))));
-		//cout << "GLM: " << endl << "x: " << q1.x << " y: " << q1.y << " z: " << q1.z << " w: " << q1.w << endl << "SSE: " << endl;
-		MAT rotationViewMatrix = QuaternionToMatrix(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
-		vInv = (MatrixMultiply(&rotationViewMatrix, &view));
+		MAT rotationViewMatrix = MatrixRotationQuaternion(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
+		MAT vInv = (MatrixMultiply(&rotationViewMatrix, &view));
 		view = MatrixInverse(&vInv);
 		MAT modelView = MatrixMultiply(&model, &view), viewProjection = MatrixMultiply(&view, &projection);
 
@@ -592,20 +644,17 @@ int main(int argc, char *argv[]) {
 
 		/* Draw skybox. */
 		glDisable(GL_DEPTH_TEST);
-		glUseProgram(skyboxProg); // (*skyboxProg)();
+		glUseProgram(skyboxProg);
 		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, MatrixInverse(&projection)));
 		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, MatrixTranspose(&modelView)));
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
-		/*skybox->bind(skyboxProg);
-		skybox->draw(GL_TRIANGLES, 0, 6);
-		skybox->unbind(skyboxProg);*/
 		bind_mesh(skybox, skyboxAttribs, 0, glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
 
 		/* Draw everything. */
 		glEnable(GL_DEPTH_TEST);
-		glUseProgram(phong); // (*phong)();
+		glUseProgram(phong);
 		glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, MatrixGet(mv, projection));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, MatrixGet(mv, view));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, MatrixGet(mv, vInv));
@@ -615,21 +664,23 @@ int main(int argc, char *argv[]) {
 		/* Draw ground. */
 		ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(mv); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
-		model = MatrixLoad(mv); // model = mat4(1.0f);
+		model = MatrixLoad(mv);
+		MAT scaleMatrix = MatrixScaling(100, 100, 100);
+		// model = MatrixMultiply(&model, &scaleMatrix);
 		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, MatrixGet(mv, model));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, MatrixInverse(&modelView)));
 		glActiveTexture(GL_TEXTURE0);
 		glUniform1i(glGetUniformLocation(phong, "tex"), 0);
-		FOR(i, groundMesh->nodeCount) {
+		for (unsigned int i = 0; i < groundMesh->nodeCount; i++) {
 			model_node *node = groundMesh->nodes[i];
 
 			glBindTexture(GL_TEXTURE_2D, node->texture);
-			bind_mesh(node->mesh, node->attributes, node->stride, glDrawElements(GL_TRIANGLES, node->indexCount, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
+			// bind_mesh(node->mesh, node->attributes, node->stride, glDrawElements(GL_TRIANGLES, node->indexCount, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
+			bind_mesh(node->mesh, node->attributes, node->stride, glDrawArrays(GL_TRIANGLES, 0, node->vertexCount););
 		}
 
-		/* Bullet debug draw. */
-		// world->world->debugDrawWorld();
-		dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, MatrixMultiply(&model, &viewProjection)));
+		// world->world->debugDrawWorld(); // Debug draw the bullet world
+		// dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, MatrixMultiply(&model, &viewProjection)));
 
 		/* Draw bunny model. */
 		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
@@ -655,23 +706,20 @@ int main(int argc, char *argv[]) {
 		if ((1000 / FPS) > (SDL_GetTicks() - start_time)) SDL_Delay((1000 / FPS) - (SDL_GetTicks() - start_time));
 	}
 
-	SDL_HideWindow(win);
+	SDL_HideWindow(win); // Hide the window to make the cleanup time transparent
 
 	delete ground;
 	delete ball;
 	delete world;
 
+	glDeleteProgram(phong);
+	destroy_model(groundMesh2);
 	destroy_model(groundMesh);
-	// delete mesh;
-	// delete prog;
 
 	glDeleteTextures(1, &skyboxTex);
-	// delete skyboxProg;
-	// delete skybox;
 	glDeleteProgram(skyboxProg);
 	destroy_mesh(skybox);
 
-	/* Cleanup */
 	SDL_GL_DeleteContext(glcontext);
 	SDL_DestroyWindow(win);
 	SDL_Quit();

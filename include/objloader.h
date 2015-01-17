@@ -1,5 +1,5 @@
 /** A loader that takes a file name and returns a vertices and materials.
-@file objloader.h */
+	@file objloader.h */
 
 #ifndef OBJLOADER_H
 #define OBJLOADER_H
@@ -7,6 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define OBJ_OPTIMIZE_MESHES
 
 	struct mtl_material {
 		char *name;
@@ -25,14 +27,14 @@ extern "C" {
 	};
 
 	struct obj_model_part {
-		unsigned int vertexCount;
+		unsigned int vertexCount, faceCount;
 		float *vertices;
-		struct mtl_material *material;
+		unsigned int materialIndex; // struct mtl_material *material;
 	};
 
 	/**
 	  An OBJ model, consisting of a number of parts, given by #numParts and stored in #parts.
-	*/
+	  */
 	struct obj_model {
 		unsigned int numParts, /**< The number of parts of the type obj_model_part in #parts.*/
 			numMaterials, /**< The number of materials. */

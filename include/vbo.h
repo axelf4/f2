@@ -2,7 +2,7 @@
 #ifndef VBO_H
 #define VBO_H
 
-#include "f1.h"
+#include <GL/glew.h>
 #include <iostream>
 
 namespace f1 {
