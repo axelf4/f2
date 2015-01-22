@@ -27,35 +27,42 @@ extern "C" {
 #define SOCK_ADDR_IN_PORT(sa)	((struct sockaddr_in *)(sa))->sin_port
 #define SOCK_ADDR_IN_ADDR(sa)	((struct sockaddr_in *)(sa))->sin_addr
 #ifdef HAS_IPV6
-#define SOCK_ADDR_IN6_PORT(sa)	((struct sockaddr_in6 *)(sa))->sin6_port
-#define SOCK_ADDR_IN6_ADDR(sa)	((struct sockaddr_in6 *)(sa))->sin6_addr
 #define SOCK_ADDR_EQ_ADDR(sa, sb) \
-    ((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-      && SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr) \
-     || (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
-         && memcmp((char *) &(SOCK_ADDR_IN6_ADDR(sa)), \
-                   (char *) &(SOCK_ADDR_IN6_ADDR(sb)), \
-                   sizeof(SOCK_ADDR_IN6_ADDR(sa))) == 0))
+	((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+	&& SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr) \
+	|| (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
+	&& memcmp((char *) &((struct sockaddr_in6 *)(sa))->sin6_addr, \
+		(char *) &((struct sockaddr_in6 *)(sa))->sin6_addr, \
+		sizeof ((struct sockaddr_in6 *)(sa))->sin6_addr) == 0))
 
 #define SOCK_ADDR_EQ_PORT(sa, sb) \
-    ((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-      && SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb)) \
-     || (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
-         && SOCK_ADDR_IN6_PORT(sa) == SOCK_ADDR_IN6_PORT(sb)))
+	((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+	&& SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb)) \
+	|| (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
+	&& ((struct sockaddr_in6 *)(sa))->sin6_port == ((struct sockaddr_in6 *)(sb))->sin6_port))
 #else
 #define SOCK_ADDR_EQ_ADDR(sa, sb) \
-    (SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-     && SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr)
+	(SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+	&& SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr)
 
 #define SOCK_ADDR_EQ_PORT(sa, sb) \
-    (SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-     && SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb))
+	(SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
+	&& SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb))
 #endif
 
-	struct addr { const char *address; unsigned short port; };
+	/** 255 - 1 */
+#define NET_MAX_TO_BE_ACKNOWLEDGED 254
+
+	// struct addr { const char *address; unsigned short port; };
+
+	struct sockaddr_in net_address(const char *address, unsigned int port);
 
 	struct conn {
 		struct sockaddr_in addr;
+		// History
+		char *sentBuffers[NET_MAX_TO_BE_ACKNOWLEDGED];
+		int sentLengths[NET_MAX_TO_BE_ACKNOWLEDGED];
+		char sentCounter;
 	};
 
 	struct packet {
@@ -72,7 +79,7 @@ extern "C" {
 		struct conn **connections;
 		int numConnections;
 
-		void(*accepted)(struct peer *);
+		void(*accept)(struct peer *, struct conn *);
 	};
 
 	// TODO implement support for BSD sockets and winsock2
@@ -80,20 +87,23 @@ extern "C" {
 
 	extern void net_initialize();
 
-	extern struct peer * net_peer_bind(struct addr addr);
-
 	/**
 	@param address the address at which peers may connect to this peer */
-	extern struct peer * net_peer_create(struct addr *address, unsigned short maxConnections);
+	extern struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxConnections);
 
 	extern void net_peer_dispose(struct peer *peer);
 
 	// TODO add milliseconds timeout
 	extern void net_update(struct peer *peer);
 
-	extern void net_send(struct peer *peer, const char *buf, int len);
+	/** Sends a packet to the specified remote end.
+		@warning Make sure to leave 1 byte empty in \a buf and have \a len reflect that! */
+	extern void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int reliable);
 
-	extern char * net_packet(int len);
+	/** Receives a packet from an remote end.
+		@param buflen the maximum number of bytes to read to the buffer
+		@return the number of bytes read, or 0 */
+	extern int net_receive(struct peer *peer, char *buf, int buflen, struct sockaddr_in *from);
 
 #ifdef __cplusplus
 }
