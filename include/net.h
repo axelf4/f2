@@ -59,10 +59,15 @@ extern "C" {
 
 	struct conn {
 		struct sockaddr_in addr;
-		// History
+		// History buffer
 		char *sentBuffers[NET_MAX_TO_BE_ACKNOWLEDGED];
 		int sentLengths[NET_MAX_TO_BE_ACKNOWLEDGED];
 		char sentCounter;
+
+		/** The last sequence number received. */
+		unsigned char lastReceived;
+		/** Array of 1s and 0s. 1 is for packet at index (seqno - 1) has arrived. 0 is for waiting for packet. Initialized with ones. */
+		char receivedSeqnos[NET_MAX_TO_BE_ACKNOWLEDGED];
 	};
 
 	struct packet {

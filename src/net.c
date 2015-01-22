@@ -7,9 +7,12 @@ struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) {
 	struct conn *connection = malloc(sizeof(struct conn));
 	connection->addr = addr;
 	connection->sentCounter = 0;
+	connection->lastReceived = NET_MAX_TO_BE_ACKNOWLEDGED;
 	for (unsigned int i = 0; i < NET_MAX_TO_BE_ACKNOWLEDGED; i++) {
 		connection->sentBuffers[i] = 0;
+		connection->receivedSeqnos[i] = 1;
 	}
+
 	peer->connections[peer->numConnections++] = connection;
 
 	return connection;
@@ -96,19 +99,17 @@ void net_update(struct peer *peer) {
 		struct conn *connection = peer->connections[i];
 
 		for (unsigned int j = 0; j < NET_MAX_TO_BE_ACKNOWLEDGED; j++) {
-			char *buf = connection->sentBuffers[j];
-			if (buf == 0) continue;
-			int len = connection->sentLengths[j];
-
-			printf("Resending packet... by ");
-			net_send(peer, buf, len, connection->addr, 2);
+			if (!connection->receivedSeqnos[j]) {
+				char syn[] = { j + 1, 0xFF };
+				net_send(peer, syn, 2, connection->addr, 2);
+			}
 		}
 	}
 }
 
 // TODO make return error value
 void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int reliable) {
-	printf("sending bytes\n");
+	// printf("sending bytes\n");
 	// struct sockaddr_in to = { .sin_family = AF_INET, .sin_port = htons(DEFAULT_PORT), .sin_addr.s_addr = inet_addr("127.0.0.1") };
 	// int tolen = sizeof(to);
 
@@ -128,10 +129,11 @@ void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int 
 		if (connection == 0) connection = add_connection(peer, to);
 		if (connection->sentCounter++ >= NET_MAX_TO_BE_ACKNOWLEDGED) connection->sentCounter = 1;
 		buf[len - 1] = connection->sentCounter;
-		connection->sentBuffers[connection->sentCounter - 1] = buf;
+		char **historyBuf = connection->sentBuffers + connection->sentCounter - 1;
+		if (*historyBuf != 0) free(*historyBuf); // If there was an old buffer at the index; free it
+		*historyBuf = buf;
 		connection->sentLengths[connection->sentCounter - 1] = len;
 	}
-
 
 	int result = sendto(peer->socket, buf, len, 0, (struct sockaddr *)&to, sizeof(struct sockaddr_in));
 	if (result == SOCKET_ERROR) {
@@ -173,19 +175,25 @@ beginning:; // If received a packet used internally: don't return but skip
 
 		unsigned char seqno = *(buf + result - 1);
 		if (seqno == 0xFF) {
-			printf("The remote end has successfully received a packet!\n");
-			// An ACK packet; someone has received a reliable packet
-			char *historyBuf = connection->sentBuffers[*buf - 1];
-			if (historyBuf != 0) {
-				free(historyBuf);
-				connection->sentBuffers[*buf - 1] = connection->sentLengths[*buf - 1] = 0;
-			}
+			// TODO make 0xFF resend a packet instead of declaring it finished
+			printf("The remote end has sent a request to resend packet %d.\n", *buf);
+			net_send(peer, connection->sentBuffers[*buf - 1], connection->sentLengths[*buf - 1], *from, 2);
 			goto beginning; // Don't return the internal packet!
 		}
 		else if (seqno) {
-			// 'last' isn't 0; the packet in question was reliable, send ACK packet
-			char ack[] = { seqno, 0xFF };
-			net_send(peer, ack, 2, *from, 2);
+			// TODO add pings and document
+			// TODO request SYN resend of missed packets
+			unsigned char from = connection->lastReceived % NET_MAX_TO_BE_ACKNOWLEDGED;
+			if (seqno - from > 0) {
+				// Iterate on the sequence numbers between from and seqno
+				for (unsigned int i = from + 1; i < seqno; i = (i + 1) % NET_MAX_TO_BE_ACKNOWLEDGED) {
+					connection->receivedSeqnos[i - 1] = 0;
+				}
+
+				connection->lastReceived = seqno;
+			}
+			else if (connection->receivedSeqnos[seqno - 1]) goto beginning; // The packet has already arrived
+			connection->receivedSeqnos[seqno - 1] = 1;
 		}
 
 		printf("Sequence number is %d/", seqno);
