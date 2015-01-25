@@ -36,7 +36,7 @@ void readPeer(struct peer *peer, std::mutex *mtx, bool *continuing, bool client)
 			// if (len == -1) break;
 		}
 
-		Sleep(800);
+		// Sleep(500);
 	}
 }
 

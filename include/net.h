@@ -50,8 +50,8 @@ extern "C" {
 	&& SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb))
 #endif
 
-	/** 255 - 1 */
-#define NET_MAX_TO_BE_ACKNOWLEDGED 254
+	/** 255 - 2, one for SYN packets and one for pings */
+#define NET_MAX_TO_BE_ACKNOWLEDGED 253
 
 	// struct addr { const char *address; unsigned short port; };
 

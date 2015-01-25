@@ -7,7 +7,7 @@ struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) {
 	struct conn *connection = malloc(sizeof(struct conn));
 	connection->addr = addr;
 	connection->sentCounter = 0;
-	connection->lastReceived = NET_MAX_TO_BE_ACKNOWLEDGED;
+	connection->lastReceived = 0; // NET_MAX_TO_BE_ACKNOWLEDGED;
 	for (unsigned int i = 0; i < NET_MAX_TO_BE_ACKNOWLEDGED; i++) {
 		connection->sentBuffers[i] = 0;
 		connection->receivedSeqnos[i] = 1;
@@ -104,6 +104,10 @@ void net_update(struct peer *peer) {
 				net_send(peer, syn, 2, connection->addr, 2);
 			}
 		}
+
+		// Send ping
+		char buf[] = { connection->sentCounter, 0xFE };
+		net_send(peer, buf, 2, connection->addr, 2);
 	}
 }
 
@@ -171,7 +175,6 @@ beginning:; // If received a packet used internally: don't return but skip
 
 			peer->accept(peer, connection);
 		}
-		else printf("Existing connection.\n");
 
 		unsigned char seqno = *(buf + result - 1);
 		if (seqno == 0xFF) {
@@ -180,20 +183,19 @@ beginning:; // If received a packet used internally: don't return but skip
 			net_send(peer, connection->sentBuffers[*buf - 1], connection->sentLengths[*buf - 1], *from, 2);
 			goto beginning; // Don't return the internal packet!
 		}
-		else if (seqno) {
-			// TODO add pings and document
-			// TODO request SYN resend of missed packets
-			unsigned char from = connection->lastReceived % NET_MAX_TO_BE_ACKNOWLEDGED;
-			if (seqno - from > 0) {
-				// Iterate on the sequence numbers between from and seqno
-				for (unsigned int i = from + 1; i < seqno; i = (i + 1) % NET_MAX_TO_BE_ACKNOWLEDGED) {
+		else if (seqno) { // A ping or reliable packet
+			unsigned char no = seqno == 0xFE ? *buf + 1 : seqno; // If a ping; use the last packet sent's number, else use the received packet's
+			// If the packet in question is newer than the last received:
+			if (no > connection->lastReceived) {
+				// Mark all packets with numbers between the last received's and the received's as missing
+				for (unsigned int i = connection->lastReceived + 1; i < no; i = (i + 1) % NET_MAX_TO_BE_ACKNOWLEDGED) {
 					connection->receivedSeqnos[i - 1] = 0;
 				}
-
-				connection->lastReceived = seqno;
+				if (seqno != 0xFE) connection->lastReceived = seqno; // Update the last received flag if the packet isn't a ping
 			}
 			else if (connection->receivedSeqnos[seqno - 1]) goto beginning; // The packet has already arrived
-			connection->receivedSeqnos[seqno - 1] = 1;
+			if (seqno == 0xFE) goto beginning; // The packet was internally used as a ping
+			else connection->receivedSeqnos[seqno - 1] = 1; // Mark the packet as received
 		}
 
 		printf("Sequence number is %d/", seqno);
