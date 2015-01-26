@@ -35,8 +35,6 @@ struct sockaddr_in net_address(const char *address, unsigned int port) {
 }
 
 struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxConnections) {
-	int iResult;
-
 	SOCKET Socket;
 	if ((Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
 		printf("socket failed with error: %d\n", WSAGetLastError());
@@ -57,8 +55,8 @@ struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxCo
 
 		recvaddr->sin_addr.s_addr = INADDR_ANY;
 
-		iResult = bind(Socket, (struct sockaddr *) recvaddr, sizeof(struct sockaddr_in));
-		if (iResult != 0) {
+		int i = bind(Socket, (struct sockaddr *) recvaddr, sizeof(struct sockaddr_in));
+		if (i != 0) {
 			printf("bind failed with error %d\n", WSAGetLastError());
 			return 0;
 		}
@@ -148,7 +146,7 @@ void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int 
 
 int net_receive(struct peer *peer, char *buf, int buflen, struct sockaddr_in *from) {
 	// TODO first write this berkeley code then optimize for windows with WSA*.
-beginning:; // If received a packet used internally: don't return but skip
+beginning:; // If received a packet used internally: don't return, but skip it
 	int fromlen = sizeof(struct sockaddr_in), result;
 	if ((result = recvfrom(peer->socket, buf, buflen, 0, (struct sockaddr *)from, &fromlen)) == SOCKET_ERROR) {
 		int error;
@@ -157,26 +155,25 @@ beginning:; // If received a packet used internally: don't return but skip
 	}
 	else if (result > 0) {
 		if (rand() % 2) goto beginning; // Simulate packet drop locally
-		// Find out if the packet has formed a new connection
+		// Find out if the packet forms a new connection
 		struct conn *connection = 0;
 		for (int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
 			struct sockaddr_in address = other->addr;
 			if (SOCK_ADDR_EQ_ADDR(from, &address) && SOCK_ADDR_EQ_PORT(from, &address)) {
-				connection = other;
+				connection = other; // The origin of the packet and the connection's address match: existing connection
 				break;
 			}
 		}
 		if (!connection) {
-			connection = add_connection(peer, *from); // First time receiving from the remote end's address
-			if (peer->accept != 0) peer->accept(peer, connection);
+			connection = add_connection(peer, *from); // First time receiving from the remote end's address; create new connection
+			if (peer->accept != 0) peer->accept(peer, connection); // Alert the application about it
 		}
 
 		unsigned char seqno = *(buf + result - 1);
 		if (seqno == 0xFF) {
-			// TODO make 0xFF resend a packet instead of declaring it finished
+			net_send(peer, connection->sentBuffers[*buf - 1], connection->sentLengths[*buf - 1], *from, 2); // The remote end requested a resend of the packet with the id *buf
 			printf("The remote end has sent a request to resend packet %d.\n", *buf);
-			net_send(peer, connection->sentBuffers[*buf - 1], connection->sentLengths[*buf - 1], *from, 2);
 			goto beginning; // Don't return the internal packet!
 		}
 		else if (seqno) { // A ping or reliable packet
