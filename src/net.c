@@ -3,12 +3,12 @@
 #include <stdio.h>
 #include <string.h>
 
-struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) {
+static struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) {
 	struct conn *connection = malloc(sizeof(struct conn));
 	connection->addr = addr;
 	connection->sentCounter = 0;
-	connection->lastReceived = 0; // NET_MAX_TO_BE_ACKNOWLEDGED;
-	for (unsigned int i = 0; i < NET_MAX_TO_BE_ACKNOWLEDGED; i++) {
+	connection->lastReceived = 0; // NET_MAX_TO_BE_SYNCHRONIZED;
+	for (unsigned int i = 0; i < NET_MAX_TO_BE_SYNCHRONIZED; i++) {
 		connection->sentBuffers[i] = 0;
 		connection->receivedSeqnos[i] = 1;
 	}
@@ -38,8 +38,7 @@ struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxCo
 	int iResult;
 
 	SOCKET Socket;
-	// IPPROTO_UDP
-	if ((Socket = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
+	if ((Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
 		printf("socket failed with error: %d\n", WSAGetLastError());
 		WSACleanup();
 		return 0;
@@ -92,19 +91,17 @@ void net_peer_dispose(struct peer *peer) {
 }
 
 void net_update(struct peer *peer) {
-	/*struct conn *conn = malloc(sizeof(struct conn));
-	conn->socket = ClientSocket;
-	peer->connections[peer->numConnections++] = conn;*/
 	for (unsigned int i = 0; i < peer->numConnections; i++) {
 		struct conn *connection = peer->connections[i];
 
-		for (unsigned int j = 0; j < NET_MAX_TO_BE_ACKNOWLEDGED; j++) {
+		for (unsigned int j = 0; j < NET_MAX_TO_BE_SYNCHRONIZED; j++) {
 			if (!connection->receivedSeqnos[j]) {
 				char syn[] = { j + 1, 0xFF };
 				net_send(peer, syn, 2, connection->addr, 2);
 			}
 		}
 
+		// TODO only ping if time since last receive has exeded a certain threshold
 		// Send ping
 		char buf[] = { connection->sentCounter, 0xFE };
 		net_send(peer, buf, 2, connection->addr, 2);
@@ -117,21 +114,22 @@ void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int 
 	// struct sockaddr_in to = { .sin_family = AF_INET, .sin_port = htons(DEFAULT_PORT), .sin_addr.s_addr = inet_addr("127.0.0.1") };
 	// int tolen = sizeof(to);
 
-	struct conn *connection = 0;
-	for (int i = 0; i < peer->numConnections; i++) {
-		struct conn *other = peer->connections[i];
-		struct sockaddr_in connAddr = other->addr;
-		if (SOCK_ADDR_EQ_ADDR(&to, &connAddr) && SOCK_ADDR_EQ_PORT(&to, &connAddr)) {
-			connection = other;
-			break;
-		}
-	}
 	if (!reliable) {
 		buf[len - 1] = 0;
 	}
 	else if (reliable != 2) {
+		struct conn *connection = 0;
+		for (int i = 0; i < peer->numConnections; i++) {
+			struct conn *other = peer->connections[i];
+			struct sockaddr_in connAddr = other->addr;
+			if (SOCK_ADDR_EQ_ADDR(&to, &connAddr) && SOCK_ADDR_EQ_PORT(&to, &connAddr)) {
+				connection = other;
+				break;
+			}
+		}
 		if (connection == 0) connection = add_connection(peer, to);
-		if (connection->sentCounter++ >= NET_MAX_TO_BE_ACKNOWLEDGED) connection->sentCounter = 1;
+
+		if (connection->sentCounter++ >= NET_MAX_TO_BE_SYNCHRONIZED) connection->sentCounter = 1;
 		buf[len - 1] = connection->sentCounter;
 		char **historyBuf = connection->sentBuffers + connection->sentCounter - 1;
 		if (*historyBuf != 0) free(*historyBuf); // If there was an old buffer at the index; free it
@@ -159,21 +157,19 @@ beginning:; // If received a packet used internally: don't return but skip
 	}
 	else if (result > 0) {
 		if (rand() % 2) goto beginning; // Simulate packet drop locally
+		// Find out if the packet has formed a new connection
 		struct conn *connection = 0;
 		for (int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
-			struct sockaddr_in connAddr = other->addr;
-			// if (memcmp(&from, &connAddr, sizeof(struct sockaddr_in)) == 0) {
-			if (SOCK_ADDR_EQ_ADDR(from, &connAddr) && SOCK_ADDR_EQ_PORT(from, &connAddr)) {
+			struct sockaddr_in address = other->addr;
+			if (SOCK_ADDR_EQ_ADDR(from, &address) && SOCK_ADDR_EQ_PORT(from, &address)) {
 				connection = other;
 				break;
 			}
 		}
 		if (!connection) {
 			connection = add_connection(peer, *from); // First time receiving from the remote end's address
-			printf("New connection.\n");
-
-			peer->accept(peer, connection);
+			if (peer->accept != 0) peer->accept(peer, connection);
 		}
 
 		unsigned char seqno = *(buf + result - 1);
@@ -188,7 +184,7 @@ beginning:; // If received a packet used internally: don't return but skip
 			// If the packet in question is newer than the last received:
 			if (no > connection->lastReceived) {
 				// Mark all packets with numbers between the last received's and the received's as missing
-				for (unsigned int i = connection->lastReceived + 1; i < no; i = (i + 1) % NET_MAX_TO_BE_ACKNOWLEDGED) {
+				for (unsigned int i = connection->lastReceived + 1; i < no; i = (i + 1) % NET_MAX_TO_BE_SYNCHRONIZED) {
 					connection->receivedSeqnos[i - 1] = 0;
 				}
 				if (seqno != 0xFE) connection->lastReceived = seqno; // Update the last received flag if the packet isn't a ping

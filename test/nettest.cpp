@@ -12,7 +12,7 @@ using namespace std;
 struct conn *clientConn;
 
 void accept(struct peer *peer, struct conn *connection) {
-	cout << "Accepted!" << endl;
+	cout << "Accepted new connection!" << endl;
 	clientConn = connection;
 }
 

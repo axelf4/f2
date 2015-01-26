@@ -1,3 +1,6 @@
+/** Functions for reliably sending UDP packets.
+	@file net.h */
+
 #ifndef NET_H
 #define NET_H
 
@@ -13,8 +16,6 @@ extern "C" {
 #pragma comment(lib, "Ws2_32.lib")
 	// #pragma comment (lib, "Mswsock.lib")
 	// #pragma comment (lib, "AdvApi32.lib")
-
-	// TODO put socket in non-blocking mode and use select
 #endif
 
 #define DEFAULT_PORT 6622
@@ -22,36 +23,36 @@ extern "C" {
 #define DEFAULT_BUFLEN 512
 #endif
 
-#define SOCK_ADDR_FAMILY(ptr)	((struct sockaddr *)(ptr))->sa_family
-#define SOCK_ADDR_IN_FAMILY(sa)	((struct sockaddr_in *)(sa))->sin_family
-#define SOCK_ADDR_IN_PORT(sa)	((struct sockaddr_in *)(sa))->sin_port
-#define SOCK_ADDR_IN_ADDR(sa)	((struct sockaddr_in *)(sa))->sin_addr
 #ifdef HAS_IPV6
 #define SOCK_ADDR_EQ_ADDR(sa, sb) \
-	((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-	&& SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr) \
-	|| (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
-	&& memcmp((char *) &((struct sockaddr_in6 *)(sa))->sin6_addr, \
-		(char *) &((struct sockaddr_in6 *)(sa))->sin6_addr, \
-		sizeof ((struct sockaddr_in6 *)(sa))->sin6_addr) == 0))
-
+	(((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET \
+	&& ((struct sockaddr_in *)(sa))->sin_addr.s_addr == ((struct sockaddr_in *)(sb))->sin_addr.s_addr) \
+	|| (((struct sockaddr *)(sa))->sa_family == AF_INET6 && ((struct sockaddr *)(sb))->sa_family == AF_INET6 \
+	&& memcmp((char *) &((struct sockaddr_in6 *)(sa))->sin6_addr, (char *) &((struct sockaddr_in6 *)(sa))->sin6_addr, sizeof ((struct sockaddr_in6 *)(sa))->sin6_addr) == 0))
 #define SOCK_ADDR_EQ_PORT(sa, sb) \
-	((SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-	&& SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb)) \
-	|| (SOCK_ADDR_FAMILY(sa) == AF_INET6 && SOCK_ADDR_FAMILY(sb) == AF_INET6 \
+	((((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET \
+	&& ((struct sockaddr_in *)(sa))->sin_port == ((struct sockaddr_in *)(sb))->sin_port) \
+	|| (((struct sockaddr *)(sa))->sa_family == AF_INET6 && ((struct sockaddr *)(sb))->sa_family == AF_INET6 \
 	&& ((struct sockaddr_in6 *)(sa))->sin6_port == ((struct sockaddr_in6 *)(sb))->sin6_port))
 #else
-#define SOCK_ADDR_EQ_ADDR(sa, sb) \
-	(SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-	&& SOCK_ADDR_IN_ADDR(sa).s_addr == SOCK_ADDR_IN_ADDR(sb).s_addr)
-
-#define SOCK_ADDR_EQ_PORT(sa, sb) \
-	(SOCK_ADDR_FAMILY(sa) == AF_INET && SOCK_ADDR_FAMILY(sb) == AF_INET \
-	&& SOCK_ADDR_IN_PORT(sa) == SOCK_ADDR_IN_PORT(sb))
+	/** Compares the address families and network addresses for equality, and returns non-zero in that case.
+		@def SOCK_ADDR_EQ_ADDR(sa, sb)
+		@param sa The first socket address of type @code struct sockaddr * @code to be compared
+		@param sb The second socket address of type @code struct sockaddr * @code to be compared
+		@return Zero if the arguments differ, otherwise non-zero
+		@warning Evaluates the arguments multiple times */
+#define SOCK_ADDR_EQ_ADDR(sa, sb) (((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET && ((struct sockaddr_in *)(sa))->sin_addr.s_addr == ((struct sockaddr_in *)(sb))->sin_addr.s_addr)
+	/** Compares the address families and ports for equality, and returns non-zero in that case.
+		@def SOCK_ADDR_EQ_PORT(sa, sb)
+		@param sa The first socket address of type @code struct sockaddr * @code to be compared
+		@param sb The second socket address of type @code struct sockaddr * @code to be compared
+		@return Zero if the arguments differ, otherwise non-zero
+		@warning Evaluates the arguments multiple times */
+#define SOCK_ADDR_EQ_PORT(sa, sb) (((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET && ((struct sockaddr_in *)(sa))->sin_port == ((struct sockaddr_in *)(sb))->sin_port)
 #endif
 
 	/** 255 - 2, one for SYN packets and one for pings */
-#define NET_MAX_TO_BE_ACKNOWLEDGED 253
+#define NET_MAX_TO_BE_SYNCHRONIZED 0xFD
 
 	// struct addr { const char *address; unsigned short port; };
 
@@ -60,21 +61,14 @@ extern "C" {
 	struct conn {
 		struct sockaddr_in addr;
 		// History buffer
-		char *sentBuffers[NET_MAX_TO_BE_ACKNOWLEDGED];
-		int sentLengths[NET_MAX_TO_BE_ACKNOWLEDGED];
+		char *sentBuffers[NET_MAX_TO_BE_SYNCHRONIZED];
+		int sentLengths[NET_MAX_TO_BE_SYNCHRONIZED];
 		char sentCounter;
 
 		/** The last sequence number received. */
 		unsigned char lastReceived;
 		/** Array of 1s and 0s. 1 is for packet at index (seqno - 1) has arrived. 0 is for waiting for packet. Initialized with ones. */
-		char receivedSeqnos[NET_MAX_TO_BE_ACKNOWLEDGED];
-	};
-
-	struct packet {
-		/** The packet id. 1st byte internal information such as whether this is an ack packet. If this is an ack pakcet then the blob only contains the sequence. */
-		unsigned int sequence;
-
-		char *blob;
+		char receivedSeqnos[NET_MAX_TO_BE_SYNCHRONIZED];
 	};
 
 	struct peer {
@@ -98,7 +92,6 @@ extern "C" {
 
 	extern void net_peer_dispose(struct peer *peer);
 
-	// TODO add milliseconds timeout
 	extern void net_update(struct peer *peer);
 
 	/** Sends a packet to the specified remote end.
