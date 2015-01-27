@@ -48,7 +48,7 @@ struct group {
 	struct group *next; /**< A pointer to the next group in a linked list type structure. */
 };
 
-static inline struct group * create_group(char *name) {
+static struct group * create_group(char *name) {
 	struct group *group = (struct group *) malloc(sizeof(struct group));
 	group->name = name;
 	group->numFaces = 0;
