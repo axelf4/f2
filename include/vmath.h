@@ -1,8 +1,7 @@
 /** Vector math library with SIMD acceleration.
 	\file vmath.h */
 
-// TODO rename __SSE__ to SIMD_INTRINSICS
-// TODO make cmake set the variables __SSE__, __SSE2__, __SSE3, __SSE4__
+// TODO make cmake set the variables __SSE__, __SSE2__, __SSE3, __SSE4_1__, __SSE4_2__
 
 #ifndef VMATH_H
 #define VMATH_H
@@ -43,14 +42,6 @@ extern "C" {
 #endif
 	// if __ARM_NEON__ or __SSE__ or __ALTIVEC__
 #define VMATH_INLINE inline /**< Inlining. */
-	/** A scalar that can be be used for multiplying vectors. */
-	typedef
-#ifdef USE_DOUBLE_PRECISION
-		double
-#else
-		float
-#endif
-		scalar;
 	/** \def ROW_MAJOR_MATRIX
 	\brief Whether ::MAT is row-major order in memory. */
 	/** \def COLUMN_MAJOR_MATRIX
@@ -107,15 +98,7 @@ extern "C" {
 #ifdef __SSE__
 		__m128
 #else
-	union {
-		float v[4]; /**< A 4 elements long float vector containing the components. */
-		struct {
-			float x, /**< The x component of the vector. */
-				y, /**< The y component of the vector. */
-				z, /**< The z component of the vector. */
-				w; /**< The w component of the vector. */
-		}
-	}
+	struct { float v[4]; /**< A 4 elements long float vector containing the components. */ }
 #endif
 	VEC;
 
@@ -252,7 +235,7 @@ extern "C" {
 		return v;
 #endif
 	}
-	
+
 	/** Returns the dot product, a.k.a. the scalar product, of the two vectors \a a and \a b (a · b). */
 	VMATH_INLINE float VectorDot(VEC a, VEC b) {
 #if defined(__SSE4_1__)
@@ -271,7 +254,7 @@ extern "C" {
 	/** Returns the cross product, a.k.a. the vector product, of the two vectors \a a and \a b (a × b). */
 	VMATH_INLINE VEC VectorCross(VEC a, VEC b) {
 #ifdef __SSE__
-		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))),_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
+		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))), _mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
 #else
 		VEC v = { a.v[1] * b.v[2] - a.v[2] * b.v[1],
 			a.v[2] * b.v[0] - a.v[0] * b.v[2],
@@ -280,7 +263,7 @@ extern "C" {
 		return v;
 #endif
 	}
-	
+
 	/** Returns `0` if, and only if, any component of the two vectors \a a and \a b mismatch. */
 	VMATH_INLINE int VectorEqual(VEC a, VEC b) {
 #ifdef __SSE__
