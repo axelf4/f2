@@ -42,16 +42,28 @@ extern "C" {
 #endif
 	// if __ARM_NEON__ or __SSE__ or __ALTIVEC__
 #define VMATH_INLINE inline /**< Inlining. */
-	/** \def ROW_MAJOR_MATRIX
-	\brief Whether ::MAT is row-major order in memory. */
-	/** \def COLUMN_MAJOR_MATRIX
-	\brief Whether ::MAT is column-major order in memory. */
-#if !defined(ROW_MAJOR_MATRIX) && !defined(COLUMN_MAJOR_MATRIX)
-#define ROW_MAJOR_MATRIX
+
+#ifndef MATRIX_ORDER
+	/** A value of either 'ROW_MAJOR' or 'COLUMN_MAJOR' that specifies the memory layout for matrices of type ::MAT.
+	For ROW_MAJOR the order would be:
+	> 00 01 02 03\n
+	> 04 05 06 07\n
+	> 08 09 10 11\n
+	> 12 13 14 15
+
+	And for COLUMN_MAJOR:
+	> 00 04 08 12\n
+	> 01 05 09 13\n
+	> 02 06 10 14\n
+	> 03 07 11 15 */
+#define MATRIX_ORDER ROW_MAJOR
+#elif MATRIX_ORDER != ROW_MAJOR && MATRIX_ORDER != COLUMN_MAJOR
+#error MATRIX_ORDER isn't properly defined
 #endif
+
+	// Doxygen won't generate documentation for macros that aren't defined
 #ifdef __DOXYGEN__
-#define COLUMN_MAJOR_MATRIX
-#define NO_SIMD_INTRINSICS /**< If defined compiled code won't be SIMD accelerated, even if availible. */
+#define NO_SIMD_INTRINSICS /**< If defined, compiled code won't be SIMD accelerated even if availible. */
 #endif
 
 #ifdef NO_SIMD_INTRINSICS
@@ -441,7 +453,7 @@ extern "C" {
 		__m128 minor0, minor1, minor2, minor3,
 			row0, row1, row2, row3,
 			det, tmp1;
-#ifdef ROW_MAJOR_MATRIX
+#if MATRIX_ORDER == ROW_MAJOR
 		MAT tmp = MatrixTranspose(a);
 		a = &tmp;
 #endif
