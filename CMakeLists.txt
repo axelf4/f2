@@ -11,12 +11,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 set(SOURCES
 	src/glh.c
 	src/objloader.c
-	src/vbo.cpp
 
 	include/glh.h
 	include/vmath.h
-	include/objloader.h
-	include/vbo.h)
+	include/objloader.h)
 
 set(DEMO_SOURCES
 	demo/main.cpp
