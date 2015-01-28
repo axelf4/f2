@@ -1,4 +1,4 @@
-/** A loader that takes a file name and returns a vertices and materials.
+/** A loader that takes a file name of an OBJ model and returns vertices and materials.
 	@file objloader.h */
 
 #ifndef OBJLOADER_H
