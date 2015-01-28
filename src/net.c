@@ -6,8 +6,8 @@
 static struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) {
 	struct conn *connection = malloc(sizeof(struct conn));
 	connection->addr = addr;
-	connection->sentCounter = 0;
-	connection->lastReceived = 0; // NET_MAX_TO_BE_SYNCHRONIZED;
+	connection->lastSent = 0;
+	connection->lastReceived = 0;
 	for (unsigned int i = 0; i < NET_MAX_TO_BE_SYNCHRONIZED; i++) {
 		connection->sentBuffers[i] = 0;
 		connection->receivedSeqnos[i] = 1;
@@ -101,7 +101,7 @@ void net_update(struct peer *peer) {
 
 		// TODO only ping if time since last receive has exeded a certain threshold
 		// Send ping
-		char buf[] = { connection->sentCounter, 0xFE };
+		char buf[] = { connection->lastSent, 0xFE };
 		net_send(peer, buf, 2, connection->addr, 2);
 	}
 }
@@ -127,12 +127,12 @@ void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int 
 		}
 		if (connection == 0) connection = add_connection(peer, to);
 
-		if (connection->sentCounter++ >= NET_MAX_TO_BE_SYNCHRONIZED) connection->sentCounter = 1;
-		buf[len - 1] = connection->sentCounter;
-		char **historyBuf = connection->sentBuffers + connection->sentCounter - 1;
+		if (connection->lastSent++ >= NET_MAX_TO_BE_SYNCHRONIZED) connection->lastSent = 1;
+		buf[len - 1] = connection->lastSent;
+		char **historyBuf = connection->sentBuffers + connection->lastSent - 1;
 		if (*historyBuf != 0) free(*historyBuf); // If there was an old buffer at the index; free it
 		*historyBuf = buf;
-		connection->sentLengths[connection->sentCounter - 1] = len;
+		connection->sentLengths[connection->lastSent - 1] = len;
 	}
 
 	int result = sendto(peer->socket, buf, len, 0, (struct sockaddr *)&to, sizeof(struct sockaddr_in));

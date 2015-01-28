@@ -60,15 +60,11 @@ extern "C" {
 
 	struct conn {
 		struct sockaddr_in addr;
-		// History buffer
-		char *sentBuffers[NET_MAX_TO_BE_SYNCHRONIZED];
-		int sentLengths[NET_MAX_TO_BE_SYNCHRONIZED];
-		char sentCounter;
-
-		/** The last sequence number received. */
-		unsigned char lastReceived;
-		/** Array of 1s and 0s. 1 is for packet at index (seqno - 1) has arrived. 0 is for waiting for packet. Initialized with ones. */
-		char receivedSeqnos[NET_MAX_TO_BE_SYNCHRONIZED];
+		int sentLengths[NET_MAX_TO_BE_SYNCHRONIZED]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
+		unsigned char *sentBuffers[NET_MAX_TO_BE_SYNCHRONIZED], /**< History buffer */
+			lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
+			lastReceived, /**< The sequence number of the last received packet (defaults to 0). */
+			receivedSeqnos[NET_MAX_TO_BE_SYNCHRONIZED]; /**< Array of 1s and 0s. 1 is for packet at index (seqno - 1) has arrived. 0 is for waiting for packet. Initialized with ones. */
 	};
 
 	struct peer {
