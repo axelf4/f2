@@ -17,7 +17,7 @@ find_library( SOIL_LIBRARIES
 
 include(FindPackageHandleStandardArgs)
 
-find_package_handle_standard_args(SOIL DEFAULT_MSG SOIL_LIBRARIES SOIL_INCLUDE_DIRS )
+find_package_handle_standard_args(SOIL DEFAULT_MSG SOIL_LIBRARIES SOIL_INCLUDE_DIRS)
 if ( SOIL_INCLUDE_DIRS AND SOIL_LIBRARIES )
 	SET( SOIL_FOUND TRUE )
 else ()

@@ -86,22 +86,22 @@ extern "C" {
 #define PI 3.141592654f /**< An optimal approximation of the constant pi. */
 #define NULL_VECTOR VectorReplicate(0) /**< A null vector (or zero vector) whose length is zero, with the components [0, 0, 0, 0] (*0*). */
 
-#define M00 0 /**< XX. */
-#define M01 4 /**< XY. */
-#define M02 8 /**< XZ. */
-#define M03 12 /**< XW. */
-#define M10 1 /**< YX. */
-#define M11 5 /**< YY. */
-#define M12 9 /**< YZ. */
-#define M13 13 /**< YW. */
-#define M20 2 /**< ZX. */
-#define M21 6 /**< ZY. */
-#define M22 10 /**< ZZ. */
-#define M23 14 /**< ZW. */
-#define M30 3 /**< WX. */
-#define M31 7 /**< WY. */
-#define M32 11 /**< WZ. */
-#define M33 15 /**< WW. */
+//#define M00 0 /**< XX. */
+//#define M01 4 /**< XY. */
+//#define M02 8 /**< XZ. */
+//#define M03 12 /**< XW. */
+//#define M10 1 /**< YX. */
+//#define M11 5 /**< YY. */
+//#define M12 9 /**< YZ. */
+//#define M13 13 /**< YW. */
+//#define M20 2 /**< ZX. */
+//#define M21 6 /**< ZY. */
+//#define M22 10 /**< ZZ. */
+//#define M23 14 /**< ZW. */
+//#define M30 3 /**< WX. */
+//#define M31 7 /**< WY. */
+//#define M32 11 /**< WZ. */
+//#define M33 15 /**< WW. */
 
 	/* VECTOR */
 

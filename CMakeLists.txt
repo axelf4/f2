@@ -3,19 +3,15 @@ project(game C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
-#i f(${_MACHINE_ARCH_FLAG} MATCHES X86)
-#SET (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SAFESEH:NO")
-#SET (CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SAFESEH:NO")
-#SET (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} /SAFESEH:NO")
-
 set(SOURCES
-	src/glh.c
-	src/objloader.c
-
-	include/glh.h
 	include/vmath.h
-	include/objloader.h)
-
+	include/glh.h
+	src/glh.c
+	include/objloader.h
+	src/objloader.c
+	include/glTFloader.h
+	src/glTFloader.cpp)
+	
 set(DEMO_SOURCES
 	demo/main.cpp
 	demo/shaders.h
@@ -36,9 +32,10 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(SOIL REQUIRED)
 find_package(Bullet REQUIRED)
+find_package(RapidJSON REQUIRED)
 find_package(Assimp REQUIRED)
 
-include_directories(include ${OPENGL_INCLUDE_DIR} ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
+include_directories(include ${OPENGL_INCLUDE_DIR} ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${RAPIDJSON_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR})
 set(LIBRARIES f1 ${SDL2_LIBRARY} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES} ${OPENGL_LIBRARIES})
 target_link_libraries(game ${LIBRARIES})
 
@@ -82,6 +79,3 @@ if(BUILD_TESTS)
 	target_link_libraries(runTests ${GTEST_BOTH_LIBRARIES} pthread ${LIBRARIES})
 	# add_test(NAME runTests COMMAND runTests)
 endif()
-
-
-# cmake -G "Visual Studio 12 2013" ..

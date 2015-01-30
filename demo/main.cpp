@@ -465,19 +465,30 @@ inline void printMatrix(float *matrixValue) {
 	}
 }
 
+#include <Windows.h>
+#include <fstream>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/filereadstream.h>
+
+using namespace rapidjson;
+
 int main(int argc, char *argv[]) {
-	/*obj_model *obj = load_obj_model(RESOURCE_DIR "cs_office/cs_office.obj");
-	for (unsigned int i = 0; i < obj->numParts; i++) {
-	obj_model_part *part = obj->parts[i];
+	FILE * pFile = fopen(RESOURCE_DIR "jsontest.json", "rb");
+	char buffer[65536];
+	FileReadStream is(pFile, buffer, sizeof(buffer));
+	fclose(pFile);
 
-	for (unsigned int j = 0; j < part->vertexCount; j += 8) {
-	cout << part->vertices[j] << " " << part->vertices[j + 1] << " " << part->vertices[j + 2] << " " << part->vertices[j + 3] << " " << part->vertices[j + 4] << " " << part->vertices[j + 5] << " " << part->vertices[j + 6] << " " << part->vertices[j + 7] << endl;
-	}
-	}
-	destroy_obj_model(obj);
+	Document document;
+	document.ParseStream<0, UTF8<>, FileReadStream>(is);
 
-	system("pause");*/
-	// return 0;
+	assert(document.IsObject());
+
+	cout << document["hello"]["gerald"].GetBool() << endl;
+
+	system("pause");
+	return 0;
 
 	ALIGN(16) float value[4], matrixValue[16];
 	VEC v1 = VectorSet(10, 3, 5, 0),
