@@ -466,41 +466,6 @@ inline void printMatrix(float *matrixValue) {
 }
 
 int main(int argc, char *argv[]) {
-	/*obj_model *obj = load_obj_model(RESOURCE_DIR "cs_office/cs_office.obj");
-	for (unsigned int i = 0; i < obj->numParts; i++) {
-	obj_model_part *part = obj->parts[i];
-
-	for (unsigned int j = 0; j < part->vertexCount; j += 8) {
-	cout << part->vertices[j] << " " << part->vertices[j + 1] << " " << part->vertices[j + 2] << " " << part->vertices[j + 3] << " " << part->vertices[j + 4] << " " << part->vertices[j + 5] << " " << part->vertices[j + 6] << " " << part->vertices[j + 7] << endl;
-	}
-	}
-	destroy_obj_model(obj);
-
-	system("pause");*/
-	// return 0;
-
-	ALIGN(16) float value[4], matrixValue[16];
-	VEC v1 = VectorSet(10, 3, 5, 0),
-		v2 = VectorReplicate(10);
-	// cout << "||v1|| = " << VectorLength(v1) << endl;
-	// v1 = VectorMultiply(v1, v2);
-	// v1 = VectorNormalize(v1);
-
-	MAT m1 = MatrixIdentity();
-	m1 = MatrixSet(
-		3, 4, 7, 1,
-		0, 3, 12, 14,
-		5, 6, 23, 11,
-		8, 9, 2, 0);
-	printMatrix(MatrixGet(matrixValue, m1));
-	m1 = MatrixInverse(&m1);
-	printMatrix(MatrixGet(matrixValue, m1));
-	/*cout << "--------" << endl;
-	m1 = MatrixTranspose(&m1);
-	printMatrix(MatrixGet(matrixValue, m1));*/
-
-	// printVector(VectorGet(value, v1));
-
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
