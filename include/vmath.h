@@ -455,7 +455,7 @@ extern "C" {
 
 	/** Transposes the matrix \a a (a<sup>T</sup>). */
 	VMATH_INLINE MAT MatrixTranspose(MAT *a) {
-#ifdef __SSE_4_1__
+#ifdef __SSE4_1__
 		__m128 tmp0 = _mm_unpacklo_ps(a->row0, a->row1), tmp2 = _mm_unpacklo_ps(a->row2, a->row3), tmp1 = _mm_unpackhi_ps(a->row0, a->row1), tmp3 = _mm_unpackhi_ps(a->row2, a->row3);
 		MAT m = { _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) };
 		return m;
