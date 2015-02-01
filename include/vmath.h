@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <math.h>
+#include <string.h>
 #include <assert.h>
 
 #if defined(_MSC_VER)
