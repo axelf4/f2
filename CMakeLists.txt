@@ -42,7 +42,7 @@ target_link_libraries(game ${LIBRARIES})
 add_definitions(-DRESOURCE_DIR="../resource/")
 
 if(MSVC)
-	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D__SSE2__ -D__SSE3__ -D__SSE4_1__ -D__SSE4_2__)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D__SSE__ -D__SSE2__ -D__SSE3__ -D__SSE4_1__ -D__SSE4_2__)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /arch:SSE2")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:SSE2")
 else()
