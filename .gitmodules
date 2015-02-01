@@ -1,3 +1,6 @@
+[submodule "lib/gtest"]
+	path = lib/gtest
+	url = https://chromium.googlesource.com/external/googletest.git
 [submodule "lib/rapidjson"]
 	path = lib/rapidjson
-	url = git@github.com:miloyip/rapidjson.git
+	url = git://github.com/miloyip/rapidjson.git
