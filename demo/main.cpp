@@ -465,7 +465,7 @@ inline void printMatrix(float *matrixValue) {
 	}
 }
 
-#include <Windows.h>
+// #include <Windows.h>
 #include <fstream>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
@@ -487,8 +487,8 @@ int main(int argc, char *argv[]) {
 
 	cout << document["hello"]["gerald"].GetBool() << endl;
 
-	system("pause");
-	return 0;
+	// system("pause");
+	// return 0;
 
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
