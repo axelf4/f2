@@ -5,6 +5,7 @@
 #include <SDL_opengl.h>
 
 #include <glh.h>
+#define NO_SIMD_INTRINSICS
 #include <vmath.h>
 #include <objloader.h>
 

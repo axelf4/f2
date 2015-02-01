@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <math.h>
+#include <assert.h>
 
 #if defined(_MSC_VER)
 	/* Microsoft C/C++-compatible compiler */
@@ -114,14 +115,26 @@ extern "C" {
 #endif
 	VEC;
 
+	/** Stores a representation of the vector \a _A in the float array \a _V and returns \a _V.
+	@def VectorGet(_V, _A)
+	@param[out] _V A 4 elements long 16-byte aligned float array to store in.
+	@param[in] _A The vector to be stored.
+
+	This method is to be used when the data of a ::VEC needs to be converted to a more general, usable format. */
+#ifdef __SSE__
+#define VectorGet(_V, _A) (_mm_store_ps((_V), (_A)), (_V))
+#else
+#define VectorGet(_V, _A) (memcpy((_V), (_A).v, sizeof(float) * 4), (_V))
+#endif
+
 	/** Returns a ::VEC, whoose components are solely \a v.
 		@param v The value to use for the components. */
 	VMATH_INLINE VEC VectorReplicate(float v) {
 #ifdef __SSE__
 		return(_mm_set1_ps(v));
 #else
-		VEC v = { v, v, v, v };
-		return(v);
+		VEC result = { v, v, v, v };
+		return(result);
 #endif
 	}
 
@@ -137,7 +150,7 @@ extern "C" {
 		VEC v = { w, z, y, x };
 		return(v);
 #endif
-	}
+}
 
 	/** Loads and returns a ::VEC from the float array \a v.
 		@param v The float array to load up. */
@@ -145,22 +158,10 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_load_ps(v));
 #else
-		VEC v = { v[0], v[1], v[2], v[3] };
-		return(v);
+		VEC result = { v[0], v[1], v[2], v[3] };
+		return(result);
 #endif
 	}
-
-	/** Stores a representation of the vector \a _A in the float array \a _V and returns \a _V.
-		@def VectorGet(_V, _A)
-		@param[out] _V A 4 elements long 16-byte aligned float array to store in.
-		@param[in] _A The vector to be stored.
-
-		This method is to be used when the data of a ::VEC needs to be converted to a more general, usable format. */
-#ifdef __SSE__
-#define VectorGet(_V, _A) (_mm_store_ps((_V), (_A)), (_V))
-#else
-#define VectorGet(_V, _A) (memcpy((_V), (_A).v, sizeof(float) * 4), (_V))
-#endif
 
 	/** Adds the two vectors \a a and \a b (a + b).
 		@param a The first vector to add.
@@ -221,7 +222,7 @@ extern "C" {
 #elif defined(__SSE__)
 
 #else
-		return((float) sqrt(a.v[0] * a.v[0] + a.v[1] * a.v[1] + a.v[2] * a.v[2]));
+		return((float)sqrt(a.v[0] * a.v[0] + a.v[1] * a.v[1] + a.v[2] * a.v[2]));
 #endif
 	}
 
@@ -271,7 +272,7 @@ extern "C" {
 		VEC v = { a.v[1] * b.v[2] - a.v[2] * b.v[1],
 			a.v[2] * b.v[0] - a.v[0] * b.v[2],
 			a.v[0] * b.v[1] - a.v[1] * b.v[0],
-			0};
+			0 };
 		return v;
 #endif
 	}
@@ -306,12 +307,15 @@ extern "C" {
 		const float chy_chp = chy * chp;
 		const float shy_shp = shy * shp;
 
-		return(_mm_setr_ps(
-			(chy_shp * chr) + (shy_chp * shr), // cos(yaw/2) * sin(pitch/2) * cos(roll/2) + sin(yaw/2) * cos(pitch/2) * sin(roll/2)
+#ifdef __SSE__
+		return(_mm_setr_ps((chy_shp * chr) + (shy_chp * shr), (shy_chp * chr) - (chy_shp * shr), (chy_chp * shr) - (shy_shp * chr), (chy_chp * chr) + (shy_shp * shr)));
+#else
+		VEC v = { (chy_shp * chr) + (shy_chp * shr), // cos(yaw/2) * sin(pitch/2) * cos(roll/2) + sin(yaw/2) * cos(pitch/2) * sin(roll/2)
 			(shy_chp * chr) - (chy_shp * shr), // sin(yaw/2) * cos(pitch/2) * cos(roll/2) - cos(yaw/2) * sin(pitch/2) * sin(roll/2)
 			(chy_chp * shr) - (shy_shp * chr), // cos(yaw/2) * cos(pitch/2) * sin(roll/2) - sin(yaw/2) * sin(pitch/2) * cos(roll/2)
-			(chy_chp * chr) + (shy_shp * shr) // cos(yaw/2) * cos(pitch/2) * cos(roll/2) + sin(yaw/2) * sin(pitch/2) * sin(roll/2)
-			));
+			(chy_chp * chr) + (shy_shp * shr) }; // cos(yaw/2) * cos(pitch/2) * cos(roll/2) + sin(yaw/2) * sin(pitch/2) * sin(roll/2)
+		return v;
+#endif
 	}
 
 	/* MATRIX */
@@ -328,18 +332,36 @@ extern "C" {
 #endif
 	} MAT;
 
+	/** Stores a representation of the matrix \a _A in the float array \a _V and returns \a _V.
+	@def MatrixGet(_V, _A)
+	@param[out] _V A 16 elements long 16-byte aligned float array to store in.
+	@param[in] _A The matrix to be stored. Note: not a pointer as the rest of the matrix functions.
+
+	This method is to be used when the data of a ::MAT needs to be converted to a more general, usable format. */
+#ifdef __SSE__
+#define MatrixGet(_V, _A) (_mm_store_ps((_V), (_A).row0), _mm_store_ps((_V) + 4, (_A).row1), _mm_store_ps((_V) + 8, (_A).row2), _mm_store_ps((_V) + 12, (_A).row3), (_V))
+#else
+#define MatrixGet(_V, _A) (memcpy((_V), (_A).m, sizeof(float) * 16), (_V))
+#endif
+
 	/** Returns a new ::MAT from the specified components. */
 	VMATH_INLINE MAT MatrixSet(float m00, float m01, float m02, float m03, float m10, float m11, float m12, float m13, float m20, float m21, float m22, float m23, float m30, float m31, float m32, float m33) {
 #ifdef __SSE__
 		MAT m = { _mm_setr_ps(m00, m01, m02, m03), _mm_setr_ps(m10, m11, m12, m13), _mm_setr_ps(m20, m21, m22, m23), _mm_setr_ps(m30, m31, m32, m33) };
-		return m;
+#else
+		MAT m = { m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33 };
 #endif
-	}
+		return m;
+}
 
 	/** Loads and returns a ::MAT from the float array \a v.
 		@param v The float array to load up. */
 	VMATH_INLINE MAT MatrixLoad(float *v) {
+#ifdef __SSE__
 		MAT m = { _mm_load_ps(v), _mm_load_ps(v + 4), _mm_load_ps(v + 8), _mm_load_ps(v + 12) };
+#else
+		MAT m = { v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15] };
+#endif
 		return m;
 	}
 
@@ -347,10 +369,10 @@ extern "C" {
 	VMATH_INLINE MAT MatrixIdentity() {
 #ifdef __SSE__
 		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(0, 0, 0, 1) };
-		return m;
 #else
-		return 0;
+		MAT m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
 #endif
+		return m;
 	}
 
 	/** Returns a perspective matrix.
@@ -359,24 +381,14 @@ extern "C" {
 		@param zNear The near coordinate of the z-plane.
 		@param zFar The far coordinate of the z-plane. */
 	VMATH_INLINE MAT MatrixPerspective(float fov, float aspect, float zNear, float zFar) {
-#ifdef __SSE__
 		const float h = 1.0f / tan(fov * PI / 360);
-		MAT m = { _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) };
-		return m;
-#endif
-	}
-
-	/** Stores a representation of the matrix \a _A in the float array \a _V and returns \a _V.
-		@def MatrixGet(_V, _A)
-		@param[out] _V A 16 elements long 16-byte aligned float array to store in.
-		@param[in] _A The matrix to be stored. Note: not a pointer as the rest of the matrix functions.
-
-		This method is to be used when the data of a ::MAT needs to be converted to a more general, usable format. */
 #ifdef __SSE__
-#define MatrixGet(_V, _A) (_mm_store_ps((_V), (_A).row0), _mm_store_ps((_V) + 4, (_A).row1), _mm_store_ps((_V) + 8, (_A).row2), _mm_store_ps((_V) + 12, (_A).row3), (_V))
+		MAT m = { _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) };
 #else
-#define MatrixGet(_V, _A) (memcpy((_V), (_A).m, sizeof(float) * 16), (_V))
+		MAT m = { h / aspect, 0, 0, 0, 0, h, 0, 0, 0, 0, (zNear + zFar) / (zNear - zFar), -1, 0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0 };
 #endif
+		return m;
+	}
 
 	/** Multiplies the two matrices \a a and \a b (a * b).
 		@param a The first matrix to multiply.
@@ -412,29 +424,29 @@ extern "C" {
 #else
 		// FIXME
 		MAT result;
-		result.m[M03] = (a.m[M03] * b.m[M33]) + (a.m[M02] * b.m[M23]) + (a.m[M01] * b.m[M13]) + (a.m[M00] * b.m[M03]);
-		result.m[M02] = (a.m[M03] * b.m[M32]) + (a.m[M02] * b.m[M22]) + (a.m[M01] * b.m[M12]) + (a.m[M00] * b.m[M02]);
-		result.m[M01] = (a.m[M03] * b.m[M31]) + (a.m[M02] * b.m[M21]) + (a.m[M01] * b.m[M11]) + (a.m[M00] * b.m[M01]);
-		result.m[M00] = (a.m[M03] * b.m[M30]) + (a.m[M02] * b.m[M20]) + (a.m[M01] * b.m[M10]) + (a.m[M00] * b.m[M00]);
+		result.m[M03] = (a->m[M03] * b->m[M33]) + (a->m[M02] * b->m[M23]) + (a->m[M01] * b->m[M13]) + (a->m[M00] * b->m[M03]);
+		result.m[M02] = (a->m[M03] * b->m[M32]) + (a->m[M02] * b->m[M22]) + (a->m[M01] * b->m[M12]) + (a->m[M00] * b->m[M02]);
+		result.m[M01] = (a->m[M03] * b->m[M31]) + (a->m[M02] * b->m[M21]) + (a->m[M01] * b->m[M11]) + (a->m[M00] * b->m[M01]);
+		result.m[M00] = (a->m[M03] * b->m[M30]) + (a->m[M02] * b->m[M20]) + (a->m[M01] * b->m[M10]) + (a->m[M00] * b->m[M00]);
 
-		result.m[M13] = (a.m[M13] * b.m[M33]) + (a.m[M12] * b.m[M23]) + (a.m[M11] * b.m[M13]) + (a.m[M10] * b.m[M03]);
-		result.m[M12] = (a.m[M13] * b.m[M32]) + (a.m[M12] * b.m[M22]) + (a.m[M11] * b.m[M12]) + (a.m[M10] * b.m[M02]);
-		result.m[M11] = (a.m[M13] * b.m[M31]) + (a.m[M12] * b.m[M21]) + (a.m[M11] * b.m[M11]) + (a.m[M10] * b.m[M01]);
-		result.m[M10] = (a.m[M13] * b.m[M30]) + (a.m[M12] * b.m[M20]) + (a.m[M11] * b.m[M10]) + (a.m[M10] * b.m[M00]);
+		result.m[M13] = (a->m[M13] * b->m[M33]) + (a->m[M12] * b->m[M23]) + (a->m[M11] * b->m[M13]) + (a->m[M10] * b->m[M03]);
+		result.m[M12] = (a->m[M13] * b->m[M32]) + (a->m[M12] * b->m[M22]) + (a->m[M11] * b->m[M12]) + (a->m[M10] * b->m[M02]);
+		result.m[M11] = (a->m[M13] * b->m[M31]) + (a->m[M12] * b->m[M21]) + (a->m[M11] * b->m[M11]) + (a->m[M10] * b->m[M01]);
+		result.m[M10] = (a->m[M13] * b->m[M30]) + (a->m[M12] * b->m[M20]) + (a->m[M11] * b->m[M10]) + (a->m[M10] * b->m[M00]);
 
-		result.m[M23] = (a.m[M23] * b.m[M33]) + (a.m[M22] * b.m[M23]) + (a.m[M21] * b.m[M13]) + (a.m[M20] * b.m[M03]);
-		result.m[M22] = (a.m[M23] * b.m[M32]) + (a.m[M22] * b.m[M22]) + (a.m[M21] * b.m[M12]) + (a.m[M20] * b.m[M02]);
-		result.m[M21] = (a.m[M23] * b.m[M31]) + (a.m[M22] * b.m[M21]) + (a.m[M21] * b.m[M11]) + (a.m[M20] * b.m[M01]);
-		result.m[M20] = (a.m[M23] * b.m[M30]) + (a.m[M22] * b.m[M20]) + (a.m[M21] * b.m[M10]) + (a.m[M20] * b.m[M00]);
+		result.m[M23] = (a->m[M23] * b->m[M33]) + (a->m[M22] * b->m[M23]) + (a->m[M21] * b->m[M13]) + (a->m[M20] * b->m[M03]);
+		result.m[M22] = (a->m[M23] * b->m[M32]) + (a->m[M22] * b->m[M22]) + (a->m[M21] * b->m[M12]) + (a->m[M20] * b->m[M02]);
+		result.m[M21] = (a->m[M23] * b->m[M31]) + (a->m[M22] * b->m[M21]) + (a->m[M21] * b->m[M11]) + (a->m[M20] * b->m[M01]);
+		result.m[M20] = (a->m[M23] * b->m[M30]) + (a->m[M22] * b->m[M20]) + (a->m[M21] * b->m[M10]) + (a->m[M20] * b->m[M00]);
 
-		result.m[M33] = (a.m[M33] * b.m[M33]) + (a.m[M32] * b.m[M23]) + (a.m[M31] * b.m[M13]) + (a.m[M30] * b.m[M03]);
-		result.m[M32] = (a.m[M33] * b.m[M32]) + (a.m[M32] * b.m[M22]) + (a.m[M31] * b.m[M12]) + (a.m[M30] * b.m[M02]);
-		result.m[M31] = (a.m[M33] * b.m[M31]) + (a.m[M32] * b.m[M21]) + (a.m[M31] * b.m[M11]) + (a.m[M30] * b.m[M01]);
-		result.m[M30] = (a.m[M33] * b.m[M30]) + (a.m[M32] * b.m[M20]) + (a.m[M31] * b.m[M10]) + (a.m[M30] * b.m[M00]);
+		result.m[M33] = (a->m[M33] * b->m[M33]) + (a->m[M32] * b->m[M23]) + (a->m[M31] * b->m[M13]) + (a->m[M30] * b->m[M03]);
+		result.m[M32] = (a->m[M33] * b->m[M32]) + (a->m[M32] * b->m[M22]) + (a->m[M31] * b->m[M12]) + (a->m[M30] * b->m[M02]);
+		result.m[M31] = (a->m[M33] * b->m[M31]) + (a->m[M32] * b->m[M21]) + (a->m[M31] * b->m[M11]) + (a->m[M30] * b->m[M01]);
+		result.m[M30] = (a->m[M33] * b->m[M30]) + (a->m[M32] * b->m[M20]) + (a->m[M31] * b->m[M10]) + (a->m[M30] * b->m[M00]);
 
-		for (int i = 0; i < 16; i += 4)
+		/*for (int i = 0; i < 16; i += 4)
 			for (int j = 0; j < 4; j++)
-				r[i + j] = b[i] * a[j] + b[i + 1] * a[j + 4] + b[i + 2] * a[j + 8] + b[i + 3] * a[j + 12];
+			r[i + j] = b[i] * a[j] + b[i + 1] * a[j + 4] + b[i + 2] * a[j + 8] + b[i + 3] * a[j + 12];*/
 
 		return result;
 #endif
@@ -442,9 +454,34 @@ extern "C" {
 
 	/** Transposes the matrix \a a (a<sup>T</sup>). */
 	VMATH_INLINE MAT MatrixTranspose(MAT *a) {
+#ifdef __SSE_4_1__
 		__m128 tmp0 = _mm_unpacklo_ps(a->row0, a->row1), tmp2 = _mm_unpacklo_ps(a->row2, a->row3), tmp1 = _mm_unpackhi_ps(a->row0, a->row1), tmp3 = _mm_unpackhi_ps(a->row2, a->row3);
 		MAT m = { _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) };
 		return m;
+#else
+		// A B C D    A E I M
+		// E F G H    B F J N
+		// I J K L    C G K O
+		// M N O P    D H L P
+		MAT m;
+		m.m[0] = a->m[0];  // A . . .
+		m.m[1] = a->m[4];  // A E . .
+		m.m[2] = a->m[8];  // A E I .
+		m.m[3] = a->m[12]; // A E I M
+		m.m[4] = a->m[1];  // B . . .
+		m.m[5] = a->m[5];  // B F . .
+		m.m[6] = a->m[9];  // B F J .
+		m.m[7] = a->m[13]; // B F J N
+		m.m[8] = a->m[2];  // C . . .
+		m.m[9] = a->m[6];  // C G . .
+		m.m[10] = a->m[10]; // C G K .
+		m.m[11] = a->m[14]; // C G K O
+		m.m[12] = a->m[3];  // D . . .
+		m.m[13] = a->m[7];  // D H . .
+		m.m[14] = a->m[11]; // D H L .
+		m.m[15] = a->m[15]; // D H L P
+		return m;
+#endif
 	}
 
 	/** Inverses the matrix \a a using Cramer's rule (a<sup>-1</sup>). */
@@ -522,16 +559,131 @@ extern "C" {
 		det = _mm_shuffle_ps(det, det, 0x00);
 		MAT m = { _mm_mul_ps(det, minor0), _mm_mul_ps(det, minor1), _mm_mul_ps(det, minor2), _mm_mul_ps(det, minor3) };
 		return m;
+#else
+		double inv[16], det;
+		int i;
+
+		// TODO compact this
+		inv[0] = a->m[5] * a->m[10] * a->m[15] - a->m[5] * a->m[11] * a->m[14] - a->m[9] * a->m[6] * a->m[15] + a->m[9] * a->m[7] * a->m[14] + a->m[13] * a->m[6] * a->m[11] - a->m[13] * a->m[7] * a->m[10];
+		inv[4] = -a->m[4] * a->m[10] * a->m[15] + a->m[4] * a->m[11] * a->m[14] + a->m[8] * a->m[6] * a->m[15] - a->m[8] * a->m[7] * a->m[14] - a->m[12] * a->m[6] * a->m[11] + a->m[12] * a->m[7] * a->m[10];
+		inv[8] = a->m[4] * a->m[9] * a->m[15] - a->m[4] * a->m[11] * a->m[13] -
+			a->m[8] * a->m[5] * a->m[15] +
+			a->m[8] * a->m[7] * a->m[13] +
+			a->m[12] * a->m[5] * a->m[11] -
+			a->m[12] * a->m[7] * a->m[9];
+
+		inv[12] = -a->m[4] * a->m[9] * a->m[14] +
+			a->m[4] * a->m[10] * a->m[13] +
+			a->m[8] * a->m[5] * a->m[14] -
+			a->m[8] * a->m[6] * a->m[13] -
+			a->m[12] * a->m[5] * a->m[10] +
+			a->m[12] * a->m[6] * a->m[9];
+
+		inv[1] = -a->m[1] * a->m[10] * a->m[15] +
+			a->m[1] * a->m[11] * a->m[14] +
+			a->m[9] * a->m[2] * a->m[15] -
+			a->m[9] * a->m[3] * a->m[14] -
+			a->m[13] * a->m[2] * a->m[11] +
+			a->m[13] * a->m[3] * a->m[10];
+
+		inv[5] = a->m[0] * a->m[10] * a->m[15] -
+			a->m[0] * a->m[11] * a->m[14] -
+			a->m[8] * a->m[2] * a->m[15] +
+			a->m[8] * a->m[3] * a->m[14] +
+			a->m[12] * a->m[2] * a->m[11] -
+			a->m[12] * a->m[3] * a->m[10];
+
+		inv[9] = -a->m[0] * a->m[9] * a->m[15] +
+			a->m[0] * a->m[11] * a->m[13] +
+			a->m[8] * a->m[1] * a->m[15] -
+			a->m[8] * a->m[3] * a->m[13] -
+			a->m[12] * a->m[1] * a->m[11] +
+			a->m[12] * a->m[3] * a->m[9];
+
+		inv[13] = a->m[0] * a->m[9] * a->m[14] -
+			a->m[0] * a->m[10] * a->m[13] -
+			a->m[8] * a->m[1] * a->m[14] +
+			a->m[8] * a->m[2] * a->m[13] +
+			a->m[12] * a->m[1] * a->m[10] -
+			a->m[12] * a->m[2] * a->m[9];
+
+		inv[2] = a->m[1] * a->m[6] * a->m[15] -
+			a->m[1] * a->m[7] * a->m[14] -
+			a->m[5] * a->m[2] * a->m[15] +
+			a->m[5] * a->m[3] * a->m[14] +
+			a->m[13] * a->m[2] * a->m[7] -
+			a->m[13] * a->m[3] * a->m[6];
+
+		inv[6] = -a->m[0] * a->m[6] * a->m[15] +
+			a->m[0] * a->m[7] * a->m[14] +
+			a->m[4] * a->m[2] * a->m[15] -
+			a->m[4] * a->m[3] * a->m[14] -
+			a->m[12] * a->m[2] * a->m[7] +
+			a->m[12] * a->m[3] * a->m[6];
+
+		inv[10] = a->m[0] * a->m[5] * a->m[15] -
+			a->m[0] * a->m[7] * a->m[13] -
+			a->m[4] * a->m[1] * a->m[15] +
+			a->m[4] * a->m[3] * a->m[13] +
+			a->m[12] * a->m[1] * a->m[7] -
+			a->m[12] * a->m[3] * a->m[5];
+
+		inv[14] = -a->m[0] * a->m[5] * a->m[14] +
+			a->m[0] * a->m[6] * a->m[13] +
+			a->m[4] * a->m[1] * a->m[14] -
+			a->m[4] * a->m[2] * a->m[13] -
+			a->m[12] * a->m[1] * a->m[6] +
+			a->m[12] * a->m[2] * a->m[5];
+
+		inv[3] = -a->m[1] * a->m[6] * a->m[11] +
+			a->m[1] * a->m[7] * a->m[10] +
+			a->m[5] * a->m[2] * a->m[11] -
+			a->m[5] * a->m[3] * a->m[10] -
+			a->m[9] * a->m[2] * a->m[7] +
+			a->m[9] * a->m[3] * a->m[6];
+
+		inv[7] = a->m[0] * a->m[6] * a->m[11] -
+			a->m[0] * a->m[7] * a->m[10] -
+			a->m[4] * a->m[2] * a->m[11] +
+			a->m[4] * a->m[3] * a->m[10] +
+			a->m[8] * a->m[2] * a->m[7] -
+			a->m[8] * a->m[3] * a->m[6];
+
+		inv[11] = -a->m[0] * a->m[5] * a->m[11] +
+			a->m[0] * a->m[7] * a->m[9] +
+			a->m[4] * a->m[1] * a->m[11] -
+			a->m[4] * a->m[3] * a->m[9] -
+			a->m[8] * a->m[1] * a->m[7] +
+			a->m[8] * a->m[3] * a->m[5];
+
+		inv[15] = a->m[0] * a->m[5] * a->m[10] -
+			a->m[0] * a->m[6] * a->m[9] -
+			a->m[4] * a->m[1] * a->m[10] +
+			a->m[4] * a->m[2] * a->m[9] +
+			a->m[8] * a->m[1] * a->m[6] -
+			a->m[8] * a->m[2] * a->m[5];
+
+		det = a->m[0] * inv[0] + a->m[1] * inv[4] + a->m[2] * inv[8] + a->m[3] * inv[12];
+		if (det == 0) return *a; // assert(det == 0 && "Non-invertible matrix");
+		det = 1.0 / det;
+
+		MAT m;
+		for (i = 0; i < 16; i++) m.m[i] = inv[i] * det;
+		return m;
 #endif
 	}
 
 	/** Builds a translation matrix from the specified offsets.
 		@param x The translation along the x-axis
-		@param y The translation along the x-axis
-		@param z The translation along the x-axis
+		@param y The translation along the y-axis
+		@param z The translation along the z-axis
 		@return The translation matrix */
 	VMATH_INLINE MAT MatrixTranslation(float x, float y, float z) {
+#ifdef __SSE__
 		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(x, y, z, 1) };
+#else
+		MAT m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1 };
+#endif
 		return m;
 	}
 
@@ -539,8 +691,12 @@ extern "C" {
 		@param v 3D vector describing the translations along the x-axis, y-axis, and z-axis
 		@return The translation matrix */
 	VMATH_INLINE MAT MatrixTranslationFromVector(VEC v) {
+#ifdef __SSE__
 		__m128 t = _mm_move_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)), _mm_set1_ps(1));
 		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_shuffle_ps(t, t, _MM_SHUFFLE(0, 3, 2, 1)) };
+#else
+		MAT m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, v.v[0], v.v[1], v.v[2], v.v[3] };
+#endif
 		return m;
 	}
 
@@ -550,7 +706,11 @@ extern "C" {
 		@param z Scaling factor along the x-axis
 		@return The scaling	matrix */
 	VMATH_INLINE MAT MatrixScaling(float x, float y, float z) {
+#ifdef __SSE__
 		MAT m = { _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(0, 0, 0, 1) };
+#else
+		MAT m = { x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1 };
+#endif
 		return m;
 	}
 
@@ -558,7 +718,6 @@ extern "C" {
 		@param a Quaternion defining the rotation.
 		@return The rotation matrix */
 	VMATH_INLINE MAT MatrixRotationQuaternion(VEC a) {
-#ifdef __SSE__
 		ALIGN(128) float q[4];
 		VectorGet(q, a);
 		float qxx = q[0] * q[0];
@@ -570,13 +729,15 @@ extern "C" {
 		float qwx = q[3] * q[0];
 		float qwy = q[3] * q[1];
 		float qwz = q[3] * q[2];
-
+#ifdef __SSE__
 		MAT m = { _mm_setr_ps(1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0),
 			_mm_setr_ps(2 * (qxy - qwz), 1 - 2 * (qxx + qzz), 2 * (qyz + qwx), 0),
 			_mm_setr_ps(2 * (qxz + qwy), 2 * (qyz - qwx), 1 - 2 * (qxx + qyy), 0),
 			_mm_setr_ps(0, 0, 0, 1) };
-		return m;
+#else
+		MAT m = { 1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0, 2 * (qxy - qwz), 1 - 2 * (qxx + qzz), 2 * (qyz + qwx), 0, 2 * (qxz + qwy), 2 * (qyz - qwx), 1 - 2 * (qxx + qyy), 0, 0, 0, 0, 1 };
 #endif
+		return m;
 	}
 
 #ifdef __cplusplus
