@@ -148,7 +148,7 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_setr_ps(x, y, z, w));
 #else
-		VEC v = { w, z, y, x };
+		VEC v = { x, y, z, w };
 		return(v);
 #endif
 }
