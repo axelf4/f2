@@ -59,7 +59,7 @@ extern "C" {
 	> 03 07 11 15 */
 #define MATRIX_ORDER ROW_MAJOR
 #elif MATRIX_ORDER != ROW_MAJOR && MATRIX_ORDER != COLUMN_MAJOR
-#error MATRIX_ORDER isn't properly defined
+#error "MATRIX_ORDER is not properly defined"
 #endif
 
 	// Doxygen won't generate documentation for macros that aren't defined
@@ -87,22 +87,22 @@ extern "C" {
 #define PI 3.141592654f /**< An optimal approximation of the constant pi. */
 #define NULL_VECTOR VectorReplicate(0) /**< A null vector (or zero vector) whose length is zero, with the components [0, 0, 0, 0] (*0*). */
 
-#define M00 0 /**< XX. */
-#define M01 4 /**< XY. */
-#define M02 8 /**< XZ. */
-#define M03 12 /**< XW. */
-#define M10 1 /**< YX. */
-#define M11 5 /**< YY. */
-#define M12 9 /**< YZ. */
-#define M13 13 /**< YW. */
-#define M20 2 /**< ZX. */
-#define M21 6 /**< ZY. */
-#define M22 10 /**< ZZ. */
-#define M23 14 /**< ZW. */
-#define M30 3 /**< WX. */
-#define M31 7 /**< WY. */
-#define M32 11 /**< WZ. */
-#define M33 15 /**< WW. */
+#define M_00 0 /**< XX. */
+#define M_01 4 /**< XY. */
+#define M_02 8 /**< XZ. */
+#define M_03 12 /**< XW. */
+#define M_10 1 /**< YX. */
+#define M_11 5 /**< YY. */
+#define M_12 9 /**< YZ. */
+#define M_13 13 /**< YW. */
+#define M_20 2 /**< ZX. */
+#define M_21 6 /**< ZY. */
+#define M_22 10 /**< ZZ. */
+#define M_23 14 /**< ZW. */
+#define M_30 3 /**< WX. */
+#define M_31 7 /**< WY. */
+#define M_32 11 /**< WZ. */
+#define M_33 15 /**< WW. */
 
 	/* VECTOR */
 
@@ -424,29 +424,29 @@ extern "C" {
 #else
 		// FIXME
 		MAT result;
-		result.m[M03] = (a->m[M03] * b->m[M33]) + (a->m[M02] * b->m[M23]) + (a->m[M01] * b->m[M13]) + (a->m[M00] * b->m[M03]);
-		result.m[M02] = (a->m[M03] * b->m[M32]) + (a->m[M02] * b->m[M22]) + (a->m[M01] * b->m[M12]) + (a->m[M00] * b->m[M02]);
-		result.m[M01] = (a->m[M03] * b->m[M31]) + (a->m[M02] * b->m[M21]) + (a->m[M01] * b->m[M11]) + (a->m[M00] * b->m[M01]);
-		result.m[M00] = (a->m[M03] * b->m[M30]) + (a->m[M02] * b->m[M20]) + (a->m[M01] * b->m[M10]) + (a->m[M00] * b->m[M00]);
+		result.m[M_03] = (a->m[M_03] * b->m[M_33]) + (a->m[M_02] * b->m[M_23]) + (a->m[M_01] * b->m[M_13]) + (a->m[M_00] * b->m[M_03]);
+		result.m[M_02] = (a->m[M_03] * b->m[M_32]) + (a->m[M_02] * b->m[M_22]) + (a->m[M_01] * b->m[M_12]) + (a->m[M_00] * b->m[M_02]);
+		result.m[M_01] = (a->m[M_03] * b->m[M_31]) + (a->m[M_02] * b->m[M_21]) + (a->m[M_01] * b->m[M_11]) + (a->m[M_00] * b->m[M_01]);
+		result.m[M_00] = (a->m[M_03] * b->m[M_30]) + (a->m[M_02] * b->m[M_20]) + (a->m[M_01] * b->m[M_10]) + (a->m[M_00] * b->m[M_00]);
 
-		result.m[M13] = (a->m[M13] * b->m[M33]) + (a->m[M12] * b->m[M23]) + (a->m[M11] * b->m[M13]) + (a->m[M10] * b->m[M03]);
-		result.m[M12] = (a->m[M13] * b->m[M32]) + (a->m[M12] * b->m[M22]) + (a->m[M11] * b->m[M12]) + (a->m[M10] * b->m[M02]);
-		result.m[M11] = (a->m[M13] * b->m[M31]) + (a->m[M12] * b->m[M21]) + (a->m[M11] * b->m[M11]) + (a->m[M10] * b->m[M01]);
-		result.m[M10] = (a->m[M13] * b->m[M30]) + (a->m[M12] * b->m[M20]) + (a->m[M11] * b->m[M10]) + (a->m[M10] * b->m[M00]);
+		result.m[M_13] = (a->m[M_13] * b->m[M_33]) + (a->m[M_12] * b->m[M_23]) + (a->m[M_11] * b->m[M_13]) + (a->m[M_10] * b->m[M_03]);
+		result.m[M_12] = (a->m[M_13] * b->m[M_32]) + (a->m[M_12] * b->m[M_22]) + (a->m[M_11] * b->m[M_12]) + (a->m[M_10] * b->m[M_02]);
+		result.m[M_11] = (a->m[M_13] * b->m[M_31]) + (a->m[M_12] * b->m[M_21]) + (a->m[M_11] * b->m[M_11]) + (a->m[M_10] * b->m[M_01]);
+		result.m[M_10] = (a->m[M_13] * b->m[M_30]) + (a->m[M_12] * b->m[M_20]) + (a->m[M_11] * b->m[M_10]) + (a->m[M_10] * b->m[M_00]);
 
-		result.m[M23] = (a->m[M23] * b->m[M33]) + (a->m[M22] * b->m[M23]) + (a->m[M21] * b->m[M13]) + (a->m[M20] * b->m[M03]);
-		result.m[M22] = (a->m[M23] * b->m[M32]) + (a->m[M22] * b->m[M22]) + (a->m[M21] * b->m[M12]) + (a->m[M20] * b->m[M02]);
-		result.m[M21] = (a->m[M23] * b->m[M31]) + (a->m[M22] * b->m[M21]) + (a->m[M21] * b->m[M11]) + (a->m[M20] * b->m[M01]);
-		result.m[M20] = (a->m[M23] * b->m[M30]) + (a->m[M22] * b->m[M20]) + (a->m[M21] * b->m[M10]) + (a->m[M20] * b->m[M00]);
+		result.m[M_23] = (a->m[M_23] * b->m[M_33]) + (a->m[M_22] * b->m[M_23]) + (a->m[M_21] * b->m[M_13]) + (a->m[M_20] * b->m[M_03]);
+		result.m[M_22] = (a->m[M_23] * b->m[M_32]) + (a->m[M_22] * b->m[M_22]) + (a->m[M_21] * b->m[M_12]) + (a->m[M_20] * b->m[M_02]);
+		result.m[M_21] = (a->m[M_23] * b->m[M_31]) + (a->m[M_22] * b->m[M_21]) + (a->m[M_21] * b->m[M_11]) + (a->m[M_20] * b->m[M_01]);
+		result.m[M_20] = (a->m[M_23] * b->m[M_30]) + (a->m[M_22] * b->m[M_20]) + (a->m[M_21] * b->m[M_10]) + (a->m[M_20] * b->m[M_00]);
 
-		result.m[M33] = (a->m[M33] * b->m[M33]) + (a->m[M32] * b->m[M23]) + (a->m[M31] * b->m[M13]) + (a->m[M30] * b->m[M03]);
-		result.m[M32] = (a->m[M33] * b->m[M32]) + (a->m[M32] * b->m[M22]) + (a->m[M31] * b->m[M12]) + (a->m[M30] * b->m[M02]);
-		result.m[M31] = (a->m[M33] * b->m[M31]) + (a->m[M32] * b->m[M21]) + (a->m[M31] * b->m[M11]) + (a->m[M30] * b->m[M01]);
-		result.m[M30] = (a->m[M33] * b->m[M30]) + (a->m[M32] * b->m[M20]) + (a->m[M31] * b->m[M10]) + (a->m[M30] * b->m[M00]);
+		result.m[M_33] = (a->m[M_33] * b->m[M_33]) + (a->m[M_32] * b->m[M_23]) + (a->m[M_31] * b->m[M_13]) + (a->m[M_30] * b->m[M_03]);
+		result.m[M_32] = (a->m[M_33] * b->m[M_32]) + (a->m[M_32] * b->m[M_22]) + (a->m[M_31] * b->m[M_12]) + (a->m[M_30] * b->m[M_02]);
+		result.m[M_31] = (a->m[M_33] * b->m[M_31]) + (a->m[M_32] * b->m[M_21]) + (a->m[M_31] * b->m[M_11]) + (a->m[M_30] * b->m[M_01]);
+		result.m[M_30] = (a->m[M_33] * b->m[M_30]) + (a->m[M_32] * b->m[M_20]) + (a->m[M_31] * b->m[M_10]) + (a->m[M_30] * b->m[M_00]);
 
 		/*for (int i = 0; i < 16; i += 4)
 			for (int j = 0; j < 4; j++)
-			r[i + j] = b[i] * a[j] + b[i + 1] * a[j + 4] + b[i + 2] * a[j + 8] + b[i + 3] * a[j + 12];*/
+				r[i + j] = b[i] * a[j] + b[i + 1] * a[j + 4] + b[i + 2] * a[j + 8] + b[i + 3] * a[j + 12];*/
 
 		return result;
 #endif
