@@ -58,7 +58,7 @@ extern "C" {
 	> 03 07 11 15 */
 #define MATRIX_ORDER ROW_MAJOR
 #elif MATRIX_ORDER != ROW_MAJOR && MATRIX_ORDER != COLUMN_MAJOR
-#error MATRIX_ORDER isn't properly defined
+#error "MATRIX_ORDER is not properly defined"
 #endif
 
 	// Doxygen won't generate documentation for macros that aren't defined
