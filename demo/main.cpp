@@ -5,7 +5,6 @@
 #include <SDL_opengl.h>
 
 #include <glh.h>
-#define NO_SIMD_INTRINSICS
 #include <vmath.h>
 #include <objloader.h>
 
@@ -461,7 +460,8 @@ inline void printMatrix(float *matrixValue) {
 	cout << "-------------" << endl;
 	for (int i = 0; i < 4; i++) {
 		// cout << matrixValue[i * 4 + 0] << " " << matrixValue[i * 4 + 1] << " " << matrixValue[i * 4 + 2] << " " << matrixValue[i * 4 + 3] << endl;
-		printf("|%2.0f|%2.0f|%2.0f|%2.0f|\n", matrixValue[i * 4 + 0], matrixValue[i * 4 + 1], matrixValue[i * 4 + 2], matrixValue[i * 4 + 3]);
+		// printf("|%2.0f|%2.0f|%2.0f|%2.0f|\n", matrixValue[i * 4 + 0], matrixValue[i * 4 + 1], matrixValue[i * 4 + 2], matrixValue[i * 4 + 3]);
+		printf("|%2f|%2f|%2f|%2f|\n", matrixValue[i * 4 + 0], matrixValue[i * 4 + 1], matrixValue[i * 4 + 2], matrixValue[i * 4 + 3]);
 		cout << "-------------" << endl;
 	}
 }

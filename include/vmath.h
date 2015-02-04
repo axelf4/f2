@@ -1,7 +1,7 @@
 /** Vector math library with SIMD acceleration.
 	\file vmath.h */
 
-// TODO make cmake set the variables __SSE__, __SSE2__, __SSE3, __SSE4_1__, __SSE4_2__
+// TODO have cmake set the variables __SSE__, __SSE2__, __SSE3, __SSE4_1__, __SSE4_2__
 
 #ifndef VMATH_H
 #define VMATH_H
@@ -88,6 +88,7 @@ extern "C" {
 #define PI 3.141592654f /**< An optimal approximation of the constant pi. */
 #define NULL_VECTOR VectorReplicate(0) /**< A null vector (or zero vector) whose length is zero, with the components [0, 0, 0, 0] (*0*). */
 
+#if MATRIX_ORDER == ROW_MAJOR
 #define M_00 0 /**< XX. */
 #define M_01 4 /**< XY. */
 #define M_02 8 /**< XZ. */
@@ -104,6 +105,24 @@ extern "C" {
 #define M_31 7 /**< WY. */
 #define M_32 11 /**< WZ. */
 #define M_33 15 /**< WW. */
+#else
+#define M_00 0 /**< XX. */
+#define M_01 1 /**< XY. */
+#define M_02 2 /**< XZ. */
+#define M_03 3 /**< XW. */
+#define M_10 4 /**< YX. */
+#define M_11 5 /**< YY. */
+#define M_12 6 /**< YZ. */
+#define M_13 7 /**< YW. */
+#define M_20 8 /**< ZX. */
+#define M_21 9 /**< ZY. */
+#define M_22 10 /**< ZZ. */
+#define M_23 11 /**< ZW. */
+#define M_30 12 /**< WX. */
+#define M_31 13 /**< WY. */
+#define M_32 14 /**< WZ. */
+#define M_33 15 /**< WW. */
+#endif
 
 	/* VECTOR */
 
@@ -151,7 +170,7 @@ extern "C" {
 		VEC v = { x, y, z, w };
 		return(v);
 #endif
-}
+	}
 
 	/** Loads and returns a ::VEC from the float array \a v.
 		@param v The float array to load up. */
@@ -350,10 +369,10 @@ extern "C" {
 #ifdef __SSE__
 		MAT m = { _mm_setr_ps(m00, m01, m02, m03), _mm_setr_ps(m10, m11, m12, m13), _mm_setr_ps(m20, m21, m22, m23), _mm_setr_ps(m30, m31, m32, m33) };
 #else
-		MAT m = { m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33 };
+		MAT m = { m00, m10, m20, m30, m01, m11, m21, m31, m02, m12, m22, m32, m03, m13, m23, m33 };
 #endif
 		return m;
-}
+	}
 
 	/** Loads and returns a ::MAT from the float array \a v.
 		@param v The float array to load up. */
@@ -423,32 +442,23 @@ extern "C" {
 		MAT m = { row0, row1, row2, row3 };
 		return m;
 #else
-		// FIXME
 		MAT result;
-		result.m[M_03] = (a->m[M_03] * b->m[M_33]) + (a->m[M_02] * b->m[M_23]) + (a->m[M_01] * b->m[M_13]) + (a->m[M_00] * b->m[M_03]);
-		result.m[M_02] = (a->m[M_03] * b->m[M_32]) + (a->m[M_02] * b->m[M_22]) + (a->m[M_01] * b->m[M_12]) + (a->m[M_00] * b->m[M_02]);
-		result.m[M_01] = (a->m[M_03] * b->m[M_31]) + (a->m[M_02] * b->m[M_21]) + (a->m[M_01] * b->m[M_11]) + (a->m[M_00] * b->m[M_01]);
-		result.m[M_00] = (a->m[M_03] * b->m[M_30]) + (a->m[M_02] * b->m[M_20]) + (a->m[M_01] * b->m[M_10]) + (a->m[M_00] * b->m[M_00]);
-
-		result.m[M_13] = (a->m[M_13] * b->m[M_33]) + (a->m[M_12] * b->m[M_23]) + (a->m[M_11] * b->m[M_13]) + (a->m[M_10] * b->m[M_03]);
-		result.m[M_12] = (a->m[M_13] * b->m[M_32]) + (a->m[M_12] * b->m[M_22]) + (a->m[M_11] * b->m[M_12]) + (a->m[M_10] * b->m[M_02]);
-		result.m[M_11] = (a->m[M_13] * b->m[M_31]) + (a->m[M_12] * b->m[M_21]) + (a->m[M_11] * b->m[M_11]) + (a->m[M_10] * b->m[M_01]);
-		result.m[M_10] = (a->m[M_13] * b->m[M_30]) + (a->m[M_12] * b->m[M_20]) + (a->m[M_11] * b->m[M_10]) + (a->m[M_10] * b->m[M_00]);
-
-		result.m[M_23] = (a->m[M_23] * b->m[M_33]) + (a->m[M_22] * b->m[M_23]) + (a->m[M_21] * b->m[M_13]) + (a->m[M_20] * b->m[M_03]);
-		result.m[M_22] = (a->m[M_23] * b->m[M_32]) + (a->m[M_22] * b->m[M_22]) + (a->m[M_21] * b->m[M_12]) + (a->m[M_20] * b->m[M_02]);
-		result.m[M_21] = (a->m[M_23] * b->m[M_31]) + (a->m[M_22] * b->m[M_21]) + (a->m[M_21] * b->m[M_11]) + (a->m[M_20] * b->m[M_01]);
-		result.m[M_20] = (a->m[M_23] * b->m[M_30]) + (a->m[M_22] * b->m[M_20]) + (a->m[M_21] * b->m[M_10]) + (a->m[M_20] * b->m[M_00]);
-
-		result.m[M_33] = (a->m[M_33] * b->m[M_33]) + (a->m[M_32] * b->m[M_23]) + (a->m[M_31] * b->m[M_13]) + (a->m[M_30] * b->m[M_03]);
-		result.m[M_32] = (a->m[M_33] * b->m[M_32]) + (a->m[M_32] * b->m[M_22]) + (a->m[M_31] * b->m[M_12]) + (a->m[M_30] * b->m[M_02]);
-		result.m[M_31] = (a->m[M_33] * b->m[M_31]) + (a->m[M_32] * b->m[M_21]) + (a->m[M_31] * b->m[M_11]) + (a->m[M_30] * b->m[M_01]);
-		result.m[M_30] = (a->m[M_33] * b->m[M_30]) + (a->m[M_32] * b->m[M_20]) + (a->m[M_31] * b->m[M_10]) + (a->m[M_30] * b->m[M_00]);
-
-		/*for (int i = 0; i < 16; i += 4)
-			for (int j = 0; j < 4; j++)
-				r[i + j] = b[i] * a[j] + b[i + 1] * a[j + 4] + b[i + 2] * a[j + 8] + b[i + 3] * a[j + 12];*/
-
+		result.m[M_00] = a->m[M_00] * b->m[M_00] + a->m[M_01] * b->m[M_10] + a->m[M_02] * b->m[M_20] + a->m[M_03] * b->m[M_30];
+		result.m[M_01] = a->m[M_00] * b->m[M_01] + a->m[M_01] * b->m[M_11] + a->m[M_02] * b->m[M_21] + a->m[M_03] * b->m[M_31];
+		result.m[M_02] = a->m[M_00] * b->m[M_02] + a->m[M_01] * b->m[M_12] + a->m[M_02] * b->m[M_22] + a->m[M_03] * b->m[M_32];
+		result.m[M_03] = a->m[M_00] * b->m[M_03] + a->m[M_01] * b->m[M_13] + a->m[M_02] * b->m[M_23] + a->m[M_03] * b->m[M_33];
+		result.m[M_10] = a->m[M_10] * b->m[M_00] + a->m[M_11] * b->m[M_10] + a->m[M_12] * b->m[M_20] + a->m[M_13] * b->m[M_30];
+		result.m[M_11] = a->m[M_10] * b->m[M_01] + a->m[M_11] * b->m[M_11] + a->m[M_12] * b->m[M_21] + a->m[M_13] * b->m[M_31];
+		result.m[M_12] = a->m[M_10] * b->m[M_02] + a->m[M_11] * b->m[M_12] + a->m[M_12] * b->m[M_22] + a->m[M_13] * b->m[M_32];
+		result.m[M_13] = a->m[M_10] * b->m[M_03] + a->m[M_11] * b->m[M_13] + a->m[M_12] * b->m[M_23] + a->m[M_13] * b->m[M_33];
+		result.m[M_20] = a->m[M_20] * b->m[M_00] + a->m[M_21] * b->m[M_10] + a->m[M_22] * b->m[M_20] + a->m[M_23] * b->m[M_30];
+		result.m[M_21] = a->m[M_20] * b->m[M_01] + a->m[M_21] * b->m[M_11] + a->m[M_22] * b->m[M_21] + a->m[M_23] * b->m[M_31];
+		result.m[M_22] = a->m[M_20] * b->m[M_02] + a->m[M_21] * b->m[M_12] + a->m[M_22] * b->m[M_22] + a->m[M_23] * b->m[M_32];
+		result.m[M_23] = a->m[M_20] * b->m[M_03] + a->m[M_21] * b->m[M_13] + a->m[M_22] * b->m[M_23] + a->m[M_23] * b->m[M_33];
+		result.m[M_30] = a->m[M_30] * b->m[M_00] + a->m[M_31] * b->m[M_10] + a->m[M_32] * b->m[M_20] + a->m[M_33] * b->m[M_30];
+		result.m[M_31] = a->m[M_30] * b->m[M_01] + a->m[M_31] * b->m[M_11] + a->m[M_32] * b->m[M_21] + a->m[M_33] * b->m[M_31];
+		result.m[M_32] = a->m[M_30] * b->m[M_02] + a->m[M_31] * b->m[M_12] + a->m[M_32] * b->m[M_22] + a->m[M_33] * b->m[M_32];
+		result.m[M_33] = a->m[M_30] * b->m[M_03] + a->m[M_31] * b->m[M_13] + a->m[M_32] * b->m[M_23] + a->m[M_33] * b->m[M_33];
 		return result;
 #endif
 	}
@@ -562,114 +572,29 @@ extern "C" {
 		return m;
 #else
 		double inv[16], det;
-		int i;
-
-		// TODO compact this
 		inv[0] = a->m[5] * a->m[10] * a->m[15] - a->m[5] * a->m[11] * a->m[14] - a->m[9] * a->m[6] * a->m[15] + a->m[9] * a->m[7] * a->m[14] + a->m[13] * a->m[6] * a->m[11] - a->m[13] * a->m[7] * a->m[10];
 		inv[4] = -a->m[4] * a->m[10] * a->m[15] + a->m[4] * a->m[11] * a->m[14] + a->m[8] * a->m[6] * a->m[15] - a->m[8] * a->m[7] * a->m[14] - a->m[12] * a->m[6] * a->m[11] + a->m[12] * a->m[7] * a->m[10];
-		inv[8] = a->m[4] * a->m[9] * a->m[15] - a->m[4] * a->m[11] * a->m[13] -
-			a->m[8] * a->m[5] * a->m[15] +
-			a->m[8] * a->m[7] * a->m[13] +
-			a->m[12] * a->m[5] * a->m[11] -
-			a->m[12] * a->m[7] * a->m[9];
-
-		inv[12] = -a->m[4] * a->m[9] * a->m[14] +
-			a->m[4] * a->m[10] * a->m[13] +
-			a->m[8] * a->m[5] * a->m[14] -
-			a->m[8] * a->m[6] * a->m[13] -
-			a->m[12] * a->m[5] * a->m[10] +
-			a->m[12] * a->m[6] * a->m[9];
-
-		inv[1] = -a->m[1] * a->m[10] * a->m[15] +
-			a->m[1] * a->m[11] * a->m[14] +
-			a->m[9] * a->m[2] * a->m[15] -
-			a->m[9] * a->m[3] * a->m[14] -
-			a->m[13] * a->m[2] * a->m[11] +
-			a->m[13] * a->m[3] * a->m[10];
-
-		inv[5] = a->m[0] * a->m[10] * a->m[15] -
-			a->m[0] * a->m[11] * a->m[14] -
-			a->m[8] * a->m[2] * a->m[15] +
-			a->m[8] * a->m[3] * a->m[14] +
-			a->m[12] * a->m[2] * a->m[11] -
-			a->m[12] * a->m[3] * a->m[10];
-
-		inv[9] = -a->m[0] * a->m[9] * a->m[15] +
-			a->m[0] * a->m[11] * a->m[13] +
-			a->m[8] * a->m[1] * a->m[15] -
-			a->m[8] * a->m[3] * a->m[13] -
-			a->m[12] * a->m[1] * a->m[11] +
-			a->m[12] * a->m[3] * a->m[9];
-
-		inv[13] = a->m[0] * a->m[9] * a->m[14] -
-			a->m[0] * a->m[10] * a->m[13] -
-			a->m[8] * a->m[1] * a->m[14] +
-			a->m[8] * a->m[2] * a->m[13] +
-			a->m[12] * a->m[1] * a->m[10] -
-			a->m[12] * a->m[2] * a->m[9];
-
-		inv[2] = a->m[1] * a->m[6] * a->m[15] -
-			a->m[1] * a->m[7] * a->m[14] -
-			a->m[5] * a->m[2] * a->m[15] +
-			a->m[5] * a->m[3] * a->m[14] +
-			a->m[13] * a->m[2] * a->m[7] -
-			a->m[13] * a->m[3] * a->m[6];
-
-		inv[6] = -a->m[0] * a->m[6] * a->m[15] +
-			a->m[0] * a->m[7] * a->m[14] +
-			a->m[4] * a->m[2] * a->m[15] -
-			a->m[4] * a->m[3] * a->m[14] -
-			a->m[12] * a->m[2] * a->m[7] +
-			a->m[12] * a->m[3] * a->m[6];
-
-		inv[10] = a->m[0] * a->m[5] * a->m[15] -
-			a->m[0] * a->m[7] * a->m[13] -
-			a->m[4] * a->m[1] * a->m[15] +
-			a->m[4] * a->m[3] * a->m[13] +
-			a->m[12] * a->m[1] * a->m[7] -
-			a->m[12] * a->m[3] * a->m[5];
-
-		inv[14] = -a->m[0] * a->m[5] * a->m[14] +
-			a->m[0] * a->m[6] * a->m[13] +
-			a->m[4] * a->m[1] * a->m[14] -
-			a->m[4] * a->m[2] * a->m[13] -
-			a->m[12] * a->m[1] * a->m[6] +
-			a->m[12] * a->m[2] * a->m[5];
-
-		inv[3] = -a->m[1] * a->m[6] * a->m[11] +
-			a->m[1] * a->m[7] * a->m[10] +
-			a->m[5] * a->m[2] * a->m[11] -
-			a->m[5] * a->m[3] * a->m[10] -
-			a->m[9] * a->m[2] * a->m[7] +
-			a->m[9] * a->m[3] * a->m[6];
-
-		inv[7] = a->m[0] * a->m[6] * a->m[11] -
-			a->m[0] * a->m[7] * a->m[10] -
-			a->m[4] * a->m[2] * a->m[11] +
-			a->m[4] * a->m[3] * a->m[10] +
-			a->m[8] * a->m[2] * a->m[7] -
-			a->m[8] * a->m[3] * a->m[6];
-
-		inv[11] = -a->m[0] * a->m[5] * a->m[11] +
-			a->m[0] * a->m[7] * a->m[9] +
-			a->m[4] * a->m[1] * a->m[11] -
-			a->m[4] * a->m[3] * a->m[9] -
-			a->m[8] * a->m[1] * a->m[7] +
-			a->m[8] * a->m[3] * a->m[5];
-
-		inv[15] = a->m[0] * a->m[5] * a->m[10] -
-			a->m[0] * a->m[6] * a->m[9] -
-			a->m[4] * a->m[1] * a->m[10] +
-			a->m[4] * a->m[2] * a->m[9] +
-			a->m[8] * a->m[1] * a->m[6] -
-			a->m[8] * a->m[2] * a->m[5];
+		inv[8] = a->m[4] * a->m[9] * a->m[15] - a->m[4] * a->m[11] * a->m[13] - a->m[8] * a->m[5] * a->m[15] + a->m[8] * a->m[7] * a->m[13] + a->m[12] * a->m[5] * a->m[11] - a->m[12] * a->m[7] * a->m[9];
+		inv[12] = -a->m[4] * a->m[9] * a->m[14] + a->m[4] * a->m[10] * a->m[13] + a->m[8] * a->m[5] * a->m[14] - a->m[8] * a->m[6] * a->m[13] - a->m[12] * a->m[5] * a->m[10] + a->m[12] * a->m[6] * a->m[9];
+		inv[1] = -a->m[1] * a->m[10] * a->m[15] + a->m[1] * a->m[11] * a->m[14] + a->m[9] * a->m[2] * a->m[15] - a->m[9] * a->m[3] * a->m[14] - a->m[13] * a->m[2] * a->m[11] + a->m[13] * a->m[3] * a->m[10];
+		inv[5] = a->m[0] * a->m[10] * a->m[15] - a->m[0] * a->m[11] * a->m[14] - a->m[8] * a->m[2] * a->m[15] + a->m[8] * a->m[3] * a->m[14] + a->m[12] * a->m[2] * a->m[11] - a->m[12] * a->m[3] * a->m[10];
+		inv[9] = -a->m[0] * a->m[9] * a->m[15] + a->m[0] * a->m[11] * a->m[13] + a->m[8] * a->m[1] * a->m[15] - a->m[8] * a->m[3] * a->m[13] - a->m[12] * a->m[1] * a->m[11] + a->m[12] * a->m[3] * a->m[9];
+		inv[13] = a->m[0] * a->m[9] * a->m[14] - a->m[0] * a->m[10] * a->m[13] - a->m[8] * a->m[1] * a->m[14] + a->m[8] * a->m[2] * a->m[13] + a->m[12] * a->m[1] * a->m[10] - a->m[12] * a->m[2] * a->m[9];
+		inv[2] = a->m[1] * a->m[6] * a->m[15] - a->m[1] * a->m[7] * a->m[14] - a->m[5] * a->m[2] * a->m[15] + a->m[5] * a->m[3] * a->m[14] + a->m[13] * a->m[2] * a->m[7] - a->m[13] * a->m[3] * a->m[6];
+		inv[6] = -a->m[0] * a->m[6] * a->m[15] + a->m[0] * a->m[7] * a->m[14] + a->m[4] * a->m[2] * a->m[15] - a->m[4] * a->m[3] * a->m[14] - a->m[12] * a->m[2] * a->m[7] + a->m[12] * a->m[3] * a->m[6];
+		inv[10] = a->m[0] * a->m[5] * a->m[15] - a->m[0] * a->m[7] * a->m[13] - a->m[4] * a->m[1] * a->m[15] + a->m[4] * a->m[3] * a->m[13] + a->m[12] * a->m[1] * a->m[7] - a->m[12] * a->m[3] * a->m[5];
+		inv[14] = -a->m[0] * a->m[5] * a->m[14] + a->m[0] * a->m[6] * a->m[13] + a->m[4] * a->m[1] * a->m[14] - a->m[4] * a->m[2] * a->m[13] - a->m[12] * a->m[1] * a->m[6] + a->m[12] * a->m[2] * a->m[5];
+		inv[3] = -a->m[1] * a->m[6] * a->m[11] + a->m[1] * a->m[7] * a->m[10] + a->m[5] * a->m[2] * a->m[11] - a->m[5] * a->m[3] * a->m[10] - a->m[9] * a->m[2] * a->m[7] + a->m[9] * a->m[3] * a->m[6];
+		inv[7] = a->m[0] * a->m[6] * a->m[11] - a->m[0] * a->m[7] * a->m[10] - a->m[4] * a->m[2] * a->m[11] + a->m[4] * a->m[3] * a->m[10] + a->m[8] * a->m[2] * a->m[7] - a->m[8] * a->m[3] * a->m[6];
+		inv[11] = -a->m[0] * a->m[5] * a->m[11] + a->m[0] * a->m[7] * a->m[9] + a->m[4] * a->m[1] * a->m[11] - a->m[4] * a->m[3] * a->m[9] - a->m[8] * a->m[1] * a->m[7] + a->m[8] * a->m[3] * a->m[5];
+		inv[15] = a->m[0] * a->m[5] * a->m[10] - a->m[0] * a->m[6] * a->m[9] - a->m[4] * a->m[1] * a->m[10] + a->m[4] * a->m[2] * a->m[9] + a->m[8] * a->m[1] * a->m[6] - a->m[8] * a->m[2] * a->m[5];
 
 		det = a->m[0] * inv[0] + a->m[1] * inv[4] + a->m[2] * inv[8] + a->m[3] * inv[12];
 		if (det == 0) return *a; // assert(det == 0 && "Non-invertible matrix");
 		det = 1.0 / det;
 
 		MAT m;
-		for (i = 0; i < 16; i++) m.m[i] = inv[i] * det;
+		for (int i = 0; i < 16; i++) m.m[i] = inv[i] * det;
 		return m;
 #endif
 	}
