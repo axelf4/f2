@@ -29,7 +29,7 @@ const char *read_file(const char *filename) {
 	return buffer;
 }
 
-GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader) {
+GLuint create_program(const char *vertexShader, const char *fragmentShader) {
 	GLuint vert, frag, id;
 	if ((vert = compile_shader(GL_VERTEX_SHADER, vertexShader)) == 0) goto deleteVertex;
 	if ((frag = compile_shader(GL_FRAGMENT_SHADER, fragmentShader)) == 0) goto deleteFragment;
@@ -53,7 +53,7 @@ deleteVertex:
 	return id;
 }
 
-GLuint compile_shader(GLenum type, const GLchar *source) {
+GLuint compile_shader(GLenum type, const char *source) {
 	GLuint shader = glCreateShader(type);
 	if (shader == 0) {
 		fprintf(stderr, "Error creating shader.\n");
@@ -67,7 +67,7 @@ GLuint compile_shader(GLenum type, const GLchar *source) {
 	if (status == GL_FALSE) {
 		GLint i;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &i);
-		GLchar *infoLog = malloc(sizeof(GLchar) * i);
+		char *infoLog = malloc(sizeof(char) * i);
 		glGetShaderInfoLog(shader, i, NULL, infoLog);
 		const char *typeName = type == GL_VERTEX_SHADER ? "GL_VERTEX_SHADER" : (type == GL_FRAGMENT_SHADER ? "GL_FRAGMENT_SHADER" : "unknown");
 		fprintf(stderr, "%s: %s\n", typeName, infoLog);
@@ -78,10 +78,10 @@ GLuint compile_shader(GLenum type, const GLchar *source) {
 	return shader;
 }
 
-GLchar * getProgramInfoLog(GLuint program) {
+char * getProgramInfoLog(GLuint program) {
 	GLint length /* = 512 */;
 	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
-	GLchar *infoLog = malloc(sizeof(GLchar) * length);
+	char *infoLog = malloc(sizeof(char) * length);
 	glGetProgramInfoLog(program, sizeof infoLog, NULL, infoLog);
 	return infoLog;
 }

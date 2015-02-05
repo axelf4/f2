@@ -15,7 +15,7 @@ extern "C" {
 	// TODO implement doxygen
 
 	/** The version of OpenGL as a float. */
-#define OGLV (atof((const GLchar*) glGetString(GL_VERSION)))
+#define OGLV (atof((const char*) glGetString(GL_VERSION)))
 
 	// TODO remove "#version 110\n" from GLSL for it to be ALOT more flexible
 	/** Returns the GLSL code in a string format. */
@@ -60,13 +60,13 @@ extern "C" {
 
 	// TODO add support for geometry shaders
 	/** Links the program. */
-	GLuint create_program(const GLchar *vertexShader, const GLchar *fragmentShader);
+	GLuint create_program(const char *vertexShader, const char *fragmentShader);
 
-	GLuint compile_shader(GLenum type, const GLchar *source);
+	GLuint compile_shader(GLenum type, const char *source);
 
 	/** Returns the info log for the shader program \a program.
 		@warning Need to free return value. */
-	GLchar * getProgramInfoLog(GLuint program);
+	char * getProgramInfoLog(GLuint program);
 
 	/* MESH */
 
