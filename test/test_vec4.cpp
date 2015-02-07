@@ -1,4 +1,3 @@
-#define GTEST_HAS_SEH 0
 #include <gtest/gtest.h>
 #include <cstdlib>
 #include <cmath>
