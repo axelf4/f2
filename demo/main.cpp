@@ -19,6 +19,7 @@
 
 #include "shaders.h"
 #include "GLDebugDrawer.h"
+#include "testmessage.pb.h"
 
 // #define WINDOW_TITLE "Point and Click Adventures"
 #define WINDOW_TITLE "Call of Duty: Avancerad V\xC3\xA4lf\xC3\xA4rd"
@@ -467,6 +468,11 @@ inline void printMatrix(float *matrixValue) {
 }
 
 int main(int argc, char *argv[]) {
+	testmessage::TestMessage msg;
+	msg.set_name("Hello");
+	msg.set_id(1337);
+	cout << msg.SerializeAsString() << endl;
+
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
