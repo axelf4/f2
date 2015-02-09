@@ -50,12 +50,12 @@ extern "C" {
 #define SOCK_ADDR_EQ_PORT(sa, sb) (((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET && ((struct sockaddr_in *)(sa))->sin_port == ((struct sockaddr_in *)(sb))->sin_port)
 #endif
 
-#define NET_SEQNO_SIZE 1
+#define NET_SEQNO_SIZE 2
 	/** 256 - 3, one for zero, one for SYN packets and one for pings. */
 #define NET_SEQNO_MAX ((1 << (NET_SEQNO_SIZE) * 8) - 3)
 #define NET_PING_SEQNO (NET_SEQNO_MAX + 1)
 	// TODO rename to NAK
-#define NET_SYN_SEQNO (NET_SEQNO_MAX + 2)
+#define NET_NAK_SEQNO (NET_SEQNO_MAX + 2)
 
 	// struct addr { const char *address; unsigned short port; };
 

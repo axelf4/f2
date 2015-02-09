@@ -95,14 +95,14 @@ void net_update(struct peer *peer) {
 		for (unsigned int j = 0; j < NET_SEQNO_MAX; j++) {
 			if (!connection->receivedSeqnos[j]) {
 				// char syn[] = { j + 1, 0xFF };
-				int synlen = NET_SEQNO_SIZE * 2;
-				char *syn = calloc(synlen, sizeof(char));
+				int naklen = NET_SEQNO_SIZE * 2;
+				char *nak = calloc(naklen, sizeof(char));
 				// *syn = j + 1;
-				for (int i = 0; i < NET_SEQNO_SIZE; i++) syn[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
+				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
 				printf("Sending a request to resend packet %d\n", j + 1);
-				for (int i = 0; i < NET_SEQNO_SIZE; i++) syn[synlen - 1 - i] = NET_SYN_SEQNO >> i * 8; // syn[synlen - 1] = NET_SYN_SEQNO;
-				net_send(peer, syn, synlen, connection->addr, 2);
-				free(syn);
+				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[naklen - 1 - i] = NET_NAK_SEQNO >> i * 8; // syn[synlen - 1] = NET_NAK_SEQNO;
+				net_send(peer, nak, naklen, connection->addr, 2);
+				free(nak);
 			}
 		}
 
@@ -190,7 +190,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 		// unsigned char seqno = *(buf + result - NET_SEQNO_SIZE); // The sequence number is located last in the buffer
 		unsigned int seqno = 0;
 		for (int i = 0; i < NET_SEQNO_SIZE; i++) seqno |= buf[result - 1 - i] << i * 8;
-		if (seqno == NET_SYN_SEQNO) {
+		if (seqno == NET_NAK_SEQNO) {
 			unsigned int no = 0;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) no |= buf[i] << (NET_SEQNO_SIZE - i - 1) * 8;
 			printf("The remote end has sent a request to resend packet %d.\n", no);
@@ -208,8 +208,6 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			else {
 				no = seqno;
 			}
-			unsigned int net_ping_seqno_t = NET_PING_SEQNO,
-				net_seqno_max_t = NET_SEQNO_MAX;
 
 			// If the packet in question is more recent than the last received:
 			if ((no > connection->lastReceived && no - connection->lastReceived <= NET_SEQNO_MAX / 2) ||
