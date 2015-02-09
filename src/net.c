@@ -8,9 +8,9 @@ static struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) 
 	connection->addr = addr;
 	connection->lastSent = 0;
 	connection->lastReceived = 0;
-	for (unsigned int i = 0; i < NET_MAX_TO_BE_SYNCHRONIZED; i++) {
+	for (unsigned int i = 0; i < NET_SEQNO_MAX; i++) {
 		connection->sentBuffers[i] = 0;
-		connection->receivedSeqnos[i] = 1;
+		connection->receivedSeqnos[i] = 1; // TODO rename and zero initialize
 	}
 
 	peer->connections[peer->numConnections++] = connection;
@@ -78,7 +78,7 @@ void net_peer_dispose(struct peer *peer) {
 	}
 
 	// Free up the connections
-	for (int i = 0; i < peer->numConnections; i++) {
+	for (unsigned int i = 0; i < peer->numConnections; i++) {
 		free(peer->connections[i]);
 	}
 	free(peer->connections);
@@ -92,32 +92,45 @@ void net_update(struct peer *peer) {
 	for (unsigned int i = 0; i < peer->numConnections; i++) {
 		struct conn *connection = peer->connections[i];
 
-		for (unsigned int j = 0; j < NET_MAX_TO_BE_SYNCHRONIZED; j++) {
+		for (unsigned int j = 0; j < NET_SEQNO_MAX; j++) {
 			if (!connection->receivedSeqnos[j]) {
-				char syn[] = { j + 1, 0xFF };
-				net_send(peer, syn, 2, connection->addr, 2);
+				// char syn[] = { j + 1, 0xFF };
+				int synlen = NET_SEQNO_SIZE * 2;
+				char *syn = calloc(synlen, sizeof(char));
+				// *syn = j + 1;
+				for (int i = 0; i < NET_SEQNO_SIZE; i++) syn[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
+				printf("Sending a request to resend packet %d\n", j + 1);
+				for (int i = 0; i < NET_SEQNO_SIZE; i++) syn[synlen - 1 - i] = NET_SYN_SEQNO >> i * 8; // syn[synlen - 1] = NET_SYN_SEQNO;
+				net_send(peer, syn, synlen, connection->addr, 2);
+				free(syn);
 			}
 		}
 
-		// TODO only ping if time since last receive has exeded a certain threshold
+		// TODO only ping if time since last receive has exceeded a certain threshold
 		// Send ping
-		char buf[] = { connection->lastSent, 0xFE };
-		net_send(peer, buf, 2, connection->addr, 2);
+		// char buf[] = { connection->lastSent, 0xFE };
+		int buflen = NET_SEQNO_SIZE * 2;
+		char *buf = calloc(buflen, sizeof(char));
+		// *buf = connection->lastSent;
+		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
+		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8; // buf[buflen - 1] = NET_PING_SEQNO;
+		net_send(peer, buf, buflen, connection->addr, 2);
+		free(buf);
 	}
 }
 
 // TODO make return error value
-void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int reliable) {
+void net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int reliable) {
 	// printf("sending bytes\n");
 	// struct sockaddr_in to = { .sin_family = AF_INET, .sin_port = htons(DEFAULT_PORT), .sin_addr.s_addr = inet_addr("127.0.0.1") };
 	// int tolen = sizeof(to);
 
 	if (!reliable) {
-		buf[len - 1] = 0;
+		for (int i = 1; i <= NET_SEQNO_SIZE; i++) buf[len - i] = 0;
 	}
 	else if (reliable != 2) {
 		struct conn *connection = 0;
-		for (int i = 0; i < peer->numConnections; i++) {
+		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
 			struct sockaddr_in connAddr = other->addr;
 			if (SOCK_ADDR_EQ_ADDR(&to, &connAddr) && SOCK_ADDR_EQ_PORT(&to, &connAddr)) {
@@ -127,8 +140,11 @@ void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int 
 		}
 		if (connection == 0) connection = add_connection(peer, to);
 
-		if (connection->lastSent++ >= NET_MAX_TO_BE_SYNCHRONIZED) connection->lastSent = 1;
-		buf[len - 1] = connection->lastSent;
+		// if (++connection->lastSent > NET_SEQNO_MAX)	connection->lastSent = 1;
+		connection->lastSent = connection->lastSent % NET_SEQNO_MAX + 1;
+		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = connection->lastSent >> i * 8;
+		// buf[len - 1] = connection->lastSent;
+
 		char **historyBuf = connection->sentBuffers + connection->lastSent - 1;
 		if (*historyBuf != 0) free(*historyBuf); // If there was an old buffer at the index; free it
 		*historyBuf = buf;
@@ -144,7 +160,7 @@ void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int 
 	}
 }
 
-int net_receive(struct peer *peer, char *buf, int buflen, struct sockaddr_in *from) {
+int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr_in *from) {
 	// TODO first write this berkeley code then optimize for windows with WSA*.
 beginning:; // If received a packet used internally: don't return, but skip it
 	int fromlen = sizeof(struct sockaddr_in), result;
@@ -155,9 +171,10 @@ beginning:; // If received a packet used internally: don't return, but skip it
 	}
 	else if (result > 0) {
 		if (rand() % 2) goto beginning; // Simulate packet drop locally
+
 		// Find out if the packet forms a new connection
 		struct conn *connection = 0;
-		for (int i = 0; i < peer->numConnections; i++) {
+		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
 			struct sockaddr_in address = other->addr;
 			if (SOCK_ADDR_EQ_ADDR(from, &address) && SOCK_ADDR_EQ_PORT(from, &address)) {
@@ -170,29 +187,49 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			if (peer->accept != 0) peer->accept(peer, connection); // Alert the application about it
 		}
 
-		unsigned char seqno = *(buf + result - 1);
-		if (seqno == 0xFF) {
-			net_send(peer, connection->sentBuffers[*buf - 1], connection->sentLengths[*buf - 1], *from, 2); // The remote end requested a resend of the packet with the id *buf
-			printf("The remote end has sent a request to resend packet %d.\n", *buf);
+		// unsigned char seqno = *(buf + result - NET_SEQNO_SIZE); // The sequence number is located last in the buffer
+		unsigned int seqno = 0;
+		for (int i = 0; i < NET_SEQNO_SIZE; i++) seqno |= buf[result - 1 - i] << i * 8;
+		if (seqno == NET_SYN_SEQNO) {
+			unsigned int no = 0;
+			for (int i = 0; i < NET_SEQNO_SIZE; i++) no |= buf[i] << (NET_SEQNO_SIZE - i - 1) * 8;
+			printf("The remote end has sent a request to resend packet %d.\n", no);
+			net_send(peer, connection->sentBuffers[no - 1], connection->sentLengths[no - 1], *from, 2); // The remote end requested a resend of the packet with the id *buf
 			goto beginning; // Don't return the internal packet!
 		}
 		else if (seqno) { // A ping or reliable packet
-			unsigned char no = seqno == 0xFE ? *buf + 1 : seqno; // If a ping; use the last packet sent's number, else use the received packet's
-			// If the packet in question is newer than the last received:
-			if (no > connection->lastReceived) {
-				// Mark all packets with numbers between the last received's and the received's as missing
-				for (unsigned int i = connection->lastReceived + 1; i < no; i = (i + 1) % NET_MAX_TO_BE_SYNCHRONIZED) {
+			unsigned int no = 0;
+			// If a ping; use the last sent packet's number, else use the received packet's
+			if (seqno == NET_PING_SEQNO) {
+				for (int i = 0; i < NET_SEQNO_SIZE; i++) {
+					no |= buf[i] >> (NET_SEQNO_SIZE - i - 1) * 8;
+				}
+			}
+			else {
+				no = seqno;
+			}
+			unsigned int net_ping_seqno_t = NET_PING_SEQNO,
+				net_seqno_max_t = NET_SEQNO_MAX;
+
+			// If the packet in question is more recent than the last received:
+			if ((no > connection->lastReceived && no - connection->lastReceived <= NET_SEQNO_MAX / 2) ||
+				(no < connection->lastReceived && connection->lastReceived - no > NET_SEQNO_MAX / 2)) {
+				// Mark all packets with numbers between the last received's and the received one's as missing
+				unsigned int i = (connection->lastReceived) % NET_SEQNO_MAX + 1,
+					numToComp = no % NET_SEQNO_MAX + (seqno == NET_PING_SEQNO);
+				if (no == NET_SEQNO_MAX) numToComp = seqno == NET_PING_SEQNO ? 1 : NET_SEQNO_MAX;
+				for (; i != numToComp; i = (i) % NET_SEQNO_MAX + 1) {
 					connection->receivedSeqnos[i - 1] = 0;
 				}
-				if (seqno != 0xFE) connection->lastReceived = seqno; // Update the last received flag if the packet isn't a ping
+				connection->lastReceived = no; // Update the last received sequence number
 			}
 			else if (connection->receivedSeqnos[seqno - 1]) goto beginning; // The packet has already arrived
-			if (seqno == 0xFE) goto beginning; // The packet was internally used as a ping
+			if (seqno == NET_PING_SEQNO) goto beginning; // The packet was internally used as a ping
 			else connection->receivedSeqnos[seqno - 1] = 1; // Mark the packet as received
 		}
 
-		printf("Sequence number is %d/", seqno);
-		for (int i = 7; i >= 0; i--) putchar((seqno & (1 << i)) ? '1' : '0');
+		printf("Sequence number is %u/", seqno);
+		for (int i = NET_SEQNO_SIZE * 8 - 1; i >= 0; i--) putchar((seqno & (1 << i)) ? '1' : '0');
 		putchar('\n');
 	}
 	return result;

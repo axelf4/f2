@@ -7,9 +7,11 @@
 
 using namespace std;
 
+#define DEFAULT_PORT 6622
 #define MAX_CLIENTS 10
 
 struct conn *clientConn;
+int receivedNum = 0;
 
 void accept(struct peer *peer, struct conn *connection) {
 	cout << "Accepted new connection!" << endl;
@@ -22,11 +24,11 @@ void readPeer(struct peer *peer, std::mutex *mtx, bool *continuing, bool client)
 			std::unique_lock<std::mutex> lck(*mtx);
 			net_update(peer);
 
-			char buf[1024];
+			unsigned char buf[1024];
 			int len;
 			struct sockaddr_in from;
 			while ((len = net_receive(peer, buf, sizeof buf, &from)) > 0) {
-				printf("Received: %d bytes or '%s'.\n", len, buf);
+				printf("Received: %d bytes or '%s'. Nr %d.\n", len, buf, ++receivedNum);
 
 				//char *sendBuf = new char[len];
 				//memcpy(sendBuf, buf, len);
@@ -36,7 +38,7 @@ void readPeer(struct peer *peer, std::mutex *mtx, bool *continuing, bool client)
 			// if (len == -1) break;
 		}
 
-		// Sleep(500);
+		Sleep(10);
 	}
 }
 
@@ -69,7 +71,7 @@ int main() {
 
 	cout << "Scanning for input..." << endl;
 	while (continuing) {
-		cout << "0:stop, 1:send; ";
+		cout << (client ? "Client" : "Server") << ": 0=stop, 1=send; ";
 		int option;
 		cin >> option;
 		std::unique_lock<std::mutex> lck(mtx);
@@ -77,12 +79,14 @@ int main() {
 			continuing = false;
 		}
 		else {
-			char *string = "HelloWorld!";
-			int buflen = strlen(string) + 2; // One for the null-terminator and one for internal usage
-			char *buf = new char[buflen];
-			strcpy(buf, string);
+			for (int i = 0; i < option; i++) { // 252
+				char *string = "HelloWorld!";
+				int buflen = strlen(string) + 1 + NET_SEQNO_SIZE; // One for the null-terminator and one for internal usage
+				unsigned char *buf = (unsigned char *)malloc(sizeof(char) * buflen);
+				strcpy((char *)buf, string);
 
-			net_send(peer, buf, buflen, client ? net_address("127.0.0.1", DEFAULT_PORT) : clientConn->addr, 1);
+				net_send(peer, buf, buflen, client ? net_address("127.0.0.1", DEFAULT_PORT) : clientConn->addr, 1);
+			}
 		}
 	}
 

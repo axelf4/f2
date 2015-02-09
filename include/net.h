@@ -18,7 +18,6 @@ extern "C" {
 	// #pragma comment (lib, "AdvApi32.lib")
 #endif
 
-#define DEFAULT_PORT 6622
 #ifndef DEFAULT_BUFLEN
 #define DEFAULT_BUFLEN 512
 #endif
@@ -51,8 +50,12 @@ extern "C" {
 #define SOCK_ADDR_EQ_PORT(sa, sb) (((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET && ((struct sockaddr_in *)(sa))->sin_port == ((struct sockaddr_in *)(sb))->sin_port)
 #endif
 
-	/** 255 - 2, one for SYN packets and one for pings */
-#define NET_MAX_TO_BE_SYNCHRONIZED 0xFD
+#define NET_SEQNO_SIZE 1
+	/** 256 - 3, one for zero, one for SYN packets and one for pings. */
+#define NET_SEQNO_MAX ((1 << (NET_SEQNO_SIZE) * 8) - 3)
+#define NET_PING_SEQNO (NET_SEQNO_MAX + 1)
+	// TODO rename to NAK
+#define NET_SYN_SEQNO (NET_SEQNO_MAX + 2)
 
 	// struct addr { const char *address; unsigned short port; };
 
@@ -60,11 +63,11 @@ extern "C" {
 
 	struct conn {
 		struct sockaddr_in addr;
-		int sentLengths[NET_MAX_TO_BE_SYNCHRONIZED]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
-		unsigned char *sentBuffers[NET_MAX_TO_BE_SYNCHRONIZED], /**< History buffer */
-			lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
-			lastReceived, /**< The sequence number of the last received packet (defaults to 0). */
-			receivedSeqnos[NET_MAX_TO_BE_SYNCHRONIZED]; /**< Array of 1s and 0s. 1 is for packet at index (seqno - 1) has arrived. 0 is for waiting for packet. Initialized with ones. */
+		int sentLengths[NET_SEQNO_MAX]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
+		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
+			receivedSeqnos[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 1 is for packet at index (seqno - 1) has arrived. 0 is for waiting for packet. Initialized with ones. */
+		unsigned int lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
+			lastReceived; /**< The sequence number of the last received packet (defaults to 0). */
 	};
 
 	struct peer {
@@ -72,7 +75,7 @@ extern "C" {
 		SOCKET socket;
 #endif
 		struct conn **connections;
-		int numConnections;
+		unsigned int numConnections;
 
 		void(*accept)(struct peer *, struct conn *);
 	};
@@ -92,12 +95,12 @@ extern "C" {
 
 	/** Sends a packet to the specified remote end.
 		@warning Make sure to leave 1 byte empty in \a buf and have \a len reflect that! */
-	extern void net_send(struct peer *peer, char *buf, int len, struct sockaddr_in to, int reliable);
+	extern void net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int reliable);
 
 	/** Receives a packet from an remote end.
 		@param buflen the maximum number of bytes to read to the buffer
 		@return the number of bytes read, or 0 */
-	extern int net_receive(struct peer *peer, char *buf, int buflen, struct sockaddr_in *from);
+	extern int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr_in *from);
 
 #ifdef __cplusplus
 }
