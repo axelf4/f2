@@ -34,14 +34,14 @@ extern "C" {
 	|| (((struct sockaddr *)(sa))->sa_family == AF_INET6 && ((struct sockaddr *)(sb))->sa_family == AF_INET6 \
 	&& ((struct sockaddr_in6 *)(sa))->sin6_port == ((struct sockaddr_in6 *)(sb))->sin6_port))
 #else
-	/** Compares the address families and network addresses for equality, and returns non-zero in that case.
+	/** Compares the address families and network addresses for equality, returning non-zero in that case.
 		@def SOCK_ADDR_EQ_ADDR(sa, sb)
 		@param sa The first socket address of type @code struct sockaddr * @code to be compared
 		@param sb The second socket address of type @code struct sockaddr * @code to be compared
 		@return Zero if the arguments differ, otherwise non-zero
 		@warning Evaluates the arguments multiple times */
 #define SOCK_ADDR_EQ_ADDR(sa, sb) (((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET && ((struct sockaddr_in *)(sa))->sin_addr.s_addr == ((struct sockaddr_in *)(sb))->sin_addr.s_addr)
-	/** Compares the address families and ports for equality, and returns non-zero in that case.
+	/** Compares the address families and ports for equality, returning non-zero in that case.
 		@def SOCK_ADDR_EQ_PORT(sa, sb)
 		@param sa The first socket address of type @code struct sockaddr * @code to be compared
 		@param sb The second socket address of type @code struct sockaddr * @code to be compared
