@@ -23,7 +23,7 @@ before_install:
   # Protobuf
   - wget https://github.com/google/protobuf/releases/download/v3.0.0-alpha-1/protobuf-cpp-3.0.0-alpha-1.tar.gz
   - tar -xzvf protobuf-cpp-3.0.0-alpha-1.tar.gz
-  - cd protobuf-cpp-3.0.0-alpha-1 && ./configure --prefix=/usr && make && make install
+  - cd protobuf-3.0.0-alpha-1 && ./configure --prefix=/usr && make && make install
 script:
   - (mkdir build && cd build && cmake -DBUILD_TESTS=ON .. -G "Unix Makefiles" && make)
 after_success:
