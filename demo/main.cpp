@@ -650,23 +650,6 @@ int main(int argc, char *argv[]) {
 		// world->world->debugDrawWorld(); // Debug draw the bullet world
 		// dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, MatrixMultiply(&model, &viewProjection)));
 
-		/* Draw bunny model. */
-		/*ball->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
-		t.getOpenGLMatrix(glm::value_ptr(model)); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
-		model = glm::scale(model, vec3(100.f));
-		glUniformMatrix4fv(glGetUniformLocation(*prog, "m"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(glGetUniformLocation(*prog, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));
-		mesh->bind(prog);
-		mesh->draw(GL_TRIANGLES, 0, 3 * 4968); // 4968, 3968
-		mesh->unbind(prog);
-		/ * Draw light. */
-		/*model = glm::translate(mat4(1.f), vec3(-2, 2, 0));
-		glUniformMatrix4fv(glGetUniformLocation(*prog, "m"), 1, GL_FALSE, glm::value_ptr(model));
-		glUniformMatrix4fv(glGetUniformLocation(*prog, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(inverse(model * view)));
-		mesh->bind(prog);
-		mesh->draw(GL_TRIANGLES, 0, 3 * 4968); // 4968, 3968
-		mesh->unbind(prog);*/
-
 		GLenum error;
 		while ((error = glGetError()) != 0) cout << "GL error: " << error << endl;/**/
 		SDL_GL_SwapWindow(win);
