@@ -10,6 +10,12 @@ extern "C" {
 #endif
 
 #include <GL/glew.h>
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN 1
+#include <Windows.h>
+#endif
+#include <GL/gl.h>
+// #include <GL/glext.h>
 
 	// TODO let this be the API and create multiple implementations for the different OpenGL versions. And link to them as different DLLs at runtime
 	// TODO implement doxygen
