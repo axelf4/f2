@@ -5,6 +5,4 @@ build
 game
 game.exe
 doc
-*.dll
-dlls
 build.bat
