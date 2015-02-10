@@ -94,7 +94,5 @@ int main() {
 
 	net_peer_dispose(peer);
 
-	// system("pause");
-
 	return 0;
 }

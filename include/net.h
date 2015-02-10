@@ -54,7 +54,6 @@ extern "C" {
 	/** 256 - 3, one for zero, one for SYN packets and one for pings. */
 #define NET_SEQNO_MAX ((1 << (NET_SEQNO_SIZE) * 8) - 3)
 #define NET_PING_SEQNO (NET_SEQNO_MAX + 1)
-	// TODO rename to NAK
 #define NET_NAK_SEQNO (NET_SEQNO_MAX + 2)
 
 	// struct addr { const char *address; unsigned short port; };
@@ -65,7 +64,7 @@ extern "C" {
 		struct sockaddr_in addr;
 		int sentLengths[NET_SEQNO_MAX]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
 		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
-			receivedSeqnos[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 1 is for packet at index (seqno - 1) has arrived. 0 is for waiting for packet. Initialized with ones. */
+			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
 		unsigned int lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
 			lastReceived; /**< The sequence number of the last received packet (defaults to 0). */
 	};
