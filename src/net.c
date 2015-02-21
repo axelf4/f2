@@ -9,7 +9,8 @@ static struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) 
 	connection->lastSent = 0;
 	connection->lastReceived = 0;
 	for (unsigned int i = 0; i < NET_SEQNO_MAX; i++) {
-		connection->sentBuffers[i] = connection->missing[i] = 0;
+		connection->sentBuffers[i] = 0;
+		connection->missing[i] = 0;
 	}
 
 	peer->connections[peer->numConnections++] = connection;
