@@ -29,6 +29,12 @@ void net_initialize() {
 #endif
 }
 
+void net_deinitialize() {
+#ifdef _WIN32
+	WSACleanup();
+#endif
+}
+
 struct sockaddr_in net_address(const char *address, unsigned int port) {
 	struct sockaddr_in retval = { .sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = inet_addr(address) };
 	return retval;
@@ -82,8 +88,6 @@ void net_peer_dispose(struct peer *peer) {
 		free(peer->connections[i]);
 	}
 	free(peer->connections);
-
-	WSACleanup();
 
 	free(peer);
 }

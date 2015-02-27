@@ -84,6 +84,8 @@ extern "C" {
 
 	extern void net_initialize();
 
+	extern void net_deinitialize();
+
 	/**
 	@param address the address at which peers may connect to this peer */
 	extern struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxConnections);

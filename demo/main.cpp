@@ -630,6 +630,7 @@ int main(int argc, char *argv[]) {
 
 	delete server;
 	net_peer_dispose(client);
+	net_deinitialize();
 
 	glDeleteProgram(phong);
 	destroy_model(groundMesh2);
