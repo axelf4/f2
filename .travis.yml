@@ -24,6 +24,10 @@ before_install:
   - wget https://github.com/google/protobuf/releases/download/v3.0.0-alpha-1/protobuf-cpp-3.0.0-alpha-1.tar.gz
   - tar -xzvf protobuf-cpp-3.0.0-alpha-1.tar.gz
   - (cd protobuf-3.0.0-alpha-1 && ./configure --prefix=/usr && make && sudo make install)
+  # EntityX
+  - wget -N https://github.com/alecthomas/entityx/archive/master.zip
+  - unzip master.zip
+  - (cd entityx-master && cmake . -G "Unix Makefiles" && make && sudo make install)
 script:
   - (mkdir build && cd build && cmake -DBUILD_TESTS=ON .. -G "Unix Makefiles" && make)
 after_success:
