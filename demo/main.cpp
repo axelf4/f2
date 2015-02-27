@@ -6,8 +6,9 @@
 
 #include <glh.h>
 #include <vmath.h>
-#include <objloader.h>
+#include <net.h>
 
+#include <objloader.h>
 #include <SOIL.h>
 // #include "obj_loader.h"
 /* assimp include files. These three are usually needed. */
@@ -16,10 +17,15 @@
 #include <assimp/postprocess.h>
 
 #include <btBulletDynamicsCommon.h>
+#include <entityx/entityx.h>
 
 #include "shaders.h"
 #include "GLDebugDrawer.h"
-#include "testmessage.pb.h"
+#include "netmessages.pb.h"
+#include "server.h"
+#include "components.h"
+
+using namespace game;
 
 // #define WINDOW_TITLE "Point and Click Adventures"
 #define WINDOW_TITLE "Call of Duty: Avancerad V\xC3\xA4lf\xC3\xA4rd"
@@ -323,8 +329,6 @@ GLuint setupSkyboxTexture() {
 	return cubemap;
 }
 
-struct game_world;
-
 struct game_entity {
 	btDynamicsWorld *world;
 	btMotionState *motionState;
@@ -344,69 +348,6 @@ struct game_entity {
 	}
 };
 
-game_entity *ball;
-
-void myTickCallback(btDynamicsWorld *world, btScalar timeStep) {
-	btVector3 velocity = ball->body->getLinearVelocity(), velocity2(velocity);
-	velocity2.setY(0);
-	btScalar speed = velocity2.length();
-	const float maxSpeed = 150;
-	if (speed > 350) {
-		velocity2 *= 350 / speed;
-		btVector3 velocity(velocity2.x(), velocity.y(), velocity2.z());
-		ball->body->setLinearVelocity(velocity);
-	}
-}
-
-struct game_world {
-	btBroadphaseInterface *broadphase;
-	btDefaultCollisionConfiguration *collisionConfiguration;
-	btCollisionDispatcher *dispatcher;
-	btSequentialImpulseConstraintSolver *solver;
-	btDynamicsWorld *world;
-
-	btIDebugDraw *debugDraw;
-
-	void init() {
-		collisionConfiguration = new btDefaultCollisionConfiguration;
-		broadphase = new btDbvtBroadphase;
-		dispatcher = new btCollisionDispatcher(collisionConfiguration);
-		solver = new btSequentialImpulseConstraintSolver;
-		world = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-		world->setGravity(btVector3(0, -9.81f * 70, 0));
-
-		debugDraw = new GLDebugDrawer();
-		// debugDraw->setDebugMode(btIDebugDraw::DBG_DrawAabb | btIDebugDraw::DBG_DrawWireframe);
-		world->setDebugDrawer(debugDraw);
-
-		world->setInternalTickCallback(&myTickCallback);
-	}
-
-	~game_world() {
-		delete debugDraw;
-
-		for (int i = 0; i < world->getNumCollisionObjects(); i++) {
-			btCollisionObject* obj = world->getCollisionObjectArray()[i];
-			btRigidBody* body = btRigidBody::upcast(obj);
-			if (body && body->getMotionState()) {
-				delete body->getMotionState();
-			}
-			world->removeCollisionObject(obj);
-			delete obj;
-		}
-
-		delete world;
-		delete solver;
-		delete broadphase;
-		delete dispatcher;
-		delete collisionConfiguration;
-	}
-
-	void add_entity(game_entity *entity) {
-		world->addRigidBody(entity->body);
-	}
-};
-
 class ClosestNotMeRayResultCallback : public btCollisionWorld::ClosestRayResultCallback {
 public:
 	ClosestNotMeRayResultCallback(const btVector3& rayFromWorld, const btVector3& rayToWorld, btRigidBody* me) : btCollisionWorld::ClosestRayResultCallback(rayFromWorld, rayToWorld), m_me(me) {}
@@ -415,7 +356,7 @@ protected:
 	btRigidBody* m_me;
 };
 
-void jump(game_entity *ball, btDynamicsWorld *world) {
+void jump(game::RigidBody *ball, btDynamicsWorld *world) {
 	// Jumping
 	btTransform ballTransform;
 	ball->motionState->getWorldTransform(ballTransform);
@@ -468,10 +409,19 @@ inline void printMatrix(float *matrixValue) {
 }
 
 int main(int argc, char *argv[]) {
-	testmessage::TestMessage msg;
-	msg.set_name("Hello");
-	msg.set_id(1337);
-	cout << msg.SerializeAsString() << endl;
+	GOOGLE_PROTOBUF_VERIFY_VERSION; // Verify that the version of the library that we linked against is compatible with the version of the headers we compiled against
+	game::PacketBase packet;
+	packet.set_type(game::PacketBase_Type_Move);
+	/*game::ClientLoginPacket *clientLogin = new game::ClientLoginPacket;
+	clientLogin->set_test("HelloWorld!");
+	packet.set_allocated_clientloginpacket(clientLogin);*/
+	game::Msg_Move *move = new game::Msg_Move;
+	move->set_seqno(0);
+	move->set_w(1);
+	move->set_a(0);
+	move->set_s(0);
+	move->set_d(0);
+	packet.set_allocated_move(move);
 
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -515,7 +465,6 @@ int main(int argc, char *argv[]) {
 	free(infoLog);
 	struct attrib skyboxAttribs[] = { { glGetAttribLocation(skyboxProg, "vertex"), 2, 0 }, NULL_ATTRIB };
 	struct mesh *skybox = create_mesh(1);
-	cout << "Stride: " << calculate_stride(skyboxAttribs) << endl;
 	glBindBuffer(GL_ARRAY_BUFFER, skybox->vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, skyboxVertices, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skybox->ibo);
@@ -532,29 +481,41 @@ int main(int argc, char *argv[]) {
 	struct model *groundMesh2 = loadMeshUsingAssimp(RESOURCE_DIR "cs_office/cs_office.obj", phong, true, groundShape); // "cube_texture.obj/cube_texture.obj"
 	struct model *groundMesh = loadMeshUsingObjLoader(RESOURCE_DIR "cs_office/cs_office.obj", phong);
 
+	entityx::EntityX entityx;
+	std::shared_ptr<game::CollisionSystem> colSys = entityx.systems.add<CollisionSystem>();
+	entityx.systems.configure();
+
 	// Bullet Physics initialization
-	game_world *world = new game_world;
-	world->init();
 	/* Ground body */
 	// btCollisionShape *groundShape = /* new btStaticPlaneShape(btVector3(0, 1, 0), 1) */ new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
 	btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)));
-	game_entity *ground = new game_entity(world->world, 0, groundMotionState, groundShape, btVector3(0, 0, 0));
-	ground->body->setFriction(1.0f); // 5.2
-	world->add_entity(ground);
+	entityx::Entity ground = entityx.entities.create();
+	ground.assign<RigidBody>(0, groundMotionState, groundShape, btVector3(0, 0, 0));
+	ground.component<RigidBody>()->body->setFriction(1.0f); // 5.2
 	/* Ball body */
-	// btCollisionShape* ballShape = new btSphereShape(1);
-	btCollisionShape *ballShape = new btBoxShape(btVector3(5, 5, 5));
+	btCollisionShape *ballShape = /* new btSphereShape(1) */ new btBoxShape(btVector3(5, 5, 5));
 	btDefaultMotionState* ballMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
 	btScalar mass = 1;
 	btVector3 ballInertia(0, 0, 0);
 	ballShape->calculateLocalInertia(mass, ballInertia);
-	ball = new game_entity(world->world, mass, ballMotionState, ballShape, ballInertia);
-	ball->body->setSleepingThresholds(btScalar(.0f), btScalar(.0f));
-	ball->body->setAngularFactor(.0f);
-	ball->body->setRestitution(0.f);
-	ball->body->setCcdMotionThreshold(1.0f);
-	ball->body->setCcdSweptSphereRadius(0.2f);
-	world->add_entity(ball);
+	entityx::Entity ball = entityx.entities.create();
+	ball.assign<RigidBody>(mass, ballMotionState, ballShape, ballInertia);
+	btRigidBody *ballBody = ball.component<RigidBody>()->body;
+	ballBody->setSleepingThresholds(btScalar(.0f), btScalar(.0f));
+	ballBody->setAngularFactor(.0f);
+	ballBody->setRestitution(0.f);
+	ballBody->setCcdMotionThreshold(1.0f);
+	ballBody->setCcdSweptSphereRadius(0.2f);
+
+	net_initialize(); // Initialize the net component
+	game::Server *server = new game::Server;
+	server->startServer();
+
+	peer *client = net_peer_create(0, 1);
+	int len = packet.ByteSize() + NET_SEQNO_SIZE;
+	unsigned char *buffer = new unsigned char[len];
+	packet.SerializeToArray(buffer, len - NET_SEQNO_SIZE);
+	net_send(client, buffer, len, net_address("127.0.0.1", 30000), 1);
 
 	bool noclip = true;
 
@@ -562,8 +523,17 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 	const Uint8 *state = SDL_GetKeyboardState(NULL);
 	while (!done) {
+		float dt = 1.f / 60; // I don't feel like writing a proper game loop just now
 		Uint32 start_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event) != 0) switch (event.type) { case SDL_QUIT: done = true; break; }
+
+		net_update(client);
+		unsigned char recvbuf[1024];
+		int recvbuflen;
+		struct sockaddr_in from;
+		while ((recvbuflen = net_receive(client, recvbuf, sizeof recvbuf, &from)) > 0) {
+			cout << "Received: " << recvbuflen << " bytes or '" << (char *)recvbuf << "'." << endl;
+		}
 
 		/* Mouse */
 		int x, y;
@@ -571,18 +541,17 @@ int main(int argc, char *argv[]) {
 		update_camera(&yaw, x * MOUSE_SENSITIVITY, &pitch, y *MOUSE_SENSITIVITY);
 		/* Keyboard */
 		if (state[SDL_SCANCODE_ESCAPE]) done = true;
-		// TODO: optimize
-		if (state[SDL_SCANCODE_W]) walk(&position, yaw, MOVEMENT_SPEED, 180, ball->body);
-		if (state[SDL_SCANCODE_A]) walk(&position, yaw, MOVEMENT_SPEED, 270, ball->body);
-		if (state[SDL_SCANCODE_S]) walk(&position, yaw, MOVEMENT_SPEED, 0, ball->body);
-		if (state[SDL_SCANCODE_D]) walk(&position, yaw, MOVEMENT_SPEED, 90, ball->body);
+		if (state[SDL_SCANCODE_W]) walk(&position, yaw, MOVEMENT_SPEED, 180, ballBody);
+		if (state[SDL_SCANCODE_A]) walk(&position, yaw, MOVEMENT_SPEED, 270, ballBody);
+		if (state[SDL_SCANCODE_S]) walk(&position, yaw, MOVEMENT_SPEED, 0, ballBody);
+		if (state[SDL_SCANCODE_D]) walk(&position, yaw, MOVEMENT_SPEED, 90, ballBody);
 		if (!(state[SDL_SCANCODE_W] || state[SDL_SCANCODE_A] || state[SDL_SCANCODE_S] || state[SDL_SCANCODE_D])) {
-			ball->body->setLinearVelocity(btVector3(0, ball->body->getLinearVelocity().y(), 0));
+			ballBody->setLinearVelocity(btVector3(0, ballBody->getLinearVelocity().y(), 0));
 		}
 		if (state[SDL_SCANCODE_SPACE]) {
 			position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y += MOVEMENT_SPEED;
 
-			jump(ball, world->world);
+			jump(ball.component<RigidBody>().get(), colSys->world);
 		}
 		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, -MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
@@ -593,7 +562,7 @@ int main(int argc, char *argv[]) {
 			view = MatrixTranslationFromVector(position);
 		}
 		else {
-			ball->body->getMotionState()->getWorldTransform(t);
+			ballBody->getMotionState()->getWorldTransform(t);
 			// t.getOpenGLMatrix(glm::value_ptr(view));
 			t.getOpenGLMatrix(mv);
 			view = MatrixLoad(mv);
@@ -630,7 +599,7 @@ int main(int argc, char *argv[]) {
 		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), vv[0], vv[1], vv[2], 1);
 
 		/* Draw ground. */
-		ground->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
+		ground.component<RigidBody>()->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(mv); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
 		model = MatrixLoad(mv);
 		MAT scaleMatrix = MatrixScaling(100, 100, 100);
@@ -653,15 +622,14 @@ int main(int argc, char *argv[]) {
 		GLenum error;
 		while ((error = glGetError()) != 0) cout << "GL error: " << error << endl;/**/
 		SDL_GL_SwapWindow(win);
-		world->world->stepSimulation(1 / 60.f, 100); // 60 10
+		entityx.systems.update_all(1 / 60.f);
 		if ((1000 / FPS) > (SDL_GetTicks() - start_time)) SDL_Delay((1000 / FPS) - (SDL_GetTicks() - start_time));
 	}
 
 	SDL_HideWindow(win); // Hide the window to make the cleanup time transparent
 
-	delete ground;
-	delete ball;
-	delete world;
+	delete server;
+	net_peer_dispose(client);
 
 	glDeleteProgram(phong);
 	destroy_model(groundMesh2);
@@ -674,6 +642,8 @@ int main(int argc, char *argv[]) {
 	SDL_GL_DeleteContext(glcontext);
 	SDL_DestroyWindow(win);
 	SDL_Quit();
+
+	google::protobuf::ShutdownProtobufLibrary();
 
 	return 0;
 }

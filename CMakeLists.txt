@@ -7,6 +7,8 @@ set(SOURCES
 	include/vmath.h
 	include/glh.h
 	src/glh.c
+	include/net.h
+	src/net.c
 	include/objloader.h
 	src/objloader.c
 	include/glTFloader.h
@@ -16,7 +18,11 @@ set(DEMO_SOURCES
 	demo/main.cpp
 	demo/shaders.h
 	demo/GLDebugDrawer.cpp
-	demo/GLDebugDrawer.h)
+	demo/GLDebugDrawer.h
+	demo/server.h
+	demo/server.cpp
+	demo/components.h
+	demo/components.cpp)
 
 if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_COMPILER_IS_GNUCC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
@@ -32,14 +38,15 @@ find_package(Bullet REQUIRED)
 find_package(RapidJSON REQUIRED)
 find_package(Assimp REQUIRED)
 find_package(Protobuf REQUIRED)
+find_package(EntityX REQUIRED)
 
-PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS resource/testmessage.proto)
+PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS resource/netmessages.proto)
 
 add_library (f1 STATIC ${SOURCES})
 add_executable (game ${DEMO_SOURCES} ${PROTO_SRCS} ${PROTO_HDRS})
 
-include_directories(include ${CMAKE_CURRENT_BINARY_DIR} ${OPENGL_INCLUDE_DIR} ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${RAPIDJSON_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR} ${PROTOBUF_INCLUDE_DIRS})
-set(LIBRARIES f1 ${SDL2_LIBRARY} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES} ${OPENGL_LIBRARIES} ${PROTOBUF_LIBRARIES})
+include_directories(include ${CMAKE_CURRENT_BINARY_DIR} ${OPENGL_INCLUDE_DIR} ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${SOIL_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS} ${RAPIDJSON_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIR} ${PROTOBUF_INCLUDE_DIRS} ${ENTITYX_INCLUDE_DIR})
+set(LIBRARIES f1 ${SDL2_LIBRARY} ${GLEW_LIBRARY} ${SOIL_LIBRARIES} ${BULLET_LIBRARIES} ${ASSIMP_LIBRARIES} ${OPENGL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${ENTITYX_LIBRARY_DEBUG})
 target_link_libraries(game ${LIBRARIES})
 
 add_definitions(-DRESOURCE_DIR="../resource/")

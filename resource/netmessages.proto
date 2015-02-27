@@ -1,0 +1,44 @@
+package game;
+
+message PacketBase {
+	enum Type {
+		ClientLoginPacket = 0;
+		Move = 1;
+	}
+	
+	required Type type = 1;
+	
+	// extensions 2 to max;
+	optional ClientLoginPacket clientLoginPacket = 2;
+	optional Msg_Move move = 3;
+}
+
+message ClientLoginPacket {
+	required string test = 1;
+}
+
+message Msg_Move {
+	required int32 seqno = 1;
+	
+	required bool w = 2;
+	required bool a = 3;
+	required bool s = 4;
+	required bool d = 5;
+}
+
+message Msg_Disconnect {
+	optional string text = 1;
+}
+
+message Msg_Entity {
+	required int32 id = 1;
+	required float x = 2;
+	required float y = 3;
+	required float z = 4;
+}
+
+message Msg_EntityList {
+	required int32 seqno = 1;
+
+	repeated Msg_Entity entities = 2;
+}
