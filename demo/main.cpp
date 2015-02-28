@@ -509,7 +509,6 @@ int main(int argc, char *argv[]) {
 
 	net_initialize(); // Initialize the net component
 	game::Server *server = new game::Server;
-	server->startServer();
 
 	peer *client = net_peer_create(0, 1);
 	int len = packet.ByteSize() + NET_SEQNO_SIZE;
@@ -527,6 +526,7 @@ int main(int argc, char *argv[]) {
 		Uint32 start_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event) != 0) switch (event.type) { case SDL_QUIT: done = true; break; }
 
+		server->readPeer();
 		net_update(client);
 		unsigned char recvbuf[1024];
 		int recvbuflen;

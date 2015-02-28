@@ -6,9 +6,23 @@
 
 using namespace std;
 
-game::Server::~Server() {
+void accept(struct peer *peer, struct conn *connection) {
+	cout << "Accepted new connection!" << endl;
+}
+
+game::Server::Server() {
+	struct sockaddr_in address = net_address(0, 30000);
+	server = net_peer_create(&address, 16);
+	server->accept = accept;
+
 	continuing = false;
-	inputThread.join();
+}
+
+game::Server::~Server() {
+	if (continuing) {
+		continuing = false;
+		inputThread.join();
+	}
 	net_peer_dispose(server);
 }
 
@@ -17,49 +31,44 @@ void game::Server::readPeer() {
 	int len;
 	struct sockaddr_in from;
 
-	while (continuing) {
-		net_update(server);
+	net_update(server);
 
-		while ((len = net_receive(server, buf, sizeof buf, &from)) > 0) {
-			cout << "Received: " << len << " bytes or '" << (char *)buf << "'." << endl;
+	while ((len = net_receive(server, buf, sizeof buf, &from)) > 0) {
+		cout << "Received: " << len << " bytes or '" << (char *)buf << "'." << endl;
 
-			game::PacketBase packet;
-			packet.ParseFromArray(buf, len - NET_SEQNO_SIZE);
-			game::PacketBase_Type type = packet.type();
-			if (type == game::PacketBase_Type_ClientLoginPacket) {
-				cout << "ClientLoginPacket" << endl;
-				game::ClientLoginPacket clientLogin = packet.clientloginpacket();
-				string test = clientLogin.test();
-				cout << "test: " << test << endl;
-			}
-			else if (type == game::PacketBase_Type_Move) {
-				cout << "Move" << endl;
-				game::Msg_Move move = packet.move();
-				bool w = move.w();
-				cout << "w: " << w << endl;
-			}
+		game::PacketBase packet;
+		packet.ParseFromArray(buf, len - NET_SEQNO_SIZE);
+		game::PacketBase_Type type = packet.type();
+		if (type == game::PacketBase_Type_ClientLoginPacket) {
+			cout << "ClientLoginPacket" << endl;
+			game::ClientLoginPacket clientLogin = packet.clientloginpacket();
+			string test = clientLogin.test();
+			cout << "test: " << test << endl;
 		}
-
-		Sleep(300);
+		else if (type == game::PacketBase_Type_Move) {
+			cout << "Move" << endl;
+			game::Msg_Move move = packet.move();
+			bool w = move.w();
+			cout << "w: " << w << endl;
+		}
 	}
-}
-
-void accept(struct peer *peer, struct conn *connection) {
-	cout << "Accepted new connection!" << endl;
 }
 
 /*void shutdownServerInstance(DWORD fdwCtrlType) {
 	serverInstance->continuing = false;
-}*/
+	}*/
+
+void game::Server::loopRead() {
+	while (continuing) {
+		readPeer();
+		Sleep(300);
+	}
+}
 
 void game::Server::startServer() {
 	// SetConsoleCtrlHandler((PHANDLER_ROUTINE)shutdownServerInstance, TRUE);
 
-	struct sockaddr_in address = net_address(0, 30000);
-	server = net_peer_create(&address, 16);
-	server->accept = accept;
-
 	continuing = true;
 
-	inputThread = std::thread(&Server::readPeer, this);
+	inputThread = std::thread(&Server::loopRead, this);
 }

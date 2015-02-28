@@ -7,11 +7,14 @@ namespace game {
 		struct peer *server;
 		std::thread inputThread;
 
-		void readPeer();
+		void loopRead();
 	public:
+		Server();
 		~Server();
 
 		bool continuing;
+
+		void readPeer();
 
 		void startServer();
 	};
