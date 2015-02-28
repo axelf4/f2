@@ -59,6 +59,10 @@ extern "C" {
 #define NET_UNRELIABLE 0
 #define NET_RELIABLE 1
 
+#ifndef NET_PING_INTERVAL
+#define NET_PING_INTERVAL 500
+#endif
+
 	// struct addr { const char *address; unsigned short port; };
 
 	struct sockaddr_in net_address(const char *address, unsigned int port);
@@ -69,7 +73,9 @@ extern "C" {
 		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
 			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
 		unsigned int lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
-			lastReceived; /**< The sequence number of the last received packet (defaults to 0). */
+			lastReceived, /**< The sequence number of the last received packet (defaults to 0). */
+			lastSendTime, /**< A timestamp of when a reliable packet was last sent to the connection. */
+			lastReceiveTime;
 	};
 
 	struct peer {
@@ -80,6 +86,7 @@ extern "C" {
 		unsigned int numConnections;
 
 		void(*accept)(struct peer *, struct conn *);
+		void(*disconnect)(struct peer *, struct conn *);
 	};
 
 	// TODO implement support for BSD sockets and winsock2
@@ -89,8 +96,8 @@ extern "C" {
 
 	extern void net_deinitialize();
 
-	/**
-	@param address the address at which peers may connect to this peer */
+	/** Send outgoing commands.
+		@param address the address at which peers may connect to this peer */
 	extern struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxConnections);
 
 	extern void net_peer_dispose(struct peer *peer);

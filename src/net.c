@@ -2,12 +2,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "time.h"
 
 static struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) {
 	struct conn *connection = malloc(sizeof(struct conn));
 	connection->addr = addr;
-	connection->lastSent = 0;
-	connection->lastReceived = 0;
+	connection->lastSent = connection->lastReceived =
+		connection->lastSendTime = connection->lastReceiveTime = 0;
 	for (unsigned int i = 0; i < NET_SEQNO_MAX; i++) {
 		connection->sentBuffers[i] = 0;
 		connection->missing[i] = 0;
@@ -72,6 +73,8 @@ struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxCo
 	peer->socket = Socket;
 	peer->connections = malloc(sizeof(struct conn *) * maxConnections);
 	peer->numConnections = 0;
+	peer->accept = 0;
+	peer->disconnect = 0;
 	return peer;
 }
 
@@ -110,16 +113,22 @@ void net_update(struct peer *peer) {
 			}
 		}
 
-		// TODO only ping if time since last receive has exceeded a certain threshold
-		// Send ping
-		// char buf[] = { connection->lastSent, 0xFE };
-		int buflen = NET_SEQNO_SIZE * 2;
-		char *buf = calloc(buflen, sizeof(char));
-		// *buf = connection->lastSent;
-		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
-		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8; // buf[buflen - 1] = NET_PING_SEQNO;
-		net_send(peer, buf, buflen, connection->addr, 2);
-		free(buf);
+		double now = time_get();
+		if (now - connection->lastSendTime > NET_PING_INTERVAL ||
+			(connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > NET_PING_INTERVAL)) {
+			// char buf[] = { connection->lastSent, 0xFE };
+			int buflen = NET_SEQNO_SIZE * 2;
+			char buf[NET_SEQNO_SIZE * 2];
+			// *buf = connection->lastSent;
+			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
+			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8; // buf[buflen - 1] = NET_PING_SEQNO;
+			net_send(peer, buf, buflen, connection->addr, 2); // Send ping
+		}
+
+		if (connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > 20000) {
+			// TODO drop client
+			if (peer->disconnect != 0) peer->disconnect(peer, connection);
+		}
 	}
 }
 
@@ -139,6 +148,7 @@ int net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in 
 			}
 		}
 		if (connection == 0) connection = add_connection(peer, to);
+		connection->lastSendTime = time_get();
 
 		// if (++connection->lastSent > NET_SEQNO_MAX)	connection->lastSent = 1;
 		connection->lastSent = connection->lastSent % NET_SEQNO_MAX + 1;
@@ -185,6 +195,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			connection = add_connection(peer, *from); // First time receiving from the remote end's address; create new connection
 			if (peer->accept != 0) peer->accept(peer, connection); // Alert the application about it
 		}
+		connection->lastReceiveTime = time_get();
 
 		// unsigned char seqno = *(buf + result - NET_SEQNO_SIZE);
 		unsigned int seqno = 0; // The sequence number is located last in the buffer

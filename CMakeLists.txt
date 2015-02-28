@@ -12,7 +12,9 @@ set(SOURCES
 	include/objloader.h
 	src/objloader.c
 	include/glTFloader.h
-	src/glTFloader.cpp)
+	src/glTFloader.cpp
+	include/time.h
+	src/time.c)
 	
 set(DEMO_SOURCES
 	demo/main.cpp
