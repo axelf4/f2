@@ -515,7 +515,7 @@ int main(int argc, char *argv[]) {
 	int len = packet.ByteSize() + NET_SEQNO_SIZE;
 	unsigned char *buffer = new unsigned char[len];
 	packet.SerializeToArray(buffer, len - NET_SEQNO_SIZE);
-	net_send(client, buffer, len, net_address("127.0.0.1", 30000), 1);
+	net_send(client, buffer, len, net_address("127.0.0.1", 30000), NET_RELIABLE);
 
 	bool noclip = true;
 

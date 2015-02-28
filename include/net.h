@@ -56,6 +56,9 @@ extern "C" {
 #define NET_PING_SEQNO (NET_SEQNO_MAX + 1)
 #define NET_NAK_SEQNO (NET_SEQNO_MAX + 2)
 
+#define NET_UNRELIABLE 0
+#define NET_RELIABLE 1
+
 	// struct addr { const char *address; unsigned short port; };
 
 	struct sockaddr_in net_address(const char *address, unsigned int port);
@@ -95,12 +98,13 @@ extern "C" {
 	extern void net_update(struct peer *peer);
 
 	/** Sends a packet to the specified remote end.
+		@return -1 in case of an error, otherwise the number of sent bytes.
 		@warning Make sure to leave 1 byte empty in \a buf and have \a len reflect that! */
-	extern void net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int reliable);
+	extern int net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int flag);
 
 	/** Receives a packet from an remote end.
 		@param buflen the maximum number of bytes to read to the buffer
-		@return the number of bytes read, or 0 */
+		@return -1 in case of an error, otherwise the number of bytes read, or 0 */
 	extern int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr_in *from);
 
 #ifdef __cplusplus

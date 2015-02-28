@@ -124,15 +124,11 @@ void net_update(struct peer *peer) {
 }
 
 // TODO make return error value
-void net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int reliable) {
-	// printf("sending bytes\n");
-	// struct sockaddr_in to = { .sin_family = AF_INET, .sin_port = htons(DEFAULT_PORT), .sin_addr.s_addr = inet_addr("127.0.0.1") };
-	// int tolen = sizeof(to);
-
-	if (!reliable) {
+int net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int flag) {
+	if (flag & NET_UNRELIABLE) {
 		for (int i = 1; i <= NET_SEQNO_SIZE; i++) buf[len - i] = 0;
 	}
-	else if (reliable != 2) {
+	else if (flag & NET_RELIABLE) {
 		struct conn *connection = 0;
 		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
@@ -157,11 +153,10 @@ void net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in
 
 	int result = sendto(peer->socket, buf, len, 0, (struct sockaddr *)&to, sizeof(struct sockaddr_in));
 	if (result == SOCKET_ERROR) {
-		printf("sendto failed with error: %d\n", WSAGetLastError());
-		closesocket(peer->socket);
-		WSACleanup();
-		return;
+		// printf("sendto failed with error: %d\n", WSAGetLastError());
+		return -1;
 	}
+	return len;
 }
 
 int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr_in *from) {
@@ -169,9 +164,9 @@ int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockad
 beginning:; // If received a packet used internally: don't return, but skip it
 	int fromlen = sizeof(struct sockaddr_in), result;
 	if ((result = recvfrom(peer->socket, buf, buflen, 0, (struct sockaddr *)from, &fromlen)) == SOCKET_ERROR) {
-		int error;
-		if ((error = WSAGetLastError()) != WSAEWOULDBLOCK)
-			printf("recvfrom failed with error %d\n", error);
+		int error = WSAGetLastError();
+		if (error == WSAEWOULDBLOCK || error == WSAECONNRESET) return 0;
+		// printf("recvfrom failed with error %d\n", error);
 	}
 	else if (result > 0) {
 		if (rand() % 2) goto beginning; // Simulate packet drop locally
@@ -205,13 +200,9 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			unsigned int no = 0;
 			// If a ping; use the last sent packet's number, else use the received packet's
 			if (seqno == NET_PING_SEQNO) {
-				for (int i = 0; i < NET_SEQNO_SIZE; i++) {
-					no |= buf[i] >> (NET_SEQNO_SIZE - i - 1) * 8;
-				}
+				for (int i = 0; i < NET_SEQNO_SIZE; i++) no |= buf[i] >> (NET_SEQNO_SIZE - i - 1) * 8;
 			}
-			else {
-				no = seqno;
-			}
+			else no = seqno;
 
 			// If the packet in question is more recent than the last received:
 			if ((no > connection->lastReceived && no - connection->lastReceived <= NET_SEQNO_MAX / 2) ||
