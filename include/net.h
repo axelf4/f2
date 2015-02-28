@@ -56,8 +56,8 @@ extern "C" {
 #define NET_PING_SEQNO (NET_SEQNO_MAX + 1)
 #define NET_NAK_SEQNO (NET_SEQNO_MAX + 2)
 
-#define NET_UNRELIABLE 0
-#define NET_RELIABLE 1
+#define NET_UNRELIABLE 1
+#define NET_RELIABLE 2
 
 #ifndef NET_PING_INTERVAL
 #define NET_PING_INTERVAL 500

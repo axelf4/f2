@@ -554,6 +554,23 @@ int main(int argc, char *argv[]) {
 			jump(ball.component<RigidBody>().get(), colSys->world);
 		}
 		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, -MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
+
+		game::PacketBase movePacket;
+		movePacket.set_type(game::PacketBase_Type_Move);
+		game::Msg_Move *moveMsg = new game::Msg_Move;
+		moveMsg->set_seqno(0);
+		moveMsg->set_w(state[SDL_SCANCODE_W]);
+		moveMsg->set_a(state[SDL_SCANCODE_A]);
+		moveMsg->set_s(state[SDL_SCANCODE_S]);
+		moveMsg->set_d(state[SDL_SCANCODE_D]);
+		movePacket.set_allocated_move(moveMsg);
+
+		int len2 = movePacket.ByteSize() + NET_SEQNO_SIZE;
+		unsigned char *buffer2 = new unsigned char[len2];
+		movePacket.SerializeToArray(buffer2, len2 - NET_SEQNO_SIZE);
+		net_send(client, buffer2, len2, net_address("127.0.0.1", 30000), NET_UNRELIABLE);
+
+
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix
 		btTransform t;

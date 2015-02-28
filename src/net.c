@@ -108,7 +108,7 @@ void net_update(struct peer *peer) {
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
 				printf("Sending a request to resend packet %d\n", j + 1);
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[naklen - 1 - i] = NET_NAK_SEQNO >> i * 8; // syn[synlen - 1] = NET_NAK_SEQNO;
-				net_send(peer, nak, naklen, connection->addr, 2);
+				net_send(peer, nak, naklen, connection->addr, 0);
 				free(nak);
 			}
 		}
@@ -122,7 +122,7 @@ void net_update(struct peer *peer) {
 			// *buf = connection->lastSent;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8; // buf[buflen - 1] = NET_PING_SEQNO;
-			net_send(peer, buf, buflen, connection->addr, 2); // Send ping
+			net_send(peer, buf, buflen, connection->addr, 0); // Send ping
 		}
 
 		if (connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > 20000) {
@@ -135,7 +135,7 @@ void net_update(struct peer *peer) {
 // TODO make return error value
 int net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int flag) {
 	if (flag & NET_UNRELIABLE) {
-		for (int i = 1; i <= NET_SEQNO_SIZE; i++) buf[len - i] = 0;
+		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = 0;
 	}
 	else if (flag & NET_RELIABLE) {
 		struct conn *connection = 0;
@@ -204,7 +204,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			unsigned int no = 0;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) no |= buf[i] << (NET_SEQNO_SIZE - i - 1) * 8;
 			printf("The remote end has sent a request to resend packet %d.\n", no);
-			net_send(peer, connection->sentBuffers[no - 1], connection->sentLengths[no - 1], *from, 2); // The remote end requested a resend of the packet with the id *buf
+			net_send(peer, connection->sentBuffers[no - 1], connection->sentLengths[no - 1], *from, 0); // The remote end requested a resend of the packet with the id *buf
 			goto beginning; // Don't return the internal packet!
 		}
 		else if (seqno) { // A ping or reliable packet
