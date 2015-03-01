@@ -68,7 +68,7 @@ extern "C" {
 	struct sockaddr_in net_address(const char *address, unsigned int port);
 
 	struct conn {
-		struct sockaddr_in addr;
+		struct sockaddr_in address;
 		int sentLengths[NET_SEQNO_MAX]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
 		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
 			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
@@ -76,6 +76,7 @@ extern "C" {
 			lastReceived, /**< The sequence number of the last received packet (defaults to 0). */
 			lastSendTime, /**< A timestamp of when a reliable packet was last sent to the connection. */
 			lastReceiveTime;
+		char *data; /**< Attached application data, is managed. */
 	};
 
 	struct peer {

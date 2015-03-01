@@ -4,15 +4,15 @@
 #include <string.h>
 #include "time.h"
 
-static struct conn * add_connection(struct peer *peer, struct sockaddr_in addr) {
+static struct conn * add_connection(struct peer *peer, struct sockaddr_in address) {
 	struct conn *connection = malloc(sizeof(struct conn));
-	connection->addr = addr;
-	connection->lastSent = connection->lastReceived =
-		connection->lastSendTime = connection->lastReceiveTime = 0;
+	connection->address = address;
+	connection->lastSent = connection->lastReceived = connection->lastSendTime = connection->lastReceiveTime = 0;
 	for (unsigned int i = 0; i < NET_SEQNO_MAX; i++) {
 		connection->sentBuffers[i] = 0;
 		connection->missing[i] = 0;
 	}
+	connection->data = 0;
 
 	peer->connections[peer->numConnections++] = connection;
 
@@ -88,7 +88,9 @@ void net_peer_dispose(struct peer *peer) {
 
 	// Free up the connections
 	for (unsigned int i = 0; i < peer->numConnections; i++) {
-		free(peer->connections[i]);
+		struct conn *connection = peer->connections[i];
+		free(connection->data);
+		free(connection);
 	}
 	free(peer->connections);
 
@@ -108,7 +110,7 @@ void net_update(struct peer *peer) {
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
 				printf("Sending a request to resend packet %d\n", j + 1);
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[naklen - 1 - i] = NET_NAK_SEQNO >> i * 8; // syn[synlen - 1] = NET_NAK_SEQNO;
-				net_send(peer, nak, naklen, connection->addr, 0);
+				net_send(peer, nak, naklen, connection->address, 0);
 				free(nak);
 			}
 		}
@@ -122,7 +124,7 @@ void net_update(struct peer *peer) {
 			// *buf = connection->lastSent;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8; // buf[buflen - 1] = NET_PING_SEQNO;
-			net_send(peer, buf, buflen, connection->addr, 0); // Send ping
+			net_send(peer, buf, buflen, connection->address, 0); // Send ping
 		}
 
 		if (connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > 20000) {
@@ -141,7 +143,7 @@ int net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in 
 		struct conn *connection = 0;
 		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
-			struct sockaddr_in connAddr = other->addr;
+			struct sockaddr_in connAddr = other->address;
 			if (SOCK_ADDR_EQ_ADDR(&to, &connAddr) && SOCK_ADDR_EQ_PORT(&to, &connAddr)) {
 				connection = other;
 				break;
@@ -185,7 +187,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 		struct conn *connection = 0;
 		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
-			struct sockaddr_in address = other->addr;
+			struct sockaddr_in address = other->address;
 			if (SOCK_ADDR_EQ_ADDR(from, &address) && SOCK_ADDR_EQ_PORT(from, &address)) {
 				connection = other; // The origin of the packet and the connection's address match: existing connection
 				break;

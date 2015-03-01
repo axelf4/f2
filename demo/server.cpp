@@ -65,6 +65,6 @@ void game::Server::update() {
 		entity->set_allocated_origin(origin);
 
 		packet.set_allocated_gamest(gamest);
-		sendPacket(server, client->addr, packet, game::PacketBase_Type_GAMEST, NET_UNRELIABLE);
+		sendPacket(server, client->address, packet, game::PacketBase_Type_GAMEST, NET_UNRELIABLE);
 	}
 }
