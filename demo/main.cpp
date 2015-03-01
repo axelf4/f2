@@ -121,35 +121,6 @@ GLuint setupSkyboxTexture() {
 	return cubemap;
 }
 
-// TODO remove
-struct game_entity {
-	btDynamicsWorld *world;
-	btMotionState *motionState;
-	btCollisionShape *shape;
-	btRigidBody *body;
-
-	game_entity(btDynamicsWorld *world, btScalar mass, btMotionState *motionState, btCollisionShape *shape, const btVector3 &inertia) : world(world), motionState(motionState), shape(shape) {
-		btRigidBody::btRigidBodyConstructionInfo rigidBodyCI(mass, motionState, shape, inertia);
-		body = new btRigidBody(rigidBodyCI);
-	}
-
-	~game_entity() {
-		world->removeRigidBody(body);
-		delete motionState;
-		delete shape;
-		delete body;
-	}
-};
-
-void sendPacket(peer *client, game::PacketBase packet, game::PacketBase_Type type, int flag) {
-	packet.set_type(type);
-
-	int len = packet.ByteSize() + NET_SEQNO_SIZE;
-	unsigned char *buffer = new unsigned char[len];
-	packet.SerializeToArray(buffer, len - NET_SEQNO_SIZE);
-	net_send(client, buffer, len, net_address("127.0.0.1", 30000), flag);
-}
-
 inline void printVector(float *value) {
 	cout << "x: " << value[0] << " y: " << value[1] << " z: " << value[2] << " w: " << value[3] << endl;
 }
@@ -166,19 +137,6 @@ inline void printMatrix(float *matrixValue) {
 
 int main(int argc, char *argv[]) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION; // Verify that the version of the library that we linked against is compatible with the version of the headers we compiled against
-	game::PacketBase packet;
-	packet.set_type(game::PacketBase_Type_Move);
-	/*game::ClientLoginPacket *clientLogin = new game::ClientLoginPacket;
-	clientLogin->set_test("HelloWorld!");
-	packet.set_allocated_clientloginpacket(clientLogin);*/
-	game::Msg_Move *move = new game::Msg_Move;
-	move->set_seqno(0);
-	move->set_w(1);
-	move->set_a(0);
-	move->set_s(0);
-	move->set_d(0);
-	packet.set_allocated_move(move);
-
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
@@ -240,31 +198,19 @@ int main(int argc, char *argv[]) {
 	entityx::EntityX entityx;
 	std::shared_ptr<game::CollisionSystem> colSys = entityx.systems.add<CollisionSystem>();
 	entityx.systems.configure();
-
-	// Bullet Physics initialization
 	/* Ground body */
-	// btCollisionShape *groundShape = /* new btStaticPlaneShape(btVector3(0, 1, 0), 1) */ new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
-	btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)));
-	entityx::Entity ground = entityx.entities.create();
-	ground.assign<RigidBody>(0, groundMotionState, groundShape, btVector3(0, 0, 0));
-	ground.component<RigidBody>()->body->setFriction(1.0f); // 5.2
-	/* Ball body */
-	btCollisionShape *ballShape = /* new btSphereShape(1) */ new btBoxShape(btVector3(5, 5, 5));
-	btDefaultMotionState* ballMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
-	btScalar mass = 1;
-	btVector3 ballInertia(0, 0, 0);
-	ballShape->calculateLocalInertia(mass, ballInertia);
-	entityx::Entity ball = entityx.entities.create();
-	ball.assign<RigidBody>(mass, ballMotionState, ballShape, ballInertia);
-	btRigidBody *ballBody = ball.component<RigidBody>()->body;
-	ballBody->setSleepingThresholds(btScalar(.0f), btScalar(.0f));
-	ballBody->setAngularFactor(.0f);
-	ballBody->setRestitution(0.f);
-	ballBody->setCcdMotionThreshold(1.0f);
-	ballBody->setCcdSweptSphereRadius(0.2f);
+	entityx::Entity ground = game::createGround(entityx, groundShape);
+	entityx::Entity player = game::createPlayer(entityx);
+	btRigidBody *ballBody = player.component<RigidBody>()->body;
 
 	net_initialize(); // Initialize the net component
 	game::Server *server = new game::Server;
+
+	game::PacketBase packet;
+	game::ClientLoginPacket *clientLogin = new game::ClientLoginPacket;
+	clientLogin->set_test("HelloWorld!");
+	packet.set_allocated_clientloginpacket(clientLogin);
+	packet.set_type(game::PacketBase_Type_ClientLoginPacket);
 
 	peer *client = net_peer_create(0, 1);
 	int len = packet.ByteSize() + NET_SEQNO_SIZE;
@@ -282,13 +228,29 @@ int main(int argc, char *argv[]) {
 		Uint32 start_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event) != 0) switch (event.type) { case SDL_QUIT: done = true; break; }
 
-		server->readPeer();
+		server->update();
 		net_update(client);
 		unsigned char recvbuf[1024];
 		int recvbuflen;
 		struct sockaddr_in from;
 		while ((recvbuflen = net_receive(client, recvbuf, sizeof recvbuf, &from)) > 0) {
 			cout << "Received: " << recvbuflen << " bytes or '" << (char *)recvbuf << "'." << endl;
+
+			game::PacketBase packet;
+			packet.ParseFromArray(recvbuf, recvbuflen - NET_SEQNO_SIZE);
+			game::PacketBase_Type type = packet.type();
+			if (type == game::PacketBase_Type_GAMEST) {
+				cout << "Oh oh a new gamestate incoming" << endl;
+				game::gamest gamest = packet.gamest();
+				for (int i = 0; i < gamest.entity_size(); i++) {
+					game::entity_state entity = gamest.entity(i);
+					game::vec3 origin = entity.origin();
+					btTransform transform = ballBody->getWorldTransform();
+					transform.setOrigin(btVector3(origin.x(), origin.y(), origin.z()));
+					ballBody->setWorldTransform(transform);
+				}
+				
+			}
 		}
 
 		/* Mouse */
@@ -307,20 +269,19 @@ int main(int argc, char *argv[]) {
 		if (state[SDL_SCANCODE_SPACE]) {
 			position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y += MOVEMENT_SPEED;
 
-			jump(ball.component<RigidBody>().get(), colSys->world);
+			jump(player.component<RigidBody>().get(), colSys->world);
 		}
 		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, -MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
 
 		game::PacketBase movePacket;
-		movePacket.set_type(game::PacketBase_Type_Move);
-		game::Msg_Move *moveMsg = new game::Msg_Move;
+		game::usercmd *moveMsg = new game::usercmd;
 		moveMsg->set_seqno(0);
 		moveMsg->set_w(state[SDL_SCANCODE_W]);
 		moveMsg->set_a(state[SDL_SCANCODE_A]);
 		moveMsg->set_s(state[SDL_SCANCODE_S]);
 		moveMsg->set_d(state[SDL_SCANCODE_D]);
-		movePacket.set_allocated_move(moveMsg);
-		sendPacket(client, movePacket, game::PacketBase_Type_Move, NET_UNRELIABLE);
+		movePacket.set_allocated_usercmd(moveMsg);
+		sendPacket(client, net_address("127.0.0.1", 30000), movePacket, game::PacketBase_Type_USERCMD, NET_UNRELIABLE);
 
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix

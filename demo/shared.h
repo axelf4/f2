@@ -5,6 +5,8 @@
 #include <btBulletDynamicsCommon.h>
 #include <vmath.h>
 #include <glh.h>
+#include <net.h>
+#include "netmessages.pb.h"
 
 #include <objloader.h>
 /* assimp include files. These three are usually needed. */
@@ -64,6 +66,12 @@ namespace game {
 	extern void walk(VEC *pos, float yaw, float distance, float direction, btRigidBody *body);
 
 	extern void jump(game::RigidBody *ball, btDynamicsWorld *world);
+
+	extern Entity createGround(EntityX &entityx, btBvhTriangleMeshShape *groundShape);
+
+	extern Entity createPlayer(EntityX &entityx);
+
+	extern void sendPacket(peer *client, sockaddr_in address, game::PacketBase packet, game::PacketBase_Type type, int flag);
 }
 
 struct model_node {

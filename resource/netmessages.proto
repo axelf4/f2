@@ -3,24 +3,31 @@ package game;
 message PacketBase {
 	enum Type {
 		ClientLoginPacket = 0;
-		Move = 1;
+		USERCMD = 1;
+		GAMEST = 2;
 	}
 	
 	required Type type = 1;
 	
 	// extensions 2 to max;
 	optional ClientLoginPacket clientLoginPacket = 2;
-	optional Msg_Move move = 3;
+	optional usercmd usercmd = 3;
+	optional gamest gamest = 4;
+}
+
+message vec3 {
+	required float x = 1;
+	required float y = 2;
+	required float z = 3;
 }
 
 message ClientLoginPacket {
 	required string test = 1;
 }
 
-// usercmd
 // add viewangles
 // use button bit field instead of bools
-message Msg_Move {
+message usercmd {
 	required int32 seqno = 1;
 	
 	required bool w = 2;
@@ -33,15 +40,14 @@ message Msg_Disconnect {
 	optional string text = 1;
 }
 
-message Msg_Entity {
+// entity_state is the information conveyed from the server in an update message
+message entity_state {
 	required int32 id = 1;
-	required float x = 2;
-	required float y = 3;
-	required float z = 4;
+	required vec3 origin = 2;
 }
 
 message gamest {
 	required int32 seqno = 1;
 
-	repeated Msg_Entity entities = 2;
+	repeated entity_state entity = 2;
 }

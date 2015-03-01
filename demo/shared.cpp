@@ -37,6 +37,7 @@ void myTickCallback(btDynamicsWorld *world, btScalar timeStep) {
 }
 
 game::CollisionSystem::CollisionSystem() {
+	// Bullet Physics initialization
 	collisionConfiguration = new btDefaultCollisionConfiguration;
 	broadphase = new btDbvtBroadphase;
 	dispatcher = new btCollisionDispatcher(collisionConfiguration);
@@ -133,6 +134,44 @@ void game::jump(game::RigidBody *ball, btDynamicsWorld *world) {
 			ball->body->applyCentralImpulse(btVector3(0.0f, 10 * magnitude, 0.f));
 		}
 	}
+}
+
+Entity game::createGround(EntityX &entityx, btBvhTriangleMeshShape *groundShape) {
+	// btCollisionShape *groundShape = /* new btStaticPlaneShape(btVector3(0, 1, 0), 1) */ new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
+	btDefaultMotionState *groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, 0)));
+	entityx::Entity ground = entityx.entities.create();
+	ground.assign<RigidBody>(0, groundMotionState, groundShape, btVector3(0, 0, 0));
+	ground.component<RigidBody>()->body->setFriction(1.0f); // 5.2
+	
+	return ground;
+}
+
+Entity game::createPlayer(EntityX &entityx) {
+	/* Ball body */
+	btCollisionShape *ballShape = /* new btSphereShape(1) */ new btBoxShape(btVector3(5, 5, 5));
+	btDefaultMotionState* ballMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
+	btScalar mass = 1;
+	btVector3 ballInertia(0, 0, 0);
+	ballShape->calculateLocalInertia(mass, ballInertia);
+	entityx::Entity ball = entityx.entities.create();
+	ball.assign<RigidBody>(mass, ballMotionState, ballShape, ballInertia);
+	btRigidBody *ballBody = ball.component<RigidBody>()->body;
+	ballBody->setSleepingThresholds(btScalar(.0f), btScalar(.0f));
+	ballBody->setAngularFactor(.0f);
+	ballBody->setRestitution(0.f);
+	ballBody->setCcdMotionThreshold(1.0f);
+	ballBody->setCcdSweptSphereRadius(0.2f);
+
+	return ball;
+}
+
+void game::sendPacket(peer *client, sockaddr_in address, game::PacketBase packet, game::PacketBase_Type type, int flag) {
+	packet.set_type(type);
+
+	int len = packet.ByteSize() + NET_SEQNO_SIZE;
+	unsigned char *buffer = new unsigned char[len];
+	packet.SerializeToArray(buffer, len - NET_SEQNO_SIZE);
+	net_send(client, buffer, len, address, flag);
 }
 
 void destroy_model(struct model *model) {

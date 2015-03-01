@@ -15,19 +15,13 @@ game::Server::Server() {
 	struct sockaddr_in address = net_address(0, 30000);
 	server = net_peer_create(&address, 16);
 	server->accept = accept;
-
-	continuing = false;
 }
 
 game::Server::~Server() {
-	if (continuing) {
-		continuing = false;
-		inputThread.join();
-	}
 	net_peer_dispose(server);
 }
 
-void game::Server::readPeer() {
+void game::Server::update() {
 	unsigned char buf[1024];
 	int len;
 	struct sockaddr_in from;
@@ -35,7 +29,7 @@ void game::Server::readPeer() {
 	net_update(server);
 
 	while ((len = net_receive(server, buf, sizeof buf, &from)) > 0) {
-		cout << "Received: " << len << " bytes or '" << (char *)buf << "'." << endl;
+		// cout << "Received: " << len << " bytes or '" << (char *)buf << "'." << endl;
 
 		game::PacketBase packet;
 		packet.ParseFromArray(buf, len - NET_SEQNO_SIZE);
@@ -46,30 +40,31 @@ void game::Server::readPeer() {
 			string test = clientLogin.test();
 			cout << "test: " << test << endl;
 		}
-		else if (type == game::PacketBase_Type_Move) {
-			cout << "Move" << endl;
-			game::Msg_Move move = packet.move();
-			bool w = move.w();
-			cout << "w: " << w << endl;
+		else if (type == game::PacketBase_Type_USERCMD) {
+			//cout << "Move" << endl;
+			game::usercmd usercmd = packet.usercmd();
+			bool w = usercmd.w();
+			// cout << "w: " << w << endl;
 		}
 	}
-}
 
-/*void shutdownServerInstance(DWORD fdwCtrlType) {
-	serverInstance->continuing = false;
-	}*/
+	for (int i = 0; i < server->numConnections; i++) {
+		struct conn *client = server->connections[i];
 
-void game::Server::loopRead() {
-	while (continuing) {
-		readPeer();
-		Sleep(300);
+		game::PacketBase packet;
+		packet.set_type(game::PacketBase_Type_GAMEST);
+		game::gamest *gamest = new game::gamest;
+		gamest->set_seqno(0);
+		game::entity_state *entity = gamest->add_entity();
+		entity->set_id(0);
+
+		game::vec3 *origin = new game::vec3;
+		origin->set_x(0);
+		origin->set_y(0);
+		origin->set_z(0);
+		entity->set_allocated_origin(origin);
+
+		packet.set_allocated_gamest(gamest);
+		sendPacket(server, client->addr, packet, game::PacketBase_Type_GAMEST, NET_UNRELIABLE);
 	}
-}
-
-void game::Server::startServer() {
-	// SetConsoleCtrlHandler((PHANDLER_ROUTINE)shutdownServerInstance, TRUE);
-
-	continuing = true;
-
-	inputThread = std::thread(&Server::loopRead, this);
 }
