@@ -142,7 +142,7 @@ Entity game::createGround(EntityX &entityx, btBvhTriangleMeshShape *groundShape)
 	entityx::Entity ground = entityx.entities.create();
 	ground.assign<RigidBody>(0, groundMotionState, groundShape, btVector3(0, 0, 0));
 	ground.component<RigidBody>()->body->setFriction(1.0f); // 5.2
-	
+
 	return ground;
 }
 
@@ -181,17 +181,18 @@ void destroy_model(struct model *model) {
 		if (node->mesh != 0) destroy_mesh(node->mesh);
 		if (node->attributes != 0) free(node->attributes);
 
-		if (node->vertices != 0) delete[] node->vertices;
-		if (node->indices != 0) delete[] node->indices;
+		// if (node->vertices != 0) delete[] node->vertices;
+		// if (node->indices != 0) delete[] node->indices;
 
 		delete node;
 	}
-	if (model->tiva != 0) model->tiva;
 	delete[] model->nodes;
+	destroy_obj_model(model->obj_model);
+	if (model->tiva != 0) model->tiva;
 	delete model;
 }
 
-model * loadMeshUsingObjLoader(const char *filename, GLuint program, GLuint(*load_texture)(const char *)) {
+model * loadMeshUsingObjLoader(const char *filename, GLuint program, bool setShape, GLuint(*load_texture)(const char *)) {
 	struct obj_model *scene = load_obj_model(filename);
 	if (!scene) {
 		std::cerr << "Error loading model: " << filename << std::endl;
@@ -200,6 +201,11 @@ model * loadMeshUsingObjLoader(const char *filename, GLuint program, GLuint(*loa
 	model *model = new struct model;
 	model->nodes = new model_node*[scene->numParts];
 	model->nodeCount = scene->numParts;
+
+	btTriangleIndexVertexArray *tiva;
+	if (setShape) {
+		tiva = new btTriangleIndexVertexArray();
+	}
 
 	GLuint *textures = new GLuint[scene->numMaterials];
 	for (unsigned int i = 0; i < scene->numMaterials; i++) {
@@ -223,21 +229,41 @@ model * loadMeshUsingObjLoader(const char *filename, GLuint program, GLuint(*loa
 		if (scene->hasUVs) node->attributes[k++] = { glGetAttribLocation(program, "texCoord"), 2, 0 };
 		if (scene->hasNorms) node->attributes[k++] = { glGetAttribLocation(program, "normal"), 3, 0 };
 		node->attributes[k++] = NULL_ATTRIB;
-		node->mesh = create_mesh(0);
+		node->mesh = create_mesh(1);
 		node->stride = calculate_stride(node->attributes);
 
 		glBindBuffer(GL_ARRAY_BUFFER, node->mesh->vbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * (node->vertexCount = part->vertexCount), part->vertices, GL_STATIC_DRAW);
-		node->vertices = (float *)(node->indices = 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->mesh->ibo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float) * (node->indexCount = part->indexCount), part->indices, GL_STATIC_DRAW);
+		
 		node->texture = textures[part->materialIndex];
+		unsigned int vertexCount = part->vertexCount, indexCount = part->indexCount;
+		float *vertices = node->vertices = part->vertices;
+		unsigned int *indices = node->indices = part->indices;
+
+		if (setShape) {
+			btIndexedMesh indexedMesh;
+			indexedMesh.m_vertexType = PHY_FLOAT;
+			indexedMesh.m_numVertices = vertexCount;
+			indexedMesh.m_vertexBase = (const unsigned char*)vertices;
+			indexedMesh.m_vertexStride = node->stride;
+			indexedMesh.m_indexType = PHY_INTEGER;
+			indexedMesh.m_numTriangles = indexCount / 3;
+			indexedMesh.m_triangleIndexBase = (const unsigned char*)indices;
+			indexedMesh.m_triangleIndexStride = 3 * sizeof(unsigned int);
+			tiva->addIndexedMesh(indexedMesh);
+		}
 	}
 
+	if (setShape) model->tiva = tiva;
+	model->obj_model = scene;
+
 	delete[] textures;
-	destroy_obj_model(scene);
 	return model;
 }
 
-model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape, btBvhTriangleMeshShape *&shape, GLuint(*load_texture)(const char *)) {
+model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape, GLuint(*load_texture)(const char *)) {
 	Assimp::Importer importer;
 	const aiScene *scene = importer.ReadFile(filename, aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_SortByPType |
 		aiProcess_OptimizeGraph | aiProcess_OptimizeMeshes);
@@ -335,10 +361,7 @@ model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape,
 		}
 	}
 
-	if (setShape) {
-		model->tiva = tiva;
-		shape = new btBvhTriangleMeshShape(tiva, true);
-	}
+	if (setShape) model->tiva = tiva;
 
 	delete[] textures;
 	return model;

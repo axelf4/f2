@@ -27,9 +27,10 @@ extern "C" {
 	};
 
 	struct obj_model_part {
-		unsigned int vertexCount, faceCount;
+		unsigned int vertexCount, indexCount, faceCount,
+			materialIndex;
 		float *vertices;
-		unsigned int materialIndex; // struct mtl_material *material;
+		unsigned int *indices;
 	};
 
 	/**

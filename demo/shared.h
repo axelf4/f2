@@ -92,12 +92,13 @@ struct model {
 	model_node **nodes;
 	size_t nodeCount;
 	btTriangleIndexVertexArray *tiva;
+	obj_model *obj_model;
 };
 
 extern void destroy_model(struct model *model);
 
-extern model * loadMeshUsingObjLoader(const char *filename, GLuint program, GLuint(*load_texture)(const char *));
+extern model * loadMeshUsingObjLoader(const char *filename, GLuint program, bool setShape, GLuint(*load_texture)(const char *));
 
-extern model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape, btBvhTriangleMeshShape *&shape, GLuint(*load_texture)(const char *));
+extern model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape, GLuint(*load_texture)(const char *));
 
 #endif

@@ -233,7 +233,9 @@ struct obj_model * load_obj_model(const char *filename) {
 		// part->faceCount = group->facesSize / (1 + hasUVs + hasNorms); // group->numFaces
 		part->faceCount = group->numFaces;
 
+#ifdef OBJ_VERTICES_ONLY
 		float *vertices = part->vertices = (float *)malloc(sizeof(float) * (part->vertexCount = group->numFaces * 3 * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
+		part->indices = 0;
 		for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
 			int vertIndex = group->faces[j++] * 3;
 			vertices[vi++] = verts[vertIndex++];
@@ -251,6 +253,47 @@ struct obj_model * load_obj_model(const char *filename) {
 				vertices[vi++] = norms[normIndex];
 			}
 		}
+#else
+		unsigned int verticesSize = 0, verticesCapacity = 2;
+		float *vertices = (float *)malloc(sizeof(float) * vertsCapacity);
+		unsigned int *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces)),
+			vi = 0;
+		for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
+			int vertIndex = group->faces[j++] * 3,
+				uvIndex = hasUVs ? group->faces[j++] * 2 : 0,
+				normIndex = hasNorms ? group->faces[j++] * 3 : 0;
+
+			int found = 0;
+			for (unsigned int l = 0; l < group->facesSize && l < j - 3;) {
+				if (vertIndex == group->faces[l++] &&
+					(!hasUVs || uvIndex == group->faces[l++]) &&
+					(!hasNorms || normIndex == group->faces[l++])) {
+					found = 1;
+					indices[k] = l;
+				}
+			}
+			if (!found) {
+				indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
+				if (vi + (3 + hasUVs * 2 + hasNorms * 3) >= verticesCapacity) {
+					vertices = (float *)realloc(vertices, sizeof(float) * (verticesCapacity *= 4));
+				}
+				vertices[vi++] = verts[vertIndex++];
+				vertices[vi++] = verts[vertIndex++];
+				vertices[vi++] = verts[vertIndex];
+				if (hasUVs) {
+					vertices[vi++] = uvs[uvIndex++];
+					vertices[vi++] = uvs[uvIndex];
+				}
+				if (hasNorms) {
+					vertices[vi++] = norms[normIndex++];
+					vertices[vi++] = norms[normIndex++];
+					vertices[vi++] = norms[normIndex];
+				}
+			}
+		}
+		part->vertexCount = vi - 1;
+		part->vertices = vertices;
+#endif
 
 		free(group->name);
 		free(group->faces);
@@ -268,6 +311,7 @@ void destroy_obj_model(struct obj_model *model) {
 	for (unsigned int i = 0; i < model->numParts; i++) {
 		struct obj_model_part *part = model->parts[i];
 		free(part->vertices);
+		free(part->indices);
 	}
 	for (unsigned int i = 0; i < model->numMaterials; i++) {
 		struct mtl_material *material = model->materials[i];

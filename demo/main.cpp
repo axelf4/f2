@@ -190,10 +190,8 @@ int main(int argc, char *argv[]) {
 	infoLog = getProgramInfoLog(skyboxProg);
 	cout << "Shader program info log: " << infoLog << endl;
 	free(infoLog);
-	// mesh *mesh = f1::getObjModel("bunny.obj");
-	btBvhTriangleMeshShape *groundShape;
-	struct model *groundMesh2 = loadMeshUsingAssimp(RESOURCE_DIR "cs_office/cs_office.obj", phong, true, groundShape, load_texture); // "cube_texture.obj/cube_texture.obj"
-	struct model *groundMesh = loadMeshUsingObjLoader(RESOURCE_DIR "cs_office/cs_office.obj", phong, load_texture);
+	struct model *groundMesh = loadMeshUsingObjLoader(RESOURCE_DIR "cs_office/cs_office.obj", phong, true, load_texture);
+	btBvhTriangleMeshShape *groundShape = new btBvhTriangleMeshShape(groundMesh->tiva, true);
 
 	entityx::EntityX entityx;
 	std::shared_ptr<game::CollisionSystem> colSys = entityx.systems.add<CollisionSystem>();
@@ -218,7 +216,7 @@ int main(int argc, char *argv[]) {
 	packet.SerializeToArray(buffer, len - NET_SEQNO_SIZE);
 	net_send(client, buffer, len, net_address("127.0.0.1", 30000), NET_RELIABLE);
 
-	bool noclip = true;
+	bool noclip = false;
 
 	bool done = false;
 	SDL_Event event;
@@ -341,8 +339,8 @@ int main(int argc, char *argv[]) {
 			model_node *node = groundMesh->nodes[i];
 
 			glBindTexture(GL_TEXTURE_2D, node->texture);
-			// bind_mesh(node->mesh, node->attributes, node->stride, glDrawElements(GL_TRIANGLES, node->indexCount, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
-			bind_mesh(node->mesh, node->attributes, node->stride, glDrawArrays(GL_TRIANGLES, 0, node->vertexCount););
+			bind_mesh(node->mesh, node->attributes, node->stride, glDrawElements(GL_TRIANGLES, node->indexCount, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
+			// bind_mesh(node->mesh, node->attributes, node->stride, glDrawArrays(GL_TRIANGLES, 0, node->vertexCount););
 		}
 
 		// world->world->debugDrawWorld(); // Debug draw the bullet world
@@ -362,7 +360,6 @@ int main(int argc, char *argv[]) {
 	net_deinitialize();
 
 	glDeleteProgram(phong);
-	destroy_model(groundMesh2);
 	destroy_model(groundMesh);
 
 	glDeleteTextures(1, &skyboxTex);

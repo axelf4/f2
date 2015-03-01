@@ -48,7 +48,7 @@ void game::Server::update() {
 		}
 	}
 
-	for (int i = 0; i < server->numConnections; i++) {
+	/*for (int i = 0; i < server->numConnections; i++) {
 		struct conn *client = server->connections[i];
 
 		game::PacketBase packet;
@@ -66,5 +66,5 @@ void game::Server::update() {
 
 		packet.set_allocated_gamest(gamest);
 		sendPacket(server, client->address, packet, game::PacketBase_Type_GAMEST, NET_UNRELIABLE);
-	}
+	}*/
 }
