@@ -3,6 +3,7 @@
 #define WIN32_LEAN_AND_MEAN 1
 #include <Windows.h>
 #include "netmessages.pb.h"
+#include "shared.h"
 
 using namespace std;
 

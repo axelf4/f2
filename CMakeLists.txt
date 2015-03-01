@@ -23,8 +23,8 @@ set(DEMO_SOURCES
 	demo/GLDebugDrawer.h
 	demo/server.h
 	demo/server.cpp
-	demo/components.h
-	demo/components.cpp)
+	demo/shared.h
+	demo/shared.cpp)
 
 if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_COMPILER_IS_GNUCC)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")

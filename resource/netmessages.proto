@@ -17,6 +17,9 @@ message ClientLoginPacket {
 	required string test = 1;
 }
 
+// usercmd
+// add viewangles
+// use button bit field instead of bools
 message Msg_Move {
 	required int32 seqno = 1;
 	
@@ -37,7 +40,7 @@ message Msg_Entity {
 	required float z = 4;
 }
 
-message Msg_EntityList {
+message gamest {
 	required int32 seqno = 1;
 
 	repeated Msg_Entity entities = 2;
