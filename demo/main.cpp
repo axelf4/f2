@@ -28,7 +28,6 @@ using namespace game;
 #define WINDOW_HEIGHT 600.f
 #define FPS 60
 #define MOUSE_SENSITIVITY 0.006f
-#define MOVEMENT_SPEED (0.2f * 50)
 
 #ifndef RESOURCE_DIR
 #define RESOURCE_DIR "resource/"
@@ -194,7 +193,7 @@ int main(int argc, char *argv[]) {
 	btBvhTriangleMeshShape *groundShape = new btBvhTriangleMeshShape(groundMesh->tiva, true);
 
 	entityx::EntityX entityx;
-	std::shared_ptr<game::CollisionSystem> colSys = entityx.systems.add<CollisionSystem>();
+	std::shared_ptr<game::CollisionSystem> collisionSystem = entityx.systems.add<CollisionSystem>();
 	entityx.systems.configure();
 	/* Ground body */
 	entityx::Entity ground = game::createGround(entityx, groundShape);
@@ -226,7 +225,7 @@ int main(int argc, char *argv[]) {
 		Uint32 start_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event) != 0) switch (event.type) { case SDL_QUIT: done = true; break; }
 
-		server->update();
+		server->update(dt);
 		net_update(client);
 		unsigned char recvbuf[1024];
 		int recvbuflen;
@@ -267,19 +266,25 @@ int main(int argc, char *argv[]) {
 		if (state[SDL_SCANCODE_SPACE]) {
 			position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y += MOVEMENT_SPEED;
 
-			jump(player.component<RigidBody>().get(), colSys->world);
+			jump(player.component<RigidBody>().get(), collisionSystem->world);
 		}
 		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, -MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
 
 		game::PacketBase movePacket;
-		game::usercmd *moveMsg = new game::usercmd;
+		game::usercmd *moveMsg = movePacket.mutable_usercmd();
 		moveMsg->set_seqno(0);
+		game::vec3 *viewangles = moveMsg->mutable_viewangles();
+		viewangles->set_x(pitch);
+		viewangles->set_y(yaw);
+		viewangles->set_z(0);
+
 		moveMsg->set_w(state[SDL_SCANCODE_W]);
 		moveMsg->set_a(state[SDL_SCANCODE_A]);
 		moveMsg->set_s(state[SDL_SCANCODE_S]);
 		moveMsg->set_d(state[SDL_SCANCODE_D]);
-		movePacket.set_allocated_usercmd(moveMsg);
-		sendPacket(client, net_address("127.0.0.1", 30000), movePacket, game::PacketBase_Type_USERCMD, NET_UNRELIABLE);
+		bool space = state[SDL_SCANCODE_SPACE];
+		moveMsg->set_space(space);
+		sendPacket(client, net_address("127.0.0.1", 30000), movePacket, game::PacketBase_Type_USERCMD, space ? NET_RELIABLE : NET_UNRELIABLE);
 
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix
@@ -349,7 +354,7 @@ int main(int argc, char *argv[]) {
 		GLenum error;
 		while ((error = glGetError()) != 0) cout << "GL error: " << error << endl;/**/
 		SDL_GL_SwapWindow(win);
-		entityx.systems.update_all(1 / 60.f);
+		entityx.systems.update_all(dt);
 		if ((1000 / FPS) > (SDL_GetTicks() - start_time)) SDL_Delay((1000 / FPS) - (SDL_GetTicks() - start_time));
 	}
 

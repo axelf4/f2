@@ -91,8 +91,10 @@ void game::CollisionSystem::receive(const ComponentRemovedEvent<game::RigidBody>
 
 void game::walk(VEC *pos, float yaw, float distance, float direction, btRigidBody *body) {
 	float xaccel = distance * (float)sin(degreesToRadians(yaw + direction)), zaccel = distance * (float)cos(degreesToRadians(yaw + direction));
-	VEC accel = VectorSet(xaccel, 0, zaccel, 0);
-	*pos = VectorAdd(*pos, accel);
+	if (pos != 0) {
+		VEC accel = VectorSet(xaccel, 0, zaccel, 0);
+		*pos = VectorAdd(*pos, accel);
+	}
 
 	// body->setLinearVelocity(btVector3(xaccel * 50, yaccel, zaccel * 50));
 	body->applyCentralImpulse(btVector3(xaccel * 10, 0, zaccel * 10));
@@ -236,7 +238,7 @@ model * loadMeshUsingObjLoader(const char *filename, GLuint program, bool setSha
 		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * (node->vertexCount = part->vertexCount), part->vertices, GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->mesh->ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float) * (node->indexCount = part->indexCount), part->indices, GL_STATIC_DRAW);
-		
+
 		node->texture = textures[part->materialIndex];
 		unsigned int vertexCount = part->vertexCount, indexCount = part->indexCount;
 		float *vertices = node->vertices = part->vertices;
