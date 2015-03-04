@@ -9,8 +9,6 @@ extern "C" {
 #endif
 
 #ifdef _WIN32	
-#define WIN32_LEAN_AND_MEAN
-
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
@@ -71,8 +69,8 @@ extern "C" {
 		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
 			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
 		unsigned int lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
-			lastReceived, /**< The sequence number of the last received packet (defaults to 0). */
-			lastSendTime, /**< A timestamp of when a reliable packet was last sent to the connection. */
+			lastReceived; /**< The sequence number of the last received packet (defaults to 0). */
+		double lastSendTime, /**< A timestamp of when a reliable packet was last sent to the connection. */
 			lastReceiveTime;
 		char *data; /**< Attached application data, is managed. */
 	};

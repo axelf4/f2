@@ -7,7 +7,8 @@
 static struct conn * add_connection(struct peer *peer, struct sockaddr_in address) {
 	struct conn *connection = malloc(sizeof(struct conn));
 	connection->address = address;
-	connection->lastSent = connection->lastReceived = connection->lastSendTime = connection->lastReceiveTime = 0;
+	connection->lastSent = connection->lastReceived = 0;
+	connection->lastSendTime = connection->lastReceiveTime = 0;
 	for (unsigned int i = 0; i < NET_SEQNO_MAX; i++) {
 		connection->sentBuffers[i] = 0;
 		connection->missing[i] = 0;
