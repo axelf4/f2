@@ -13,10 +13,6 @@ before_install:
   - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
   - tar -xzvf SDL2-2.0.3.tar.gz
   - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
-  # Assimp
-  - wget -N https://github.com/assimp/assimp/archive/master.zip
-  - unzip master.zip
-  - (cd assimp-master && cmake -DASSIMP_BUILD_ASSIMP_TOOLS=OFF -DASSIMP_BUILD_SAMPLES=OFF -DASSIMP_BUILD_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
   # Bullet Physics
   - wget -N https://github.com/bulletphysics/bullet3/archive/master.zip
   - unzip master.zip

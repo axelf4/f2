@@ -9,10 +9,6 @@
 #include "netmessages.pb.h"
 
 #include <objloader.h>
-/* assimp include files. These three are usually needed. */
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 
 using namespace entityx;
 
@@ -98,7 +94,5 @@ struct model {
 extern void destroy_model(struct model *model);
 
 extern model * loadMeshUsingObjLoader(const char *filename, GLuint program, bool setShape, GLuint(*load_texture)(const char *));
-
-extern model * loadMeshUsingAssimp(const char *filename, GLuint program, bool setShape, GLuint(*load_texture)(const char *));
 
 #endif
