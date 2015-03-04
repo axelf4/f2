@@ -224,25 +224,26 @@ model * loadMeshUsingObjLoader(const char *filename, GLuint program, bool setSha
 	for (unsigned int i = 0; i < scene->numParts; i++) {
 		struct obj_model_part *part = scene->parts[i];
 		model_node *node = model->nodes[i] = new model_node;
+		unsigned int vertexCount = node->vertexCount = part->vertexCount, indexCount = node->indexCount = part->indexCount;
+		float *vertices = node->vertices = part->vertices;
+		unsigned int *indices = node->indices = part->indices;
+		node->texture = textures[part->materialIndex];
 
 		size_t k = 0;
 		node->attributes = (struct attrib *) malloc(sizeof(struct attrib) * (2 + scene->hasUVs + scene->hasNorms));
-		node->attributes[k++] = { glGetAttribLocation(program, "vertex"), 3, 0 };
-		if (scene->hasUVs) node->attributes[k++] = { glGetAttribLocation(program, "texCoord"), 2, 0 };
-		if (scene->hasNorms) node->attributes[k++] = { glGetAttribLocation(program, "normal"), 3, 0 };
+		node->attributes[k++] = { program ? glGetAttribLocation(program, "vertex") : 0, 3, 0 };
+		if (scene->hasUVs) node->attributes[k++] = { program ? glGetAttribLocation(program, "texCoord") : 0, 2, 0 };
+		if (scene->hasNorms) node->attributes[k++] = { program ? glGetAttribLocation(program, "normal") : 0, 3, 0 };
 		node->attributes[k++] = NULL_ATTRIB;
-		node->mesh = create_mesh(1);
 		node->stride = calculate_stride(node->attributes);
 
-		glBindBuffer(GL_ARRAY_BUFFER, node->mesh->vbo);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(float) * (node->vertexCount = part->vertexCount), part->vertices, GL_STATIC_DRAW);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->mesh->ibo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(float) * (node->indexCount = part->indexCount), part->indices, GL_STATIC_DRAW);
-
-		node->texture = textures[part->materialIndex];
-		unsigned int vertexCount = part->vertexCount, indexCount = part->indexCount;
-		float *vertices = node->vertices = part->vertices;
-		unsigned int *indices = node->indices = part->indices;
+		if (program != 0) {
+			node->mesh = create_mesh(1);
+			glBindBuffer(GL_ARRAY_BUFFER, node->mesh->vbo);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertexCount, vertices, GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, node->mesh->ibo);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indexCount, indices, GL_STATIC_DRAW);
+		}
 
 		if (setShape) {
 			btIndexedMesh indexedMesh;

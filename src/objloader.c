@@ -291,7 +291,7 @@ struct obj_model * load_obj_model(const char *filename) {
 				}
 			}
 		}
-		part->vertexCount = vi - 1;
+		part->vertexCount = vi;
 		part->vertices = vertices;
 #endif
 

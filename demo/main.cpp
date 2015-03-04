@@ -339,7 +339,7 @@ int main(int argc, char *argv[]) {
 		ground.component<RigidBody>()->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(mv); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
 		model = MatrixLoad(mv);
-		MAT scaleMatrix = MatrixScaling(100, 100, 100);
+		// MAT scaleMatrix = MatrixScaling(100, 100, 100);
 		// model = MatrixMultiply(&model, &scaleMatrix);
 		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, MatrixGet(mv, model));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, MatrixInverse(&modelView)));
