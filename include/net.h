@@ -63,9 +63,7 @@ extern "C" {
 #define NET_PING_INTERVAL 500
 #endif
 
-	// struct addr { const char *address; unsigned short port; };
-
-	struct sockaddr_in net_address(const char *address, unsigned int port);
+#define NET_IP4_ADDR(ip, port, addr) (((struct sockaddr *)(addr))->sa_family = AF_INET, inet_pton(AF_INET, ip, &((struct sockaddr_in *)(addr))->sin_addr), ((struct sockaddr_in *)(addr))->sin_port = htons(port), addr)
 
 	struct conn {
 		struct sockaddr_in address;

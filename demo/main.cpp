@@ -213,7 +213,10 @@ int main(int argc, char *argv[]) {
 	int len = packet.ByteSize() + NET_SEQNO_SIZE;
 	unsigned char *buffer = new unsigned char[len];
 	packet.SerializeToArray(buffer, len - NET_SEQNO_SIZE);
-	net_send(client, buffer, len, net_address("127.0.0.1", 30000), NET_RELIABLE);
+	struct sockaddr_in sendAddress;
+	NET_IP4_ADDR("127.0.0.1", 30000, &sendAddress);
+	net_send(client, buffer, len, sendAddress, NET_RELIABLE);
+	// net_send(client, buffer, len, net_address("127.0.0.1", 30000), NET_RELIABLE);
 
 	bool noclip = false;
 
@@ -231,13 +234,13 @@ int main(int argc, char *argv[]) {
 		int recvbuflen;
 		struct sockaddr_in from;
 		while ((recvbuflen = net_receive(client, recvbuf, sizeof recvbuf, &from)) > 0) {
-			cout << "Received: " << recvbuflen << " bytes or '" << (char *)recvbuf << "'." << endl;
+			// cout << "Received: " << recvbuflen << " bytes or '" << (char *)recvbuf << "'." << endl;
 
 			game::PacketBase packet;
 			packet.ParseFromArray(recvbuf, recvbuflen - NET_SEQNO_SIZE);
 			game::PacketBase_Type type = packet.type();
 			if (type == game::PacketBase_Type_GAMEST) {
-				cout << "Oh oh a new gamestate incoming" << endl;
+				// cout << "Oh oh a new gamestate incoming" << endl;
 				game::gamest gamest = packet.gamest();
 				for (int i = 0; i < gamest.entity_size(); i++) {
 					game::entity_state entity = gamest.entity(i);
@@ -284,7 +287,9 @@ int main(int argc, char *argv[]) {
 		moveMsg->set_d(state[SDL_SCANCODE_D]);
 		bool space = state[SDL_SCANCODE_SPACE];
 		moveMsg->set_space(space);
-		sendPacket(client, net_address("127.0.0.1", 30000), movePacket, game::PacketBase_Type_USERCMD, space ? NET_RELIABLE : NET_UNRELIABLE);
+		sockaddr_in address;
+		NET_IP4_ADDR("127.0.0.1", 30000, &address);
+		sendPacket(client, address, movePacket, game::PacketBase_Type_USERCMD, space ? NET_RELIABLE : NET_UNRELIABLE);
 
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix

@@ -36,11 +36,6 @@ void net_deinitialize() {
 #endif
 }
 
-struct sockaddr_in net_address(const char *address, unsigned int port) {
-	struct sockaddr_in retval = { .sin_family = AF_INET, .sin_port = htons(port), .sin_addr.s_addr = inet_addr(address) };
-	return retval;
-}
-
 struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxConnections) {
 	SOCKET Socket;
 	if ((Socket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
@@ -233,9 +228,9 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			else connection->missing[seqno - 1] = 0; // Mark the packet as received
 		}
 
-		printf("Sequence number is %u/", seqno);
+		/*printf("Sequence number is %u/", seqno);
 		for (int i = NET_SEQNO_SIZE * 8 - 1; i >= 0; i--) putchar((seqno & (1 << i)) ? '1' : '0');
-		putchar('\n');
+		putchar('\n');*/
 	}
 	return result;
 }

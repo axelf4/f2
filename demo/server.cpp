@@ -11,7 +11,8 @@ void accept(struct peer *peer, struct conn *connection) {
 }
 
 game::Server::Server() {
-	struct sockaddr_in address = net_address(0, 30000);
+	struct sockaddr_in address;
+	NET_IP4_ADDR(0, 30000, &address);
 	server = net_peer_create(&address, 16);
 	server->accept = accept;
 
