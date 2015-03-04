@@ -99,27 +99,22 @@ void net_update(struct peer *peer) {
 
 		for (unsigned int j = 0; j < NET_SEQNO_MAX; j++) {
 			if (connection->missing[j]) {
-				// char syn[] = { j + 1, 0xFF };
 				int naklen = NET_SEQNO_SIZE * 2;
-				char *nak = calloc(naklen, sizeof(char));
-				// *syn = j + 1;
+				char nak[NET_SEQNO_SIZE * 2];
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
 				printf("Sending a request to resend packet %d\n", j + 1);
-				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[naklen - 1 - i] = NET_NAK_SEQNO >> i * 8; // syn[synlen - 1] = NET_NAK_SEQNO;
+				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[naklen - 1 - i] = NET_NAK_SEQNO >> i * 8;
 				net_send(peer, nak, naklen, connection->address, 0);
-				free(nak);
 			}
 		}
 
 		double now = time_get();
 		if (now - connection->lastSendTime > NET_PING_INTERVAL ||
 			(connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > NET_PING_INTERVAL)) {
-			// char buf[] = { connection->lastSent, 0xFE };
 			int buflen = NET_SEQNO_SIZE * 2;
 			char buf[NET_SEQNO_SIZE * 2];
-			// *buf = connection->lastSent;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
-			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8; // buf[buflen - 1] = NET_PING_SEQNO;
+			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8;
 			net_send(peer, buf, buflen, connection->address, 0); // Send ping
 		}
 
@@ -131,7 +126,7 @@ void net_update(struct peer *peer) {
 }
 
 // TODO make return error value
-int net_send(struct peer *peer, unsigned char *buf, int len, struct sockaddr_in to, int flag) {
+int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr_in to, int flag) {
 	if (flag & NET_UNRELIABLE) {
 		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = 0;
 	}
