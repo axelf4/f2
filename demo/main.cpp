@@ -120,6 +120,11 @@ GLuint setupSkyboxTexture() {
 	return cubemap;
 }
 
+float lerp(float v0, float v1, float t) {
+	return v0 + t * (v1 - v0);
+	// return (1 - t) * v0 + t * v1;
+}
+
 inline void printVector(float *value) {
 	cout << "x: " << value[0] << " y: " << value[1] << " z: " << value[2] << " w: " << value[3] << endl;
 }
@@ -200,6 +205,10 @@ int main(int argc, char *argv[]) {
 	entityx::Entity player = game::createPlayer(entityx);
 	btRigidBody *ballBody = player.component<RigidBody>()->body;
 
+	game::usercmd commands[256];
+	unsigned int lastAdded = 0, lastReceived = 0;
+	btVector3 lastPosition(0, 0, 0);
+
 	net_initialize(); // Initialize the net component
 	game::Server *server = new game::Server;
 
@@ -224,7 +233,7 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 	const Uint8 *state = SDL_GetKeyboardState(NULL);
 	while (!done) {
-		float dt = 1.f / 60; // I don't feel like writing a proper game loop just now
+		float dt = 1.f / FPS; // (0-1) I don't feel like writing a proper game loop just now
 		Uint32 start_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event) != 0) switch (event.type) { case SDL_QUIT: done = true; break; }
 
@@ -242,14 +251,28 @@ int main(int argc, char *argv[]) {
 			if (type == game::PacketBase_Type_GAMEST) {
 				// cout << "Oh oh a new gamestate incoming" << endl;
 				game::gamest gamest = packet.gamest();
+				unsigned int seqno = gamest.seqno();
+				if (seqno <= lastReceived) continue;
+				lastReceived = seqno;
+
 				for (int i = 0; i < gamest.entity_size(); i++) {
 					game::entity_state entity = gamest.entity(i);
 					game::vec3 origin = entity.origin();
 					btTransform transform = ballBody->getWorldTransform();
 					transform.setOrigin(btVector3(origin.x(), origin.y(), origin.z()));
 					ballBody->setWorldTransform(transform);
+
+					game::vec3 velocity = entity.velocity();
+					ballBody->setLinearVelocity(btVector3(velocity.x(), velocity.y(), velocity.z()));
 				}
-				
+
+				if (lastAdded > seqno) {
+					int nums = lastAdded - seqno;
+					int i = seqno + 1;
+					do {
+						applyUsercmd(commands[i % 256], player.component<RigidBody>().get(), collisionSystem->world, 0);
+					} while (i++ < lastAdded);
+				}
 			}
 		}
 
@@ -259,54 +282,65 @@ int main(int argc, char *argv[]) {
 		update_camera(&yaw, x * MOUSE_SENSITIVITY, &pitch, y *MOUSE_SENSITIVITY);
 		/* Keyboard */
 		if (state[SDL_SCANCODE_ESCAPE]) done = true;
-		if (state[SDL_SCANCODE_W]) walk(&position, yaw, MOVEMENT_SPEED, 180, ballBody);
+		/*if (state[SDL_SCANCODE_W]) walk(&position, yaw, MOVEMENT_SPEED, 180, ballBody);
 		if (state[SDL_SCANCODE_A]) walk(&position, yaw, MOVEMENT_SPEED, 270, ballBody);
 		if (state[SDL_SCANCODE_S]) walk(&position, yaw, MOVEMENT_SPEED, 0, ballBody);
 		if (state[SDL_SCANCODE_D]) walk(&position, yaw, MOVEMENT_SPEED, 90, ballBody);
 		if (!(state[SDL_SCANCODE_W] || state[SDL_SCANCODE_A] || state[SDL_SCANCODE_S] || state[SDL_SCANCODE_D])) {
-			ballBody->setLinearVelocity(btVector3(0, ballBody->getLinearVelocity().y(), 0));
+		ballBody->setLinearVelocity(btVector3(0, ballBody->getLinearVelocity().y(), 0));
 		}
 		if (state[SDL_SCANCODE_SPACE]) {
-			position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y += MOVEMENT_SPEED;
+		position = VectorAdd(position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y += MOVEMENT_SPEED;
 
-			jump(player.component<RigidBody>().get(), collisionSystem->world);
-		}
+		jump(player.component<RigidBody>().get(), collisionSystem->world);
+		}*/
 		if (state[SDL_SCANCODE_LSHIFT]) position = VectorAdd(position, VectorSet(0, -MOVEMENT_SPEED, 0, 0)); // position.y -= MOVEMENT_SPEED;
 
 		game::PacketBase movePacket;
-		game::usercmd *moveMsg = movePacket.mutable_usercmd();
-		moveMsg->set_seqno(0);
-		game::vec3 *viewangles = moveMsg->mutable_viewangles();
+		game::usercmd *usercmd = movePacket.mutable_usercmd();
+		game::vec3 *viewangles = usercmd->mutable_viewangles();
 		viewangles->set_x(pitch);
 		viewangles->set_y(yaw);
 		viewangles->set_z(0);
 
-		moveMsg->set_w(state[SDL_SCANCODE_W]);
-		moveMsg->set_a(state[SDL_SCANCODE_A]);
-		moveMsg->set_s(state[SDL_SCANCODE_S]);
-		moveMsg->set_d(state[SDL_SCANCODE_D]);
-		bool space = state[SDL_SCANCODE_SPACE];
-		moveMsg->set_space(space);
+		usercmd->set_w(!!state[SDL_SCANCODE_W]);
+		usercmd->set_a(!!state[SDL_SCANCODE_A]);
+		usercmd->set_s(!!state[SDL_SCANCODE_S]);
+		usercmd->set_d(!!state[SDL_SCANCODE_D]);
+		bool space = !!state[SDL_SCANCODE_SPACE];
+		usercmd->set_space(space);
+
+		if (usercmd->w() || usercmd->a() || usercmd->s() || usercmd->d() || usercmd->space()) {
+			commands[lastAdded++ % 256] = *usercmd;
+		}
+		usercmd->set_seqno(lastAdded);
+		applyUsercmd(*usercmd, player.component<RigidBody>().get(), collisionSystem->world, &position);
+
 		sockaddr_in address;
 		NET_IP4_ADDR("127.0.0.1", 30000, &address);
 		sendPacket(client, address, movePacket, game::PacketBase_Type_USERCMD, space ? NET_RELIABLE : NET_UNRELIABLE);
 
 		if (state[SDL_SCANCODE_C]) noclip = !noclip;
 		// Set the view matrix
-		btTransform t;
 		if (noclip) {
 			// VectorGet(vv, position); view = MatrixTranslation(vv[0], vv[1], vv[2]);
 			view = MatrixTranslationFromVector(position);
 		}
 		else {
+			btTransform t;
 			ballBody->getMotionState()->getWorldTransform(t);
-			// t.getOpenGLMatrix(glm::value_ptr(view));
+
+			btVector3 origin = t.getOrigin();
+			for (int i = 0; i < 20; i++) {
+				lastPosition = btVector3(
+					lerp(lastPosition.x(), origin.x(), dt),
+					lerp(lastPosition.y(), origin.y(), dt),
+					lerp(lastPosition.z(), origin.z(), dt));
+			}
+			if (!state[SDL_SCANCODE_E]) t.setOrigin(lastPosition);
+
 			t.getOpenGLMatrix(mv);
 			view = MatrixLoad(mv);
-			/*btTransform ballTransform;
-			ball->motionState->getWorldTransform(ballTransform);
-			btVector3 pos = ballTransform.getOrigin();
-			view = glm::translate(glm::mat4(1.f), glm::vec3(pos.x(), pos.y(), pos.z()));*/
 		}
 		MAT rotationViewMatrix = MatrixRotationQuaternion(QuaternionRotationRollPitchYaw(pitch, yaw, 0));
 		MAT vInv = (MatrixMultiply(&rotationViewMatrix, &view));
@@ -336,6 +370,7 @@ int main(int argc, char *argv[]) {
 		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), vv[0], vv[1], vv[2], 1);
 
 		/* Draw ground. */
+		btTransform t;
 		ground.component<RigidBody>()->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(mv); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
 		model = MatrixLoad(mv);

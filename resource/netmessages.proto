@@ -28,7 +28,7 @@ message ClientLoginPacket {
 // add viewangles
 // use button bit field instead of bools
 message usercmd {
-	required int32 seqno = 1;
+	required uint32 seqno = 1;
 	required vec3 viewangles = 2;
 	required bool w = 3;
 	required bool a = 4;
@@ -45,11 +45,12 @@ message Msg_Disconnect {
 message entity_state {
 	required int32 id = 1;
 	required vec3 origin = 2;
+	required vec3 velocity = 3;
 }
 
 // packet_entities
 message gamest {
-	required int32 seqno = 1;
+	required uint32 seqno = 1;
 
 	repeated entity_state entity = 2;
 }

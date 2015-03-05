@@ -17,6 +17,8 @@ using namespace entityx;
 // Converts radians to degrees.
 #define radiansToDegrees(angleRadians) (angleRadians * 180.0 / PI)
 
+#define MOVEMENT_SPEED (0.5f * 50)
+
 namespace game {
 
 	struct RigidBody {
@@ -59,7 +61,7 @@ namespace game {
 		btRigidBody* m_me;
 	};
 
-	extern void walk(VEC *pos, float yaw, float distance, float direction, btRigidBody *body);
+	extern void walk(VEC *pos, float yaw, float direction, btRigidBody *body);
 
 	extern void jump(game::RigidBody *ball, btDynamicsWorld *world);
 
@@ -68,6 +70,8 @@ namespace game {
 	extern Entity createPlayer(EntityX &entityx);
 
 	extern void sendPacket(peer *client, sockaddr_in address, game::PacketBase packet, game::PacketBase_Type type, int flag);
+
+	extern void applyUsercmd(game::usercmd cmd, game::RigidBody *body, btDynamicsWorld *world, VEC *position);
 }
 
 struct model_node {

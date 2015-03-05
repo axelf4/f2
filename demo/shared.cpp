@@ -89,20 +89,21 @@ void game::CollisionSystem::receive(const ComponentRemovedEvent<game::RigidBody>
 	world->removeRigidBody(event.component->body);
 }
 
-void game::walk(VEC *pos, float yaw, float distance, float direction, btRigidBody *body) {
-	float xaccel = distance * (float)sin(degreesToRadians(yaw + direction)), zaccel = distance * (float)cos(degreesToRadians(yaw + direction));
+void game::walk(VEC *pos, float yaw, float direction, btRigidBody *body) {
+	float xaccel = MOVEMENT_SPEED * (float)sin(degreesToRadians(yaw + direction)), zaccel = MOVEMENT_SPEED * (float)cos(degreesToRadians(yaw + direction));
 	if (pos != 0) {
 		VEC accel = VectorSet(xaccel, 0, zaccel, 0);
 		*pos = VectorAdd(*pos, accel);
 	}
 
-	// body->setLinearVelocity(btVector3(xaccel * 50, yaccel, zaccel * 50));
-	body->applyCentralImpulse(btVector3(xaccel * 10, 0, zaccel * 10));
+	btVector3 velocity = body->getLinearVelocity();
+	body->setLinearVelocity(btVector3(velocity.x() + xaccel * 5, velocity.y(), velocity.z() + zaccel * 5));
+	// body->applyCentralImpulse(btVector3(xaccel * 10, 0, zaccel * 10));
 }
 
 void game::jump(game::RigidBody *ball, btDynamicsWorld *world) {
 	// Jumping
-	btTransform ballTransform;
+	/*btTransform ballTransform;
 	ball->motionState->getWorldTransform(ballTransform);
 	btVector3 pos = ballTransform.getOrigin(), btFrom(pos.x(), pos.y(), pos.z()), btTo(pos.x(), pos.y() - 1, pos.z());
 	ClosestNotMeRayResultCallback res(btFrom, btTo, ball->body);
@@ -110,30 +111,32 @@ void game::jump(game::RigidBody *ball, btDynamicsWorld *world) {
 	if (res.hasHit()){
 		ball->body->applyCentralImpulse(btVector3(0.0f, 2.5f * 100, 0.f));
 		cout << "jump" << endl;
-	}
+	}*/
 
-	btTransform xform;
-	ball->motionState->getWorldTransform(xform);
+	btTransform transform;
+	ball->motionState->getWorldTransform(transform);
 	// btVector3 down = -xform.getBasis()[1];
-	btVector3 down = ballTransform.getOrigin();
+	btVector3 down = transform.getOrigin();
 	// cout << down.getX() << down.getY() << down.getZ() << endl;
 	// down.normalize();
 	btScalar halfHeight = btScalar(5) / 2;
-	btVector3 from(xform.getOrigin()), to(from + down * halfHeight * btScalar(1.1));
+	btVector3 from(transform.getOrigin()), to(from + down * halfHeight * btScalar(1.1));
 	ClosestNotMeRayResultCallback rayCallback(from, to, ball->body);
 	rayCallback.m_closestHitFraction = 1.0;
 	world->rayTest(from, to, rayCallback);
 	if (rayCallback.hasHit())
 	{
-		if (rayCallback.m_closestHitFraction < btScalar(1.0)) {
+		if (rayCallback.m_closestHitFraction < btScalar(0.01)) {
 			cout << "jump" << endl;
-			btTransform xform;
-			ball->motionState->getWorldTransform(xform);
+			// btTransform xform;
+			// ball->motionState->getWorldTransform(xform);
 			// btVector3 up = xform.getBasis()[1];
 			// up.normalize();
-			btScalar magnitude = (btScalar(1.0) / ball->body->getInvMass()) * btScalar(8.0);
+			//btScalar magnitude = (btScalar(1.0) / ball->body->getInvMass()) * btScalar(8.0);
 			// ball->body->applyCentralImpulse(up * magnitude);
-			ball->body->applyCentralImpulse(btVector3(0.0f, 10 * magnitude, 0.f));
+			// btVector3 origin = transform.getOrigin();
+			// transform.setOrigin(btVector3(origin.x(), origin.y() + 1, origin.z()));
+			ball->body->applyCentralImpulse(btVector3(0, 2.5f * 100, 0));
 		}
 	}
 }
@@ -150,7 +153,8 @@ Entity game::createGround(EntityX &entityx, btBvhTriangleMeshShape *groundShape)
 
 Entity game::createPlayer(EntityX &entityx) {
 	/* Ball body */
-	btCollisionShape *ballShape = /* new btSphereShape(1) */ new btBoxShape(btVector3(5, 5, 5));
+	// btCollisionShape *ballShape = /* new btSphereShape(1) */ new btBoxShape(btVector3(5, 5, 5));
+	btCollisionShape *ballShape = new btCylinderShape(btVector3(5, 5, 5));
 	btDefaultMotionState* ballMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 50, 0)));
 	btScalar mass = 1;
 	btVector3 ballInertia(0, 0, 0);
@@ -174,6 +178,24 @@ void game::sendPacket(peer *client, sockaddr_in address, game::PacketBase packet
 	unsigned char *buffer = new unsigned char[len];
 	packet.SerializeToArray(buffer, len - NET_SEQNO_SIZE);
 	net_send(client, buffer, len, address, flag);
+}
+
+void game::applyUsercmd(game::usercmd cmd, game::RigidBody *body, btDynamicsWorld *world, VEC *position) {
+	game::vec3 viewangles = cmd.viewangles();
+	float pitch = viewangles.x(), yaw = viewangles.y();
+
+	if (cmd.w()) walk(position, yaw, 180, body->body);
+	if (cmd.a()) walk(position, yaw, 270, body->body);
+	if (cmd.s()) walk(position, yaw, 0, body->body);
+	if (cmd.d()) walk(position, yaw, 90, body->body);
+	if (!(cmd.w() || cmd.a() || cmd.s() || cmd.d())) {
+		body->body->setLinearVelocity(btVector3(0, body->body->getLinearVelocity().y(), 0));
+	}
+	if (cmd.space()) {
+		if (position != 0) *position = VectorAdd(*position, VectorSet(0, MOVEMENT_SPEED, 0, 0)); // position.y += MOVEMENT_SPEED;
+
+		jump(body, world);
+	}
 }
 
 void destroy_model(struct model *model) {
