@@ -101,15 +101,8 @@ GLuint create_null_texture(int width, int height) {
 }
 
 GLuint setupSkyboxTexture() {
-	/* load 6 images into a new OpenGL cube map, forcing RGB */
-	GLuint cubemap = SOIL_load_OGL_cubemap(
-		RESOURCE_DIR "zpos.png",
-		RESOURCE_DIR "zneg.png",
-		RESOURCE_DIR "ypos.png",
-		RESOURCE_DIR "yneg.png",
-		RESOURCE_DIR "xpos.png",
-		RESOURCE_DIR "xneg.png",
-		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	/* load image into a new OpenGL cube map, forcing RGB */
+	GLuint cubemap = SOIL_load_OGL_single_cubemap(RESOURCE_DIR "skybox.png", "SNDUWE", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
