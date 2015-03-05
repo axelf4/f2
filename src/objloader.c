@@ -224,6 +224,7 @@ struct obj_model * load_obj_model(const char *filename) {
 	model->materials = materials;
 	unsigned int i = 0;
 	struct group *group = firstGroup, *nextGroup;
+	unsigned int complete = 0;
 	do {
 		nextGroup = group->next; // Need this reference before freeing the group
 		// Skip the group if empty, don't care about the empty space in the parts array
@@ -263,16 +264,18 @@ struct obj_model * load_obj_model(const char *filename) {
 				uvIndex = hasUVs ? group->faces[j++] * 2 : 0,
 				normIndex = hasNorms ? group->faces[j++] * 3 : 0;
 
-			int found = 0;
-			for (unsigned int l = 0; l < group->facesSize && l < j - 3;) {
+			int existing = 0;
+			for (unsigned int l = 0; l < j;) {
 				if (vertIndex == group->faces[l++] &&
 					(!hasUVs || uvIndex == group->faces[l++]) &&
 					(!hasNorms || normIndex == group->faces[l++])) {
-					found = 1;
+					if (l == j) break; // Compared against itself
+					existing = 1;
 					indices[k] = l;
+					break;
 				}
 			}
-			if (!found) {
+			if (!existing) {
 				indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
 				if (vi + (3 + hasUVs * 2 + hasNorms * 3) >= verticesCapacity) {
 					vertices = (float *)realloc(vertices, sizeof(float) * (verticesCapacity *= 4));
@@ -291,6 +294,7 @@ struct obj_model * load_obj_model(const char *filename) {
 				}
 			}
 		}
+		complete += vi;
 		part->vertexCount = vi;
 		part->vertices = vertices;
 #endif
@@ -300,6 +304,7 @@ struct obj_model * load_obj_model(const char *filename) {
 		free(group);
 		i++; // Increment for next group
 	} while ((group = nextGroup) != 0);
+	printf("Complete %d\n.", complete);
 	model->numParts = i; // Set the model's number of parts to the actual number of groups/parts as counted
 	free(verts);
 	free(uvs);
