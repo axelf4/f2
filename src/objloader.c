@@ -224,7 +224,6 @@ struct obj_model * load_obj_model(const char *filename) {
 	model->materials = materials;
 	unsigned int i = 0;
 	struct group *group = firstGroup, *nextGroup;
-	unsigned int complete = 0;
 	do {
 		nextGroup = group->next; // Need this reference before freeing the group
 		// Skip the group if empty, don't care about the empty space in the parts array
@@ -294,7 +293,6 @@ struct obj_model * load_obj_model(const char *filename) {
 				}
 			}
 		}
-		complete += vi;
 		part->vertexCount = vi;
 		part->vertices = vertices;
 #endif
@@ -304,7 +302,6 @@ struct obj_model * load_obj_model(const char *filename) {
 		free(group);
 		i++; // Increment for next group
 	} while ((group = nextGroup) != 0);
-	printf("Complete %d\n.", complete);
 	model->numParts = i; // Set the model's number of parts to the actual number of groups/parts as counted
 	free(verts);
 	free(uvs);
