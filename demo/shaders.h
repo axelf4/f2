@@ -3,8 +3,8 @@
 
 namespace shaders {
     // skybox.vert & skybox.frag
-    const char *skyboxVertexSrc = GLSL(attribute vec2 vertex; uniform mat4 invProjection; uniform mat4 trnModelView; varying vec3 eyeDirection; void main() { eyeDirection = vec3(trnModelView * invProjection * (gl_Position = vec4(vertex, 0.0, 1.0))); /* trnModelView * unprojected */ });
-    const char *skyboxFragmentSrc = GLSL(varying vec3 eyeDirection; uniform samplerCube texture; void main() { gl_FragColor = textureCube(texture, eyeDirection); });
+	const char *skyboxVertexSrc = GLSL(attribute vec2 vertex; uniform mat4 invProjection; uniform mat4 trnModelView; varying vec3 eyeDirection; void main() { eyeDirection = vec3(trnModelView * invProjection * (gl_Position = vec4(vertex, 0.0, 1.0))); /* trnModelView * unprojected */ });
+	const char *skyboxFragmentSrc = GLSL(varying vec3 eyeDirection; uniform samplerCube texture; void main() { gl_FragColor = textureCube(texture, eyeDirection); gl_FragDepth = 1.0; });
 
     // phong.vert
     const char phongVertexSrc[] = GLSL(

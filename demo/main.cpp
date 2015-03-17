@@ -22,7 +22,7 @@
 using namespace game;
 
 // #define WINDOW_TITLE "Point and Click Adventures"
-#define WINDOW_TITLE "Call of Duty: Avancerad V\xC3\xA4lf\xC3\xA4rd"
+#define WINDOW_TITLE "Call of Duty: Avancerad V\xC3\xA4lf\xC3\xA4rd v0.0.1 \"Sex and Candy\" Release"
 // 640/480, 800/600, 1366/768
 #define WINDOW_WIDTH 800.f
 #define WINDOW_HEIGHT 600.f
@@ -76,30 +76,6 @@ GLuint load_texture(const char *filename) {
 	return texture;
 }
 
-// TODO merge into load_texture
-GLuint create_null_texture(int width, int height) {
-	// Create an empty white texture. This texture is applied to OBJ models
-	// that don't have any texture maps. This trick allows the same shader to
-	// be used to draw the OBJ model with and without textures applied.
-
-	int pitch = ((width * 32 + 31) & ~31) >> 3; // align to 4-byte boundaries
-	GLubyte *pixels = new GLubyte[pitch * height] /* { 255 } */;
-	for (int i = 0; i < pitch * height; i++) pixels[i] = 255;
-	GLuint texture = 0;
-
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, &pixels[0]);
-
-	return texture;
-}
-
 GLuint setupSkyboxTexture() {
 	/* load image into a new OpenGL cube map, forcing RGB */
 	GLuint cubemap = SOIL_load_OGL_single_cubemap(RESOURCE_DIR "skybox.png", "SNDUWE", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
@@ -112,6 +88,92 @@ GLuint setupSkyboxTexture() {
 
 	return cubemap;
 }
+
+struct GBuffer {
+	enum GBUFFER_TEXTURE_TYPE {
+		GBUFFER_TEXTURE_TYPE_POSITION,
+		GBUFFER_TEXTURE_TYPE_DIFFUSE,
+		GBUFFER_TEXTURE_TYPE_NORMAL,
+		GBUFFER_NUM_TEXTURES
+	};
+
+	GLuint fbo,
+		textures[GBUFFER_NUM_TEXTURES],
+		depthTexture;
+
+	GBuffer() {}
+
+	~GBuffer() {
+		//Delete resources
+		glDeleteTextures(1, &depthTexture);
+		glDeleteTextures(GBUFFER_NUM_TEXTURES, textures);
+		//Bind 0, which means render to back buffer, as a result, fb is unbound
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDeleteFramebuffersEXT(1, &fbo);
+	}
+
+	bool Init(unsigned int WindowWidth, unsigned int WindowHeight) {
+		// TODO we only need diffuse normal and depth!
+
+		// Create the FBO
+		glGenFramebuffers(1, &fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+		// Create the gbuffer textures
+		glGenTextures(GBUFFER_NUM_TEXTURES, textures);
+		for (unsigned int i = 0; i < GBUFFER_NUM_TEXTURES; i++) {
+			glBindTexture(GL_TEXTURE_2D, textures[i]);
+			GLint internalFormat;
+			if (i == GBUFFER_TEXTURE_TYPE_DIFFUSE) internalFormat = GL_RGB;
+			else if (i == GBUFFER_TEXTURE_TYPE_NORMAL) internalFormat = GL_RGB16F;
+			else if (i == GBUFFER_TEXTURE_TYPE_POSITION) internalFormat = GL_RGB32F;
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WindowWidth, WindowHeight, 0, GL_RGB, GL_FLOAT, NULL);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, textures[i], 0);
+		}
+
+		// depth
+		glGenTextures(1, &depthTexture);
+		glBindTexture(GL_TEXTURE_2D, depthTexture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		// glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_INTENSITY);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+		/*glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, WindowWidth, WindowHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);*/
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, WindowWidth, WindowHeight, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+
+		GLenum DrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+		glDrawBuffers(3, DrawBuffers);
+
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (status != GL_FRAMEBUFFER_COMPLETE) {
+			printf("FB error, status: 0x%x\n", status);
+			return false;
+		}
+
+		// restore default FBO
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		return true;
+	}
+
+	void BindForReadingTextures() {
+		for (unsigned int i = 0; i < GBUFFER_NUM_TEXTURES; i++) {
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, textures[GBUFFER_TEXTURE_TYPE_POSITION + i]);
+		}
+		glActiveTexture(GL_TEXTURE0 + GBUFFER_NUM_TEXTURES);
+		glBindTexture(GL_TEXTURE_2D, depthTexture);
+	}
+};
 
 float lerp(float v0, float v1, float t) {
 	return v0 + t * (v1 - v0);
@@ -155,8 +217,8 @@ int main(int argc, char *argv[]) {
 	// Depth testing
 	glDepthFunc(GL_LEQUAL);
 	// Alpha blending
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// glEnable(GL_BLEND);
+	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	// Culling
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
@@ -170,7 +232,7 @@ int main(int argc, char *argv[]) {
 	const unsigned int cubeIndices[] = { 0, 1, 2, 0, 2, 3 }; /* Indices for the faces of a Cube. */
 	GLuint skyboxTex = setupSkyboxTexture();
 	GLuint skyboxProg = create_program(shaders::skyboxVertexSrc, shaders::skyboxFragmentSrc);
-	glUseProgram(skyboxProg);
+	glUseProgram(skyboxProg); // glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
 	GLchar *infoLog = getProgramInfoLog(skyboxProg);
 	cout << "Skybox program info log: " << infoLog << endl;
 	free(infoLog);
@@ -183,12 +245,20 @@ int main(int argc, char *argv[]) {
 
 	// f1::program *phong = new program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
 	// cout << "Shader program info log: " << *phong << endl;
-	GLuint phong = create_program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
+	// GLuint phong = create_program(shaders::phongVertexSrc, shaders::phongFragmentSrc);
+	GLuint phong = create_program(read_file(RESOURCE_DIR "geometry_pass.vs"), read_file(RESOURCE_DIR "geometry_pass.fs"));
 	infoLog = getProgramInfoLog(skyboxProg);
 	cout << "Shader program info log: " << infoLog << endl;
 	free(infoLog);
-	struct model *groundMesh = loadMeshUsingObjLoader(RESOURCE_DIR "cs_office/cs_office.obj", phong, true, load_texture);
+	struct model *groundMesh = loadMeshUsingObjLoader(RESOURCE_DIR "cs_office/cs_office.obj", phong, true, load_texture); // cs_office/cs_office.obj
 	btBvhTriangleMeshShape *groundShape = new btBvhTriangleMeshShape(groundMesh->tiva, true);
+
+	GBuffer *gbuffer = new GBuffer();
+	gbuffer->Init(WINDOW_WIDTH, WINDOW_HEIGHT);
+	GLuint lightpass = create_program(read_file(RESOURCE_DIR "light_pass.vs"), read_file(RESOURCE_DIR "dir_light_pass.fs"));
+	infoLog = getProgramInfoLog(skyboxProg);
+	cout << "Light_pass program info log: " << infoLog << endl;
+	free(infoLog);
 
 	entityx::EntityX entityx;
 	std::shared_ptr<game::CollisionSystem> collisionSystem = entityx.systems.add<CollisionSystem>();
@@ -220,7 +290,7 @@ int main(int argc, char *argv[]) {
 	net_send(client, buffer, len, sendAddress, NET_RELIABLE);
 	// net_send(client, buffer, len, net_address("127.0.0.1", 30000), NET_RELIABLE);
 
-	bool noclip = false;
+	bool noclip = true;
 
 	bool done = false;
 	SDL_Event event;
@@ -251,8 +321,14 @@ int main(int argc, char *argv[]) {
 				for (int i = 0; i < gamest.entity_size(); i++) {
 					game::entity_state entity = gamest.entity(i);
 					game::vec3 origin = entity.origin();
+
 					btTransform transform = ballBody->getWorldTransform();
-					transform.setOrigin(btVector3(origin.x(), origin.y(), origin.z()));
+					btVector3 oldOrigin = transform.getOrigin();
+					// transform.setOrigin(btVector3(origin.x(), origin.y(), origin.z()));
+					transform.setOrigin(btVector3(
+						lerp(oldOrigin.x(), origin.x(), dt),
+						lerp(oldOrigin.y(), origin.y(), dt),
+						lerp(oldOrigin.z(), origin.z(), dt)));
 					ballBody->setWorldTransform(transform);
 
 					game::vec3 velocity = entity.velocity();
@@ -323,14 +399,14 @@ int main(int argc, char *argv[]) {
 			btTransform t;
 			ballBody->getMotionState()->getWorldTransform(t);
 
-			btVector3 origin = t.getOrigin();
+			/*btVector3 origin = t.getOrigin();
 			for (int i = 0; i < 20; i++) {
-				lastPosition = btVector3(
-					lerp(lastPosition.x(), origin.x(), dt),
-					lerp(lastPosition.y(), origin.y(), dt),
-					lerp(lastPosition.z(), origin.z(), dt));
+			lastPosition = btVector3(
+			lerp(lastPosition.x(), origin.x(), dt),
+			lerp(lastPosition.y(), origin.y(), dt),
+			lerp(lastPosition.z(), origin.z(), dt));
 			}
-			if (!state[SDL_SCANCODE_E]) t.setOrigin(lastPosition);
+			if (!state[SDL_SCANCODE_E]) t.setOrigin(lastPosition);*/
 
 			t.getOpenGLMatrix(mv);
 			view = MatrixLoad(mv);
@@ -340,39 +416,34 @@ int main(int argc, char *argv[]) {
 		view = MatrixInverse(&vInv);
 		MAT modelView = MatrixMultiply(&model, &view), viewProjection = MatrixMultiply(&view, &projection);
 
-		glClearColor(0.5f, 0.3f, 0.8f, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		/* Draw skybox. */
-		glDisable(GL_DEPTH_TEST);
-		glUseProgram(skyboxProg);
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, MatrixInverse(&projection)));
-		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, MatrixTranspose(&modelView)));
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
-		glUniform1i(glGetUniformLocation(skyboxProg, "texture"), 0);
-		bind_mesh(skybox, skyboxAttribs, 0, glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
-
 		/* Draw everything. */
+		// First pass (geometry)
+		glBindFramebuffer(GL_FRAMEBUFFER, gbuffer->fbo);
+		glDepthMask(GL_TRUE); // Only the geometry pass updates the depth buffer
+
+		/*glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_NEVER, 1, 0xFF); // never pass stencil test
+		glStencilOp(GL_REPLACE, GL_KEEP, GL_KEEP);  // replace stencil buffer values to ref=1
+		glStencilMask(0xFF); // stencil buffer free to write*/
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+		glDisable(GL_BLEND);
+
 		glUseProgram(phong);
 		glUniformMatrix4fv(glGetUniformLocation(phong, "p"), 1, GL_FALSE, MatrixGet(mv, projection));
 		glUniformMatrix4fv(glGetUniformLocation(phong, "v"), 1, GL_FALSE, MatrixGet(mv, view));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "vInv"), 1, GL_FALSE, MatrixGet(mv, vInv));
-		VectorGet(vv, position);
-		glUniform4f(glGetUniformLocation(phong, "eyeCoords"), vv[0], vv[1], vv[2], 1);
 
 		/* Draw ground. */
 		btTransform t;
 		ground.component<RigidBody>()->body->getMotionState()->getWorldTransform(t); // Get the transform from Bullet and into 't'
 		t.getOpenGLMatrix(mv); // Convert the btTransform into the GLM matrix using 'glm::value_ptr'
 		model = MatrixLoad(mv);
-		// MAT scaleMatrix = MatrixScaling(100, 100, 100);
-		// model = MatrixMultiply(&model, &scaleMatrix);
 		glUniformMatrix4fv(glGetUniformLocation(phong, "m"), 1, GL_FALSE, MatrixGet(mv, model));
-		glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, MatrixInverse(&modelView)));
+		// glUniformMatrix4fv(glGetUniformLocation(phong, "normalMatrix"), 1, GL_FALSE, MatrixGet(mv, MatrixInverse(&modelView)));
 		glActiveTexture(GL_TEXTURE0);
-		glUniform1i(glGetUniformLocation(phong, "tex"), 0);
+		glUniform1i(glGetUniformLocation(phong, "gColorMap"), 0);
 		for (unsigned int i = 0; i < groundMesh->nodeCount; i++) {
 			model_node *node = groundMesh->nodes[i];
 
@@ -381,11 +452,59 @@ int main(int argc, char *argv[]) {
 			// bind_mesh(node->mesh, node->attributes, node->stride, glDrawArrays(GL_TRIANGLES, 0, node->vertexCount););
 		}
 
-		// world->world->debugDrawWorld(); // Debug draw the bullet world
-		// dynamic_cast<GLDebugDrawer*>(world->debugDraw)->end(MatrixGet(mv, MatrixMultiply(&model, &viewProjection)));
+		// Second pass (lightning)
+		// When we get here the depth buffer is already populated and the stencil pass
+		// depends on it, but it does not write to it.
+		// glDepthMask(GL_FALSE);
+		// glStencilMask(0x00);
+		// glDisable(GL_DEPTH_TEST);
+		glDepthFunc(GL_ALWAYS); // GL_DEPTH_TEST needs to be enabled for depth to be stored
+
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ONE, GL_ONE);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0); // Render to back buffer
+		// glDrawBuffer(GL_BACK);
+
+		glClearColor(0.f, 0.f, 0.f, 0.f);
+		// glClearDepth(0.f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		gbuffer->BindForReadingTextures();
+
+		// directional light
+		glUseProgram(lightpass);
+		VectorGet(vv, position);
+		glUniform3f(glGetUniformLocation(lightpass, "eyeCoords"), vv[0], vv[1], vv[2]);
+		glUniformMatrix4fv(glGetUniformLocation(lightpass, "mvp"), 1, GL_FALSE, MatrixGet(mv, MatrixIdentity()));
+		glUniform1i(glGetUniformLocation(lightpass, "gPositionMap"), GBuffer::GBUFFER_TEXTURE_TYPE_POSITION);
+		glUniform1i(glGetUniformLocation(lightpass, "gColorMap"), GBuffer::GBUFFER_TEXTURE_TYPE_DIFFUSE);
+		glUniform1i(glGetUniformLocation(lightpass, "gNormalMap"), GBuffer::GBUFFER_TEXTURE_TYPE_NORMAL);
+		glUniform1i(glGetUniformLocation(lightpass, "depthMap"), GBuffer::GBUFFER_NUM_TEXTURES);
+		glUniform2f(glGetUniformLocation(lightpass, "gScreenSize"), WINDOW_WIDTH, WINDOW_HEIGHT);
+		glUniformMatrix4fv(glGetUniformLocation(lightpass, "vInv"), 1, GL_FALSE, MatrixGet(mv, vInv));
+		bind_mesh(skybox, skyboxAttribs, 0, glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
+		/***/
+
+		glDisable(GL_BLEND);
+		glDepthFunc(GL_LEQUAL); // GEQUAL
+		// glStencilFunc(GL_EQUAL, 1, 0xFF); // stencil test: only pass stencil test at stencilValue == 1 (Assuming depth test would pass.) and write actual content to depth and color buffer only at stencil shape locations.
+		/* Draw skybox. */
+		glUseProgram(skyboxProg);
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "invProjection"), 1, GL_FALSE, MatrixGet(mv, MatrixInverse(&projection)));
+		glUniformMatrix4fv(glGetUniformLocation(skyboxProg, "trnModelView"), 1, GL_FALSE, MatrixGet(mv, MatrixTranspose(&modelView)));
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
+		bind_mesh(skybox, skyboxAttribs, 0, glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(0)););
+
+		// collisionSystem->world->debugDrawWorld(); // Debug draw the bullet world
+		// dynamic_cast<GLDebugDrawer*>(collisionSystem->debugDraw)->end(MatrixGet(mv, MatrixMultiply(&model, &viewProjection)));
 
 		GLenum error;
-		while ((error = glGetError()) != 0) cout << "GL error: " << error << endl;/**/
+		while ((error = glGetError()) != 0) {
+			cout << "GL error: " << error << endl;
+		}/**/
 		SDL_GL_SwapWindow(win);
 		entityx.systems.update_all(dt);
 		if ((1000 / FPS) > (SDL_GetTicks() - start_time)) SDL_Delay((1000 / FPS) - (SDL_GetTicks() - start_time));
@@ -397,12 +516,15 @@ int main(int argc, char *argv[]) {
 	net_peer_dispose(client);
 	net_deinitialize();
 
+	glDeleteProgram(lightpass);
 	glDeleteProgram(phong);
-	destroy_model(groundMesh);
+	glDeleteProgram(skyboxProg);
 
 	glDeleteTextures(1, &skyboxTex);
-	glDeleteProgram(skyboxProg);
 	destroy_mesh(skybox);
+	destroy_model(groundMesh);
+
+	delete gbuffer;
 
 	SDL_GL_DeleteContext(glcontext);
 	SDL_DestroyWindow(win);

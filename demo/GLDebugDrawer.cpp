@@ -47,6 +47,8 @@ void GLDebugDrawer::end(const float *modelViewProjection) {
 	GLint color = glGetAttribLocation(program, "color");
 	glEnableVertexAttribArray(color);
 	glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, stride, BUFFER_OFFSET(sizeof(float) * 3));
+	
+	glDisable(GL_DEPTH_TEST);
 
 	glDrawArrays(GL_LINES, 0, vertices.size());
 

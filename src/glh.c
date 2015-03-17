@@ -21,7 +21,8 @@ const char *read_file(const char *filename) {
 		fseek(f, 0, SEEK_END);
 		length = ftell(f);
 		fseek(f, 0, SEEK_SET);
-		buffer = malloc(length);
+		buffer = malloc(length + 1);
+		buffer[length] = 0;
 		if (buffer) fread(buffer, 1, length, f);
 		fclose(f);
 	}
@@ -30,7 +31,7 @@ const char *read_file(const char *filename) {
 }
 
 GLuint create_program(const char *vertexShader, const char *fragmentShader) {
-	GLuint vert, frag, id;
+	GLuint vert, frag, id = 0;
 	if ((vert = compile_shader(GL_VERTEX_SHADER, vertexShader)) == 0) goto deleteVertex;
 	if ((frag = compile_shader(GL_FRAGMENT_SHADER, fragmentShader)) == 0) goto deleteFragment;
 	if ((id = glCreateProgram()) == 0) goto deleteFragment;
@@ -59,7 +60,8 @@ GLuint compile_shader(GLenum type, const char *source) {
 		fprintf(stderr, "Error creating shader.\n");
 		return 0;
 	}
-	glShaderSource(shader, 1, &source, NULL);
+	const char **test = &source;
+	glShaderSource(shader, 1, test, NULL);
 
 	glCompileShader(shader);
 	GLint status;

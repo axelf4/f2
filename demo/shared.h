@@ -37,10 +37,9 @@ namespace game {
 		btDefaultCollisionConfiguration *collisionConfiguration;
 		btCollisionDispatcher *dispatcher;
 		btSequentialImpulseConstraintSolver *solver;
-
-		btIDebugDraw *debugDraw;
 	public:
 		btDynamicsWorld *world;
+		btIDebugDraw *debugDraw;
 
 		CollisionSystem();
 		~CollisionSystem();
