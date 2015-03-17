@@ -264,7 +264,7 @@ struct obj_model * load_obj_model(const char *filename) {
 				normIndex = hasNorms ? group->faces[j++] * 3 : 0;
 
 			int existing = 0;
-			for (unsigned int l = 0; l < j;) {
+			/*for (unsigned int l = 0; l < j;) {
 				if (vertIndex == group->faces[l++] &&
 					(!hasUVs || uvIndex == group->faces[l++]) &&
 					(!hasNorms || normIndex == group->faces[l++])) {
@@ -273,7 +273,7 @@ struct obj_model * load_obj_model(const char *filename) {
 					indices[k] = l;
 					break;
 				}
-			}
+			}*/
 			if (!existing) {
 				indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
 				if (vi + (3 + hasUVs * 2 + hasNorms * 3) >= verticesCapacity) {
