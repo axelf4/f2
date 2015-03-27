@@ -3,31 +3,11 @@ compiler:
   - gcc
   - clang
 before_install:
-  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-  - sudo apt-get update -qq
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; fi
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
   # OpenGL Extension Wrangler & Simple OpenGL Image Library & Google Test & lcov
   - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
-  # SDL2
-  - curl -O https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
-  - tar -xzvf SDL2-2.0.3.tar.gz
-  - (cd SDL2-2.0.3 && ./configure && make && sudo make install)
-  # Bullet Physics
-  - wget -N https://github.com/bulletphysics/bullet3/archive/master.zip
-  - unzip master.zip
-  - (cd bullet3-master && cmake -DBUILD_BULLET2_DEMOS=OFF -DBUILD_OPENGL3_DEMOS=OFF -DBUILD_EXTRAS=OFF -DBUILD_UNIT_TESTS=OFF . -G "Unix Makefiles" && make && sudo make install)
   # GTest (copying libgtest.a and libgtest_main.a to /usr/lib) & Coveralls::Lcov
   - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp *.a /usr/lib)
   - gem install coveralls-lcov
-  # Protobuf
-  - wget https://github.com/google/protobuf/releases/download/v3.0.0-alpha-1/protobuf-cpp-3.0.0-alpha-1.tar.gz
-  - tar -xzvf protobuf-cpp-3.0.0-alpha-1.tar.gz
-  - (cd protobuf-3.0.0-alpha-1 && ./configure --prefix=/usr && make && sudo make install)
-  # EntityX
-  - wget -N https://github.com/alecthomas/entityx/archive/master.zip
-  - unzip master.zip
-  - (cd entityx-master && cmake . -G "Unix Makefiles" && make && sudo make install)
 script:
   - (mkdir build && cd build && cmake -DBUILD_TESTS=ON .. -G "Unix Makefiles" && make)
 after_success:

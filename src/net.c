@@ -84,9 +84,11 @@ struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxCo
 }
 
 void net_peer_dispose(struct peer *peer) {
-	int result = close
+	int result =
 #ifdef _WIN32
-			socket
+		closesocket
+#else
+		close
 #endif
 			(peer->socket);
 	if (result == -1) {

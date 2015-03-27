@@ -8,4 +8,5 @@ int listenforchanges(
 #ifdef _WIN32
 
 #endif
+	return 0;
 }
