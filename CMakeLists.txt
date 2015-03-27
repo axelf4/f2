@@ -14,7 +14,9 @@ set(SOURCES
 	include/glTFloader.h
 	src/glTFloader.cpp
 	include/time.h
-	src/time.c)
+	src/time.c
+	include/filesystemwatch.h
+	src/filesystemwatch.c)
 	
 set(DEMO_SOURCES
 	demo/main.cpp
