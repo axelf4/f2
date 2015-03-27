@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "time.h"
+#include "timer.h"
 #include <fcntl.h>
 
 static struct conn * add_connection(struct peer *peer, struct sockaddr_in address) {
@@ -90,7 +90,7 @@ void net_peer_dispose(struct peer *peer) {
 #else
 		close
 #endif
-			(peer->socket);
+		(peer->socket);
 	if (result == -1) {
 		printf("closesocket failed with error: %d\n", WSAGetLastError());
 		return;
@@ -162,7 +162,7 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = connection->lastSent >> i * 8;
 		// buf[len - 1] = connection->lastSent;
 
-		char **historyBuf = connection->sentBuffers + connection->lastSent - 1;
+		char **historyBuf = (char **)connection->sentBuffers + connection->lastSent - 1;
 		if (*historyBuf != 0) free(*historyBuf); // If there was an old buffer at the index: free it
 		*historyBuf = buf;
 		connection->sentLengths[connection->lastSent - 1] = len;

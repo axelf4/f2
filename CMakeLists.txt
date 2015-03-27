@@ -13,8 +13,8 @@ set(SOURCES
 	src/objloader.c
 	include/glTFloader.h
 	src/glTFloader.cpp
-	include/time.h
-	src/time.c
+	include/timer.h
+	src/timer.c
 	include/filesystemwatch.h
 	src/filesystemwatch.c)
 
