@@ -181,7 +181,12 @@ beginning:; // If received a packet used internally: don't return, but skip it
 	int fromlen = sizeof(struct sockaddr_in), result;
 	if ((result = recvfrom(peer->socket, buf, buflen, 0, (struct sockaddr *)from, &fromlen)) == -1) {
 		int error = WSAGetLastError();
-		if (error == EWOULDBLOCK || error == ECONNRESET) return 0;
+#ifdef _WIN32
+		if (error == WSAEWOULDBLOCK || error == WSAECONNRESET)
+#else
+		if (error == EWOULDBLOCK || error == ECONNRESET)
+#endif
+			return 0;
 		// printf("recvfrom failed with error %d\n", error);
 	}
 	else if (result > 0) {

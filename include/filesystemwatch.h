@@ -11,9 +11,11 @@ extern "C" {
 
 	extern int listenforchanges(
 #ifdef _WIN32
-		LPCTSTR lpPathName
+		LPCTSTR lpPathName,
+#else
+		const char *pathname,
 #endif
-		, void(*callback)());
+		void(*callback)());
 
 #ifdef __cplusplus
 }

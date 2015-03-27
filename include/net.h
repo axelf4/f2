@@ -14,17 +14,14 @@ extern "C" {
 #pragma comment(lib, "Ws2_32.lib")
 	// #pragma comment (lib, "Mswsock.lib")
 	// #pragma comment (lib, "AdvApi32.lib")
-
-#define ECONNRESET WSAECONNRESET
-#define EWOULDBLOCK WSAEWOULDBLOCK
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include <errno.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #define WSAGetLastError() errno
 #endif
@@ -83,7 +80,7 @@ extern "C" {
 			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
 		unsigned int lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
 			lastReceived; /**< The sequence number of the last received packet (defaults to 0). */
-		double lastSendTime, /**< A timestamp of when a reliable packet was last sent to the connection. */
+		long lastSendTime, /**< A timestamp of when a reliable packet was last sent to the connection. */
 			lastReceiveTime;
 		char *data; /**< Attached application data, is managed. */
 	};

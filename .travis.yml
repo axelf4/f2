@@ -3,8 +3,8 @@ compiler:
   - gcc
   - clang
 before_install:
-  # OpenGL Extension Wrangler & Simple OpenGL Image Library & Google Test & lcov
-  - sudo apt-get install -y libglew-dev libsoil-dev libgtest-dev lcov
+  # OpenGL Extension Wrangler & Google Test & lcov
+  - sudo apt-get install -y libglew-dev libgtest-dev lcov
   # GTest (copying libgtest.a and libgtest_main.a to /usr/lib) & Coveralls::Lcov
   - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp *.a /usr/lib)
   - gem install coveralls-lcov

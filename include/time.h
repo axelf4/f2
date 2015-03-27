@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-	extern double time_get();
+	extern long time_get();
 
 #ifdef __cplusplus
 }
