@@ -201,6 +201,9 @@ int main(int argc, char *argv[]) {
 		std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
 		return 1;
 	}
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+
 	SDL_SetRelativeMouseMode(SDL_TRUE); // Capture mouse and use relative coordinates
 	SDL_Window *win = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, (int)WINDOW_WIDTH, (int)WINDOW_HEIGHT, SDL_WINDOW_OPENGL);
 	if (win == 0) {

@@ -91,7 +91,7 @@ struct model {
 	model_node **nodes;
 	size_t nodeCount;
 	btTriangleIndexVertexArray *tiva;
-	obj_model *obj_model;
+	struct obj_model *obj_model;
 };
 
 extern void destroy_model(struct model *model);
