@@ -13,8 +13,9 @@ long time_get() {
 	QueryPerformanceCounter(&count);
 	return (long)count.QuadPart * 1000000 / Frequency.QuadPart;
 #else
-	struct timespec tp;
+	/*struct timespec tp;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
-	return tp.tv_nsec;
+	return tp.tv_nsec;*/
+	return 0;
 #endif
 }
