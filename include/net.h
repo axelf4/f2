@@ -8,12 +8,25 @@
 extern "C" {
 #endif
 
-#ifdef _WIN32	
+#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
 	// #pragma comment (lib, "Mswsock.lib")
 	// #pragma comment (lib, "AdvApi32.lib")
+
+#define ECONNRESET WSAECONNRESET
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <errno.h>
+#include <arpa/inet.h>
+
+#define WSAGetLastError() errno
 #endif
 
 #ifndef DEFAULT_BUFLEN
@@ -77,8 +90,11 @@ extern "C" {
 
 	struct peer {
 #ifdef _WIN32
-		SOCKET socket;
+		SOCKET
+#else
+		int
 #endif
+			socket;
 		struct conn **connections;
 		unsigned int numConnections;
 

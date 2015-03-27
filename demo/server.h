@@ -2,7 +2,6 @@
 #define SERVER_H
 
 #include <net.h>
-#include <thread>
 #include <entityx/entityx.h>
 #include "shared.h"
 #include <vector>
