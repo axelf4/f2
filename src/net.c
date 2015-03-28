@@ -162,7 +162,7 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = connection->lastSent >> i * 8;
 		// buf[len - 1] = connection->lastSent;
 
-		char **historyBuf = (char **)connection->sentBuffers + connection->lastSent - 1;
+		unsigned char **historyBuf = connection->sentBuffers + connection->lastSent - 1;
 		if (*historyBuf != 0) free(*historyBuf); // If there was an old buffer at the index: free it
 		*historyBuf = buf;
 		connection->sentLengths[connection->lastSent - 1] = len;
