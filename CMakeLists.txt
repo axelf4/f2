@@ -15,8 +15,8 @@ set(SOURCES
 	src/glTFloader.cpp
 	include/timer.h
 	src/timer.c
-	include/filesystemwatch.h
-	src/filesystemwatch.c)
+	include/FileSystemWatcher.h
+	src/FileSystemWatcher.c)
 
 find_package(OpenGL REQUIRED)
 # find_package(OpenCL REQUIRED) ${OPENCL_INCLUDE_DIRS} ${OPENCL_LIBRARIES}
