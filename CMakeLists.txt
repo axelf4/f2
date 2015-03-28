@@ -58,6 +58,6 @@ if(BUILD_TESTS)
 
 	add_executable(runTests test/test_vec4.cpp test/test_graphics.cpp test/test_objloader.cpp)
 	# target_link_libraries(runTests ${GTEST_BOTH_LIBRARIES} pthread ${LIBRARIES})
-	target_link_libraries(runTests gtest gtest_main f2 ${OPENGL_LIBRARIES} ${GLEW_LIBRARY})
+	target_link_libraries(runTests gtest gtest_main f2 ${GLEW_LIBRARY} ${OPENGL_LIBRARIES})
 	# add_test(NAME runTests COMMAND runTests)
 endif()
