@@ -60,8 +60,8 @@ GLuint compile_shader(GLenum type, const char *source) {
 		fprintf(stderr, "Error creating shader.\n");
 		return 0;
 	}
-	const char **test = &source;
-	glShaderSource(shader, 1, test, NULL);
+	const char **string = &source;
+	glShaderSource(shader, 1, string, NULL);
 
 	glCompileShader(shader);
 	GLint status;
