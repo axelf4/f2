@@ -1,7 +1,9 @@
 #include "FileSystemWatcher.h"
+#include <stdlib.h>
 
-#ifdef _WIN32
-#include <tchar.h>
+#ifndef _WIN32
+#include <unistd.h>
+#include <stdio.h>
 #endif
 
 struct FileSystemWatcher *create_FileSystemWatcher() {
@@ -22,14 +24,16 @@ struct FileSystemWatcher *create_FileSystemWatcher() {
 
 void destroy_FileSystemWatcher(struct FileSystemWatcher *watcher) {
 #ifdef _WIN32
-	for (int i = 0; i < watcher->count; i++) {
+	for (DWORD i = 0; i < watcher->count; i++) {
 		FindCloseChangeNotification(watcher->handles[i]);
 	}
-	free(watcher->handles);
 #else
-	if (watcher->wd != -1) inotify_rm_watch(watcher->fd, watcher->wd);
+	for (int i = 0; i < watcher->count; i++) {
+		inotify_rm_watch(watcher->fd, watcher->handles[i]);
+	}
 	close(watcher->fd);
 #endif
+	free(watcher->handles);
 	free(watcher);
 }
 
@@ -54,7 +58,7 @@ int add_FileSystemWatcherTarget(struct FileSystemWatcher *watcher,
 	// inotify doesn't support watching subtree's so it's a no-no
 	if ((handle = FindFirstChangeNotification(dir, FALSE, flag)) == INVALID_HANDLE_VALUE) {
 #else
-	if ((handle = inotify_add_watch(watcher->fd, dir, watcher->flag = flag)) == -1) {
+	if ((handle = inotify_add_watch(watcher->fd, dir, flag)) == -1) {
 #endif
 		return 0;
 	}
