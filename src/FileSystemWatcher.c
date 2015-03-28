@@ -76,7 +76,7 @@ int wait_FileSystemWatcher(struct FileSystemWatcher *watcher) {
 #else
 	int buflen = 1024 * (sizeof(struct inotify_event) + 16 );
 	char buffer[buflen];
-	int i, length = read(fd, buffer, buflen);
+	int i, length = read(watcher->fd, buffer, buflen);
 	if (length < 0) return 0;
 
 	while (i < length) {
