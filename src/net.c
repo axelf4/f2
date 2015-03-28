@@ -114,7 +114,7 @@ void net_update(struct peer *peer) {
 		for (unsigned int j = 0; j < NET_SEQNO_MAX; j++) {
 			if (connection->missing[j]) {
 				int naklen = NET_SEQNO_SIZE * 2;
-				char nak[NET_SEQNO_SIZE * 2];
+				unsigned char nak[NET_SEQNO_SIZE * 2];
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
 				printf("Sending a request to resend packet %d\n", j + 1);
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[naklen - 1 - i] = NET_NAK_SEQNO >> i * 8;
@@ -125,11 +125,11 @@ void net_update(struct peer *peer) {
 		double now = time_get();
 		if (now - connection->lastSendTime > NET_PING_INTERVAL ||
 			(connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > NET_PING_INTERVAL)) {
-			int buflen = NET_SEQNO_SIZE * 2;
-			char buf[NET_SEQNO_SIZE * 2];
-			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
-			for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[buflen - 1 - i] = NET_PING_SEQNO >> i * 8;
-			net_send(peer, buf, buflen, connection->address, 0); // Send ping
+			int pinglen = NET_SEQNO_SIZE * 2;
+			unsigned char ping[NET_SEQNO_SIZE * 2];
+			for (int i = 0; i < NET_SEQNO_SIZE; i++) ping[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
+			for (int i = 0; i < NET_SEQNO_SIZE; i++) ping[pinglen - 1 - i] = NET_PING_SEQNO >> i * 8;
+			net_send(peer, ping, pinglen, connection->address, 0); // Send ping
 		}
 
 		if (connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > 20000) {
@@ -178,7 +178,7 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr_in *from) {
 	// TODO first write this berkeley code then optimize for windows with WSA*.
 beginning:; // If received a packet used internally: don't return, but skip it
-	int fromlen = sizeof(struct sockaddr_in), result;
+	socklen_t fromlen = sizeof(struct sockaddr_in), result;
 	if ((result = recvfrom(peer->socket, buf, buflen, 0, (struct sockaddr *)from, &fromlen)) == -1) {
 		int error = WSAGetLastError();
 #ifdef _WIN32
