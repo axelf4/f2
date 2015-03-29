@@ -233,8 +233,8 @@ struct obj_model * load_obj_model(const char *filename) {
 		// part->faceCount = group->facesSize / (1 + hasUVs + hasNorms); // group->numFaces
 		part->faceCount = group->numFaces;
 
-#ifdef OBJ_VERTICES_ONLY
 		float *vertices = part->vertices = (float *)malloc(sizeof(float) * (part->vertexCount = group->numFaces * 3 * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
+#ifdef OBJ_VERTICES_ONLY
 		part->indices = 0;
 		for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
 			int vertIndex = group->faces[j++] * 3;
@@ -254,31 +254,24 @@ struct obj_model * load_obj_model(const char *filename) {
 			}
 		}
 #else
-		unsigned int verticesSize = 0, verticesCapacity = 2;
-		float *vertices = (float *)malloc(sizeof(float) * vertsCapacity);
-		unsigned int *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces)),
-			vi = 0;
+		// The 'vertices' array declared above is a tad too big--atleast we won't overshoot
+		unsigned int vi = 0, *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
 		for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
 			int vertIndex = group->faces[j++] * 3,
 				uvIndex = hasUVs ? group->faces[j++] * 2 : 0,
 				normIndex = hasNorms ? group->faces[j++] * 3 : 0;
 
 			int existing = 0;
-			/*for (unsigned int l = 0; l < j;) {
-				if (vertIndex == group->faces[l++] &&
-					(!hasUVs || uvIndex == group->faces[l++]) &&
-					(!hasNorms || normIndex == group->faces[l++])) {
-					if (l == j) break; // Compared against itself
+			// Iterate through existing indices to find a match
+			for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
+				if (vertIndex == group->faces[l++] && (!hasUVs || uvIndex == group->faces[l++]) && (!hasNorms || normIndex == group->faces[l++])) {
 					existing = 1;
-					indices[k] = l;
+					indices[k] = (l - 3) / (1 + hasUVs + hasNorms);
 					break;
 				}
-			}*/
+			}
 			if (!existing) {
 				indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
-				if (vi + (3 + hasUVs * 2 + hasNorms * 3) >= verticesCapacity) {
-					vertices = (float *)realloc(vertices, sizeof(float) * (verticesCapacity *= 4));
-				}
 				vertices[vi++] = verts[vertIndex++];
 				vertices[vi++] = verts[vertIndex++];
 				vertices[vi++] = verts[vertIndex];
@@ -293,8 +286,8 @@ struct obj_model * load_obj_model(const char *filename) {
 				}
 			}
 		}
-		part->vertexCount = vi;
-		part->vertices = vertices;
+		float *tmp = realloc(part->vertices = vertices, sizeof(float) * (part->vertexCount = vi)); // Reallocate the array to a save some memory
+		if (tmp != 0) part->vertices = tmp;
 #endif
 
 		free(group->name);
