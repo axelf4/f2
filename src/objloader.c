@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h> // isspace
 #include <assert.h>
+#include <math.h>
 
 #define SPACE " \t\n\v\f\r"
 #define ATOI_CHARACTERS "+-0123456789"
@@ -57,6 +58,11 @@ static struct group * create_group(char *name) {
 	group->materialIndex = 0;
 	group->next = 0;
 	return group;
+}
+
+// Returns true iif v1 can be considered equal to v2
+int is_near(float v1, float v2){
+	return fabs(v1 - v2) < 0.01f;
 }
 
 struct obj_model * load_obj_model(const char *filename) {
@@ -257,16 +263,14 @@ struct obj_model * load_obj_model(const char *filename) {
 		// The 'vertices' array declared above is a tad too big--atleast we won't overshoot
 		unsigned int vi = 0, *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
 		for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
-			int vertIndex = group->faces[j++] * 3,
-				uvIndex = hasUVs ? group->faces[j++] * 2 : 0,
-				normIndex = hasNorms ? group->faces[j++] * 3 : 0;
+			unsigned int vertIndex = group->faces[j++] * 3, uvIndex = hasUVs ? group->faces[j++] * 2 : 0, normIndex = hasNorms ? group->faces[j++] * 3 : 0;
 
 			int existing = 0;
 			// Iterate through existing indices to find a match
 			for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
-				if (vertIndex == group->faces[l++] && (!hasUVs || uvIndex == group->faces[l++]) && (!hasNorms || normIndex == group->faces[l++])) {
+				if (vertIndex == group->faces[l++] * 3 && (!hasUVs || uvIndex == group->faces[l++] * 2) && (!hasNorms || normIndex == group->faces[l++] * 3)) {
 					existing = 1;
-					indices[k] = (l - 3) / (1 + hasUVs + hasNorms);
+					indices[k] = indices[(l - (1 + hasUVs + hasNorms)) / (1 + hasUVs + hasNorms)];
 					break;
 				}
 			}
@@ -286,6 +290,8 @@ struct obj_model * load_obj_model(const char *filename) {
 				}
 			}
 		}
+		part->vertices = vertices;
+		part->vertexCount = vi;
 		float *tmp = realloc(part->vertices = vertices, sizeof(float) * (part->vertexCount = vi)); // Reallocate the array to a save some memory
 		if (tmp != 0) part->vertices = tmp;
 #endif
