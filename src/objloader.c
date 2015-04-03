@@ -234,7 +234,8 @@ struct obj_model * load_obj_model(const char *filename) {
 		// part->faceCount = group->facesSize / (1 + hasUVs + hasNorms); // group->numFaces
 		part->faceCount = group->numFaces;
 
-		float *vertices = part->vertices = (float *)malloc(sizeof(float) * (part->vertexCount = group->numFaces * 3 * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
+		// TODO reduced the size of vertices by 3 times, still haven't tested if it works vertices only
+		float *vertices = part->vertices = (float *)malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
 #ifdef OBJ_VERTICES_ONLY
 		part->indices = 0;
 		for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
@@ -255,7 +256,6 @@ struct obj_model * load_obj_model(const char *filename) {
 			}
 		}
 #else
-		// The 'vertices' array declared above is a tad too big--atleast we won't overshoot
 		unsigned int vi = 0, *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
 		for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
 			unsigned int vertIndex = group->faces[j++] * 3, uvIndex = hasUVs ? group->faces[j++] * 2 : 0, normIndex = hasNorms ? group->faces[j++] * 3 : 0;
