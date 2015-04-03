@@ -60,11 +60,6 @@ static struct group * create_group(char *name) {
 	return group;
 }
 
-// Returns true iif v1 can be considered equal to v2
-int is_near(float v1, float v2){
-	return fabs(v1 - v2) < 0.01f;
-}
-
 struct obj_model * load_obj_model(const char *filename) {
 	// Array lists for the geometry, texture coordinate and normal storage
 	unsigned int vertsSize = 0, uvsSize = 0, normsSize = 0, vertsCapacity = 2, uvsCapacity = 2, normsCapacity = 2;
