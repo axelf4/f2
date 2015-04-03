@@ -96,6 +96,6 @@ struct mesh * create_mesh(int indexed) {
 
 void destroy_mesh(struct mesh *mesh) {
 	GLuint buffers[] = { mesh->vbo, mesh->ibo };
-	glDeleteBuffers(1, buffers);
+	glDeleteBuffers(2, buffers);
 	free(mesh);
 }
