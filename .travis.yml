@@ -9,12 +9,12 @@ before_install:
   - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp *.a /usr/lib)
   - gem install coveralls-lcov
 before_script:
-  - lcov --no-external --capture --initial --directory . --output-file base.info
+  - lcov --capture --initial --directory . --output-file base.info
 script:
   - (mkdir build && cd build && cmake -DBUILD_TESTS=ON .. -G "Unix Makefiles" && make)
   - build/runTests
 after_success:
-  - lcov --no-external --capture --directory . --output-file test.info # capture
+  - lcov --capture --directory . --output-file test.info # capture
   - lcov --add-tracefile base.info --add-tracefile test.info --output-file coverage.info
   - lcov --remove coverage.info 'test/*' '/usr/*' --output-file coverage.info # filter out system and test code
   - lcov --list coverage.info # debug before upload
