@@ -8,6 +8,7 @@ before_install:
   # GTest (copying libgtest.a and libgtest_main.a to /usr/lib) & Coveralls::Lcov
   - (cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp *.a /usr/lib)
   - gem install coveralls-lcov
+  - lcov --version
   - lcov --directory . --zerocounters # init coverage to 0
 script:
   - (mkdir build && cd build && cmake -DBUILD_TESTS=ON .. -G "Unix Makefiles" && make)

@@ -41,8 +41,8 @@ endif()
 option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
 	if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_COMPILER_IS_GNUCC)
-		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 --coverage")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 --coverage")
 	endif()
 
 	# This must be set in the top-level CMakeLists.txt for the tests to be run by 'make test' or ctest.
