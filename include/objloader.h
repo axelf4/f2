@@ -45,7 +45,7 @@ extern "C" {
 		struct mtl_material **materials; /**< The complete set of materials. */
 	};
 
-	struct obj_model * load_obj_model(const char *filename);
+	struct obj_model * load_obj_model(const char *filename, const char *data);
 
 	void destroy_obj_model(struct obj_model *model);
 

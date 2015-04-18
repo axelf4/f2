@@ -20,8 +20,9 @@ static int isNewLine(const char c) {
 }
 
 static float parseFloat(char **token) {
+	*token += strspn(*token, SPACE);
 	float f = (float)atof(*token);
-	*token += strspn(*token += strspn(*token, SPACE), ATOF_CHARACTERS);
+	*token += strspn(*token, ATOF_CHARACTERS);
 	return f;
 }
 
@@ -60,7 +61,7 @@ static struct group * create_group(char *name) {
 	return group;
 }
 
-struct obj_model * load_obj_model(const char *filename) {
+struct obj_model * load_obj_model(const char *filename, const char *data) {
 	// Array lists for the geometry, texture coordinate and normal storage
 	unsigned int vertsSize = 0, uvsSize = 0, normsSize = 0, vertsCapacity = 2, uvsCapacity = 2, normsCapacity = 2;
 	float *verts = (float *)malloc(sizeof(float) * vertsCapacity), *uvs = (float *)malloc(sizeof(float) * vertsCapacity), *norms = (float *)malloc(sizeof(float) * normsCapacity);
@@ -77,15 +78,9 @@ struct obj_model * load_obj_model(const char *filename) {
 	unsigned int materialsSize = 0;
 	struct mtl_material **materials = 0;
 
-	FILE *file = fopen(filename, "r");
-	if (file == 0) {
-		perror("Error reading file.");
-		return 0;
-	}
-	char line[80], *tok;
-	while (fgets(tok = line, 80, file)) {
-		tok += strspn(tok, " \t\r"); // Skip spaces at beginning of line
-		if ('\n' == *tok || '#' == *tok) continue;
+	char *tok = data;
+
+	while (1) {
 		if ('v' == *tok) {
 			unsigned int *size, *capacity, hasZ = 1;
 			float **list, x, y, z;
@@ -105,9 +100,11 @@ struct obj_model * load_obj_model(const char *filename) {
 				capacity = &normsCapacity;
 				list = &norms;
 			}
-			tok++; // Skip token (spaces are no problem; the letters 't'/'v' are)
-			while (*size + (hasZ ? 3 : 2) >= *capacity) {
-				*list = (float *)realloc(*list, sizeof(float) * (*capacity *= 2));
+			tok++; // Skip token (either ' ', 't' or 'n')
+			if (*size + (hasZ ? 3 : 2) >= *capacity) {
+				float *tmp = (float *)realloc(*list, sizeof(float) * (*capacity *= 2));
+				if (tmp == 0) return 0;
+				*list = tmp;
 			}
 			x = (*list)[(*size)++] = parseFloat(&tok); // X
 			y = (*list)[(*size)++] = parseFloat(&tok); // Y
@@ -192,6 +189,10 @@ struct obj_model * load_obj_model(const char *filename) {
 				}
 			}
 		}
+		else if (*tok == ' ' || *tok == '\n' || *tok == '\t' || *tok == 'r') { tok++; continue; } // Skip spaces or empty lines at beginning of line
+		else if ('#' == *tok) {
+			tok += strcspn(tok + 1, "\n") + 1; // Skip newlines or comments
+		}
 		else if (strncmp("mtllib", tok, strlen("mtllib")) == 0) {
 			// TODO make able to load multiple mtllibs as the definition: mtllib filename1 filename2 . . .
 			// Use the .obj file's directory as a base
@@ -214,8 +215,9 @@ struct obj_model * load_obj_model(const char *filename) {
 			memcpy(materials + sizeof(struct mtl_material *) * materialsSize, newMaterials, sizeof(struct mtl_material *) * numMaterials);
 			materialsSize += numMaterials;
 		}
+		else if ('\0' == *tok) break;
+		tok = strchr(tok, '\n') + 1; // Skip to next line line
 	}
-	fclose(file);
 
 	struct obj_model *model = (struct obj_model *) malloc(sizeof(struct obj_model));
 	model->hasUVs = hasUVs;
@@ -300,6 +302,7 @@ struct obj_model * load_obj_model(const char *filename) {
 	free(verts);
 	free(uvs);
 	free(norms);
+
 	return model;
 }
 

@@ -70,6 +70,7 @@ extern "C" {
 
 	GLuint compile_shader(GLenum type, const char *source);
 
+	// TODO remove
 	/** Returns the info log for the shader program \a program.
 		@warning Need to free return value. */
 	char * getProgramInfoLog(GLuint program);
@@ -82,7 +83,7 @@ extern "C" {
 
 	void destroy_mesh(struct mesh *mesh);
 
-#define bind_mesh(mesh, attributes, stride, stmt) \
+#define with_mesh(mesh, attributes, stride, stmt) \
 	do { \
 		glBindBuffer(GL_ARRAY_BUFFER, mesh->vbo); \
 		int i; \
