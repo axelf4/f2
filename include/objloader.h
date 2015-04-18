@@ -10,6 +10,9 @@ extern "C" {
 
 #define OBJ_OPTIMIZE_MESHES
 
+#define OBJ_FLAG_INDICES 0x1
+#define OBJ_FLAG_OPTIMIZE_MESHES 0x2
+
 	struct mtl_material {
 		char *name;
 
@@ -45,7 +48,7 @@ extern "C" {
 		struct mtl_material **materials; /**< The complete set of materials. */
 	};
 
-	struct obj_model * load_obj_model(const char *filename, const char *data);
+	struct obj_model * load_obj_model(const char *filename, const char *data, int flags);
 
 	void destroy_obj_model(struct obj_model *model);
 

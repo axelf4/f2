@@ -10,7 +10,7 @@
 #define ATOI_CHARACTERS "+-0123456789"
 #define ATOF_CHARACTERS ATOI_CHARACTERS "."
 
-static void skipSpacesBad(char **token) {
+static void skipSpacesBad(const char **token) {
 	// while(**token == ' ' || **token == '\t') (*token)++;
 	*token += strspn(*token, " \r\t\n");
 }
@@ -19,14 +19,14 @@ static int isNewLine(const char c) {
 	return (c == '\r') || (c == '\n') || (c == '\0');
 }
 
-static float parseFloat(char **token) {
+static float parseFloat(const char **token) {
 	*token += strspn(*token, SPACE);
 	float f = (float)atof(*token);
 	*token += strspn(*token, ATOF_CHARACTERS);
 	return f;
 }
 
-static unsigned int getIndex(char **token, unsigned int size) {
+static unsigned int getIndex(const char **token, unsigned int size) {
 	int idx = atoi(*token);
 	*token += strspn(*token += strspn(*token, SPACE), ATOI_CHARACTERS);
 	/*int idx = atoi(*token += strspn(*token, " \t"));
@@ -34,7 +34,7 @@ static unsigned int getIndex(char **token, unsigned int size) {
 	return (idx > 0 ? idx - 1 : (idx < 0 ? /* negative value = relative */ size + idx : 0));
 }
 
-static char * parseText(char **token) {
+static char * parseText(const char **token) {
 	unsigned int len = strspn(*token, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.");
 	char *retval = (char *)malloc(sizeof(char) * len + 1); // Allocate enough memory for text
 	memcpy(retval, *token, len); // Copy string from line
@@ -61,7 +61,7 @@ static struct group * create_group(char *name) {
 	return group;
 }
 
-struct obj_model * load_obj_model(const char *filename, const char *data) {
+struct obj_model * load_obj_model(const char *filename, const char *data, int flags) {
 	// Array lists for the geometry, texture coordinate and normal storage
 	unsigned int vertsSize = 0, uvsSize = 0, normsSize = 0, vertsCapacity = 2, uvsCapacity = 2, normsCapacity = 2;
 	float *verts = (float *)malloc(sizeof(float) * vertsCapacity), *uvs = (float *)malloc(sizeof(float) * vertsCapacity), *norms = (float *)malloc(sizeof(float) * normsCapacity);
@@ -78,7 +78,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data) {
 	unsigned int materialsSize = 0;
 	struct mtl_material **materials = 0;
 
-	char *tok = data;
+	const char *tok = data;
 
 	while (1) {
 		if ('v' == *tok) {
@@ -159,19 +159,19 @@ struct obj_model * load_obj_model(const char *filename, const char *data) {
 			tok += 7; // Skip the 7 chars in "usemtl "
 			char *materialName = parseText(&tok); // Parse the name of the material
 
-#ifdef OBJ_OPTIMIZE_MESHES
-			// If a group using the same material is found: set currentGroup to it
-			int existingGroup = 0;
-			struct group *group = firstGroup;
-			do {
-				if (strcmp(materials[group->materialIndex]->name, materialName) == 0) {
-					currentGroup = group;
-					existingGroup = 1;
-					break;
-				}
-			} while ((group = group->next) != 0);
-			if (existingGroup) continue;
-#endif
+			if (flags & OBJ_FLAG_OPTIMIZE_MESHES) {
+				// If a group using the same material is found: set currentGroup to it
+				int existingGroup = 0;
+				struct group *group = firstGroup;
+				do {
+					if (strcmp(materials[group->materialIndex]->name, materialName) == 0) {
+						currentGroup = group;
+						existingGroup = 1;
+						break;
+					}
+				} while ((group = group->next) != 0);
+				if (existingGroup) continue;
+			}
 
 			// If the current group already has faces that doesn't use the new material we need to differentiate them
 			if (currentGroup->numFaces > 0) {
@@ -238,60 +238,60 @@ struct obj_model * load_obj_model(const char *filename, const char *data) {
 
 		// TODO reduced the size of vertices by 3 times, still haven't tested if it works vertices only
 		float *vertices = part->vertices = (float *)malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
-#ifdef OBJ_VERTICES_ONLY
-		part->indices = 0;
-		for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
-			int vertIndex = group->faces[j++] * 3;
-			vertices[vi++] = verts[vertIndex++];
-			vertices[vi++] = verts[vertIndex++];
-			vertices[vi++] = verts[vertIndex];
-			if (hasUVs) {
-				int uvIndex = group->faces[j++] * 2;
-				vertices[vi++] = uvs[uvIndex++];
-				vertices[vi++] = uvs[uvIndex];
-			}
-			if (hasNorms) {
-				int normIndex = group->faces[j++] * 3;
-				vertices[vi++] = norms[normIndex++];
-				vertices[vi++] = norms[normIndex++];
-				vertices[vi++] = norms[normIndex];
-			}
-		}
-#else
-		unsigned int vi = 0, *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
-		for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
-			unsigned int vertIndex = group->faces[j++] * 3, uvIndex = hasUVs ? group->faces[j++] * 2 : 0, normIndex = hasNorms ? group->faces[j++] * 3 : 0;
-
-			int existing = 0;
-			// Iterate through existing indices to find a match
-			for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
-				if (vertIndex == group->faces[l++] * 3 && (!hasUVs || uvIndex == group->faces[l++] * 2) && (!hasNorms || normIndex == group->faces[l++] * 3)) {
-					existing = 1;
-					indices[k] = indices[(l - (1 + hasUVs + hasNorms)) / (1 + hasUVs + hasNorms)];
-					break;
-				}
-			}
-			if (!existing) {
-				indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
+		if (!(flags & OBJ_FLAG_INDICES)) {
+			part->indices = 0;
+			for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
+				int vertIndex = group->faces[j++] * 3;
 				vertices[vi++] = verts[vertIndex++];
 				vertices[vi++] = verts[vertIndex++];
 				vertices[vi++] = verts[vertIndex];
 				if (hasUVs) {
+					int uvIndex = group->faces[j++] * 2;
 					vertices[vi++] = uvs[uvIndex++];
 					vertices[vi++] = uvs[uvIndex];
 				}
 				if (hasNorms) {
+					int normIndex = group->faces[j++] * 3;
 					vertices[vi++] = norms[normIndex++];
 					vertices[vi++] = norms[normIndex++];
 					vertices[vi++] = norms[normIndex];
 				}
 			}
+		} else {
+			unsigned int vi = 0, *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
+			for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
+				unsigned int vertIndex = group->faces[j++] * 3, uvIndex = hasUVs ? group->faces[j++] * 2 : 0, normIndex = hasNorms ? group->faces[j++] * 3 : 0;
+
+				int existing = 0;
+				// Iterate through existing indices to find a match
+				for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
+					if (vertIndex == group->faces[l++] * 3 && (!hasUVs || uvIndex == group->faces[l++] * 2) && (!hasNorms || normIndex == group->faces[l++] * 3)) {
+						existing = 1;
+						indices[k] = indices[(l - (1 + hasUVs + hasNorms)) / (1 + hasUVs + hasNorms)];
+						break;
+					}
+				}
+				if (!existing) {
+					indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
+					vertices[vi++] = verts[vertIndex++];
+					vertices[vi++] = verts[vertIndex++];
+					vertices[vi++] = verts[vertIndex];
+					if (hasUVs) {
+						vertices[vi++] = uvs[uvIndex++];
+						vertices[vi++] = uvs[uvIndex];
+					}
+					if (hasNorms) {
+						vertices[vi++] = norms[normIndex++];
+						vertices[vi++] = norms[normIndex++];
+						vertices[vi++] = norms[normIndex];
+					}
+				}
+			}
+			part->vertices = vertices;
+			part->vertexCount = vi;
+			float *tmp = realloc(part->vertices = vertices, sizeof(float) * (part->vertexCount = vi)); // Reallocate the array to a save some memory
+			if (tmp != 0) part->vertices = tmp;
 		}
-		part->vertices = vertices;
-		part->vertexCount = vi;
-		float *tmp = realloc(part->vertices = vertices, sizeof(float) * (part->vertexCount = vi)); // Reallocate the array to a save some memory
-		if (tmp != 0) part->vertices = tmp;
-#endif
 
 		free(group->name);
 		free(group->faces);
