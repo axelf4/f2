@@ -13,24 +13,21 @@ extern "C" {
 	/** A flag that if set when loading a OBJ model will reuse existing parts which share the same material, effectively reducing the number of meshes. */
 #define OBJ_FLAG_OPTIMIZE_MESHES 0x2
 
-	/** A struct representing an imported MTL material definition. */
+	/** A structure representing an imported MTL material definition. */
 	struct mtl_material {
-		char *name; /**< The name of the material. */
+		char *name, /**< The name of the material. */
+			// TODO add textures
+			*texPath; /**< The path to the diffuse texture. */
 
-		float ambient[3],
-			diffuse[3],
-			specular[3],
-			emissive[3],
-			reflection[3];
+		float ambient[3], /**< The ambient color, declared using *Ka r g b*, where the RGB values range between 0-1. */
+			diffuse[3], /**< The diffuse color, declared using *Ka r g b*, where the RGB values range between 0-1. */
+			specular[3], /**< The specular color, declared using *Ka r g b*, where the RGB values range between 0-1. */
 
-		float shininess;
-		float opacity; /**< The transparency level 1-0, where 1 is the default and not transparent at all. */
-
-		// TODO add textures
-		char *texPath; /**< The path to the diffuse texture. */
+			shininess, /**< The specular shininess, declared with *Ns #*, where # ranges between 0-1000. */
+			opacity; /**< The transparency, declared with *Tr* or *d alpha*, ranges 0-1, where 1 is the default and not transparent at all. */
 	};
 
-	/** A part of a model, specifically a group or an object, with 1 material at most. */
+	/** A part of a model, specifically a group or an object, with at most one material. */
 	struct obj_model_part {
 		unsigned int vertexCount, /**< The number of vertices. */
 			indexCount, /**< The number of indices. */
