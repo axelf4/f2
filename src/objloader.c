@@ -264,7 +264,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 
 				int existing = 0;
 				// Iterate through existing indices to find a match
-				for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
+				if (flags & OBJ_FLAG_JOIN_IDENTICAL_VERTICES) for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
 					if (vertIndex == group->faces[l++] * 3 && (!hasUVs || uvIndex == group->faces[l++] * 2) && (!hasNorms || normIndex == group->faces[l++] * 3)) {
 						existing = 1;
 						indices[k] = indices[(l - (1 + hasUVs + hasNorms)) / (1 + hasUVs + hasNorms)];
