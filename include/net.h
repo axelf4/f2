@@ -120,7 +120,7 @@ extern "C" {
 	/** Sends a packet to the specified remote end.
 		@return -1 in case of an error, otherwise the number of sent bytes.
 		@warning Make sure to leave 1 byte empty in \a buf and have \a len reflect that! */
-	extern int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr to, int flag);
+	extern int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr *to, int flag);
 
 	/** Receives a packet from an remote end.
 		@param buflen the maximum number of bytes to read to the buffer

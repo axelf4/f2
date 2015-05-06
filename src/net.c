@@ -114,7 +114,7 @@ void net_update(struct peer *peer) {
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[i] = (j + 1) >> (NET_SEQNO_SIZE - i - 1) * 8;
 				printf("Sending a request to resend packet %d\n", j + 1);
 				for (int i = 0; i < NET_SEQNO_SIZE; i++) nak[naklen - 1 - i] = NET_NAK_SEQNO >> i * 8;
-				net_send(peer, nak, naklen, connection->address, 0);
+				net_send(peer, nak, naklen, &connection->address, 0);
 			}
 		}
 
@@ -125,7 +125,7 @@ void net_update(struct peer *peer) {
 			unsigned char ping[NET_SEQNO_SIZE * 2];
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) ping[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) ping[pinglen - 1 - i] = NET_PING_SEQNO >> i * 8;
-			net_send(peer, ping, pinglen, connection->address, 0); // Send ping
+			net_send(peer, ping, pinglen, &connection->address, 0); // Send ping
 		}
 
 		if (connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > 20000) {
@@ -136,7 +136,7 @@ void net_update(struct peer *peer) {
 }
 
 // TODO make return error value
-int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr to, int flag) {
+int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr *to, int flag) {
 	if (flag & NET_UNRELIABLE) {
 		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = 0;
 	}
@@ -145,12 +145,12 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
 			struct sockaddr connAddr = other->address;
-			if (SOCK_ADDR_EQ_ADDR(&to, &connAddr) && SOCK_ADDR_EQ_PORT(&to, &connAddr)) {
+			if (SOCK_ADDR_EQ_ADDR(to, &connAddr) && SOCK_ADDR_EQ_PORT(to, &connAddr)) {
 				connection = other;
 				break;
 			}
 		}
-		if (connection == 0) connection = add_connection(peer, to);
+		if (connection == 0) connection = add_connection(peer, *to);
 		connection->lastSendTime = time_get();
 
 		// if (++connection->lastSent > NET_SEQNO_MAX)	connection->lastSent = 1;
@@ -164,7 +164,7 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 		connection->sentLengths[connection->lastSent - 1] = len;
 	}
 
-	if (sendto(peer->socket, buf, len, 0, (struct sockaddr *)&to, sizeof(struct sockaddr_in)) == -1) {
+	if (sendto(peer->socket, buf, len, 0, to, sizeof(struct sockaddr_in)) == -1) {
 		// printf("sendto failed with error: %d\n", WSAGetLastError());
 		return -1;
 	}
@@ -211,7 +211,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			unsigned int no = 0;
 			for (int i = 0; i < NET_SEQNO_SIZE; i++) no |= buf[i] << (NET_SEQNO_SIZE - i - 1) * 8;
 			printf("The remote end has sent a request to resend packet %d.\n", no);
-			net_send(peer, connection->sentBuffers[no - 1], connection->sentLengths[no - 1], *from, 0); // The remote end requested a resend of the packet with the id *buf
+			net_send(peer, connection->sentBuffers[no - 1], connection->sentLengths[no - 1], from, 0); // The remote end requested a resend of the packet with the id *buf
 			goto beginning; // Don't return the internal packet!
 		}
 		else if (seqno) { // A ping or reliable packet
