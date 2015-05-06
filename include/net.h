@@ -1,5 +1,5 @@
-/** Functions for reliably sending UDP packets.
-	@file net.h */
+/** A reliable UDP networking layer.
+	\file net.h */
 
 #ifndef NET_H
 #define NET_H
@@ -73,8 +73,9 @@ extern "C" {
 
 #define NET_IP4_ADDR(ip, port, addr) (((struct sockaddr *)(addr))->sa_family = AF_INET, inet_pton(AF_INET, ip, &((struct sockaddr_in *)(addr))->sin_addr), ((struct sockaddr_in *)(addr))->sin_port = htons(port), addr)
 
+	/** A connection. */
 	struct conn {
-		struct sockaddr_in address;
+		struct sockaddr address;
 		int sentLengths[NET_SEQNO_MAX]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
 		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
 			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
@@ -84,6 +85,8 @@ extern "C" {
 			lastReceiveTime;
 		char *data; /**< Attached application data, is managed. */
 	};
+
+	// TODO struct addr for inet addresses
 
 	struct peer {
 #ifdef _WIN32
@@ -99,16 +102,16 @@ extern "C" {
 		void(*disconnect)(struct peer *, struct conn *);
 	};
 
-	// TODO implement support for BSD sockets and winsock2
-	// TODO struct addr for inet addresses
+	/** Initializes networking globally. Must be called prior to any networking functions.
+		@return \c 0, or the returned \c WSAStartup error code. */
+	extern int net_initialize();
 
-	extern void net_initialize();
-
+	/** Deitializes networking globally. Should be called at exit. */
 	extern void net_deinitialize();
 
 	/** Send outgoing commands.
 		@param address the address at which peers may connect to this peer */
-	extern struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxConnections);
+	extern struct peer * net_peer_create(struct sockaddr *recvaddr, unsigned short maxConnections);
 
 	extern void net_peer_dispose(struct peer *peer);
 
@@ -117,12 +120,12 @@ extern "C" {
 	/** Sends a packet to the specified remote end.
 		@return -1 in case of an error, otherwise the number of sent bytes.
 		@warning Make sure to leave 1 byte empty in \a buf and have \a len reflect that! */
-	extern int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr_in to, int flag);
+	extern int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr to, int flag);
 
 	/** Receives a packet from an remote end.
 		@param buflen the maximum number of bytes to read to the buffer
 		@return -1 in case of an error, otherwise the number of bytes read, or 0 */
-	extern int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr_in *from);
+	extern int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr *from);
 
 #ifdef __cplusplus
 }

@@ -5,7 +5,7 @@
 #include "timer.h"
 #include <fcntl.h>
 
-static struct conn * add_connection(struct peer *peer, struct sockaddr_in address) {
+static struct conn * add_connection(struct peer *peer, struct sockaddr address) {
 	struct conn *connection = malloc(sizeof(struct conn));
 	connection->address = address;
 	connection->lastSent = connection->lastReceived = 0;
@@ -21,14 +21,10 @@ static struct conn * add_connection(struct peer *peer, struct sockaddr_in addres
 	return connection;
 }
 
-void net_initialize() {
+int net_initialize() {
 #ifdef _WIN32
 	WSADATA wsaData;
-	// Initialize Winsock
-	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (result != 0) {
-		fprintf(stderr, "WSAStartup failed with error: %d\n", result);
-	}
+	return WSAStartup(MAKEWORD(2, 2), &wsaData);// Initialize Winsock
 #endif
 }
 
@@ -38,7 +34,7 @@ void net_deinitialize() {
 #endif
 }
 
-struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxConnections) {
+struct peer * net_peer_create(struct sockaddr *recvaddr, unsigned short maxConnections) {
 #ifdef _WIN32
 	SOCKET
 #else
@@ -65,9 +61,9 @@ struct peer * net_peer_create(struct sockaddr_in *recvaddr, unsigned short maxCo
 		// RecvAddr.sin_port = htons(address->port);
 		// RecvAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-		recvaddr->sin_addr.s_addr = INADDR_ANY;
+		((struct sockaddr_in *)recvaddr)->sin_addr.s_addr = INADDR_ANY;
 
-		int i = bind(sockfd, (struct sockaddr *) recvaddr, sizeof(struct sockaddr_in));
+		int i = bind(sockfd, recvaddr, sizeof(struct sockaddr_in));
 		if (i != 0) {
 			printf("bind failed with error %d\n", WSAGetLastError());
 			return 0;
@@ -140,7 +136,7 @@ void net_update(struct peer *peer) {
 }
 
 // TODO make return error value
-int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr_in to, int flag) {
+int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr to, int flag) {
 	if (flag & NET_UNRELIABLE) {
 		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = 0;
 	}
@@ -148,7 +144,7 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 		struct conn *connection = 0;
 		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
-			struct sockaddr_in connAddr = other->address;
+			struct sockaddr connAddr = other->address;
 			if (SOCK_ADDR_EQ_ADDR(&to, &connAddr) && SOCK_ADDR_EQ_PORT(&to, &connAddr)) {
 				connection = other;
 				break;
@@ -175,11 +171,11 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 	return len;
 }
 
-int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr_in *from) {
+int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr *from) {
 	// TODO first write this berkeley code then optimize for windows with WSA*.
 beginning:; // If received a packet used internally: don't return, but skip it
 	socklen_t fromlen = sizeof(struct sockaddr_in), result;
-	if ((result = recvfrom(peer->socket, buf, buflen, 0, (struct sockaddr *)from, &fromlen)) == -1) {
+	if ((result = recvfrom(peer->socket, buf, buflen, 0, from, &fromlen)) == -1) {
 		int error = WSAGetLastError();
 #ifdef _WIN32
 		if (error == WSAEWOULDBLOCK || error == WSAECONNRESET)
@@ -196,7 +192,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 		struct conn *connection = 0;
 		for (unsigned int i = 0; i < peer->numConnections; i++) {
 			struct conn *other = peer->connections[i];
-			struct sockaddr_in address = other->address;
+			struct sockaddr address = other->address;
 			if (SOCK_ADDR_EQ_ADDR(from, &address) && SOCK_ADDR_EQ_PORT(from, &address)) {
 				connection = other; // The origin of the packet and the connection's address match: existing connection
 				break;
