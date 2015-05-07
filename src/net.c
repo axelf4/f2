@@ -41,28 +41,18 @@ struct peer * net_peer_create(struct sockaddr *recvaddr, unsigned short maxConne
 	int
 #endif
 		sockfd;
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-		printf("socket failed with error: %d\n", WSAGetLastError());
-		return 0;
-	}
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) return 0;
+	// Make the socket non-blocking
 #ifdef _WIN32
 	u_long mode = 1;
-	if (ioctlsocket(sockfd, FIONBIO, &mode) == SOCKET_ERROR) {
-		printf("ioctlsocket failed with error: %d\n", WSAGetLastError());
-	}
+	if (ioctlsocket(sockfd, FIONBIO, &mode) == SOCKET_ERROR)
 #else
-	fcntl(sockfd, F_SETFL, O_NONBLOCK);
+	if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
 #endif
+		return 0;
 
 	if (recvaddr != 0) {
-		// struct sockaddr_in RecvAddr;
-		// RecvAddr.sin_family = AF_INET;
-		// RecvAddr.sin_port = htons(6622); // TODO the address field for is not an ushort
-		// RecvAddr.sin_port = htons(address->port);
-		// RecvAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-		((struct sockaddr_in *)recvaddr)->sin_addr.s_addr = INADDR_ANY;
-
+		// ((struct sockaddr_in *)recvaddr)->sin_addr.s_addr = INADDR_ANY;
 		int i = bind(sockfd, recvaddr, sizeof(struct sockaddr_in));
 		if (i != 0) {
 			printf("bind failed with error %d\n", WSAGetLastError());

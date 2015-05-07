@@ -71,11 +71,18 @@ extern "C" {
 #define NET_PING_INTERVAL 500
 #endif
 
-#define NET_IP4_ADDR(ip, port, addr) (((struct sockaddr *)(addr))->sa_family = AF_INET, inet_pton(AF_INET, ip, &((struct sockaddr_in *)(addr))->sin_addr), ((struct sockaddr_in *)(addr))->sin_port = htons(port), addr)
+	/** Convert a string containing an IPv4 address to binary form.
+		Pass an empty string to use INADDR_ANY.
+		@param ip A string containing an IPv4 address
+		@param port The designated port
+		@param addr A pointer to a struct sockaddr
+		@return \a addr to allow for chaining */
+#define NET_IP4_ADDR(ip, port, addr) (((struct sockaddr *)addr)->sa_family = AF_INET, ((struct sockaddr_in *)addr)->sin_port = htons(port), \
+	*ip == '\0' ? ((struct sockaddr_in *)addr)->sin_addr.s_addr = INADDR_ANY : inet_pton(AF_INET, ip, &((struct sockaddr_in *)addr)->sin_addr), addr)
 
 	/** A connection. */
 	struct conn {
-		struct sockaddr address;
+		struct sockaddr address; /** Internet address of the remote end. */
 		int sentLengths[NET_SEQNO_MAX]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
 		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
 			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
