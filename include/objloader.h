@@ -1,4 +1,4 @@
-/** A loader that takes a filename of an OBJ model and an array of it's data and returns vertices and materials.
+/** An OBJ model loader.
 	@file objloader.h */
 
 #ifndef OBJLOADER_H
@@ -13,7 +13,7 @@ extern "C" {
 		OBJ_INDICES = 0x1,
 		/** Merge mesh parts that share the same material, effectively reducing the total number of meshes. */
 		OBJ_OPTIMIZE_MESHES = 0x2,
-		/** Use existing found indices, when \c OBJ_INDICES is specified. */
+		/** Use existing found indices, when ::OBJ_INDICES is specified. */
 		OBJ_JOIN_IDENTICAL_VERTICES = 0x4
 	};
 
@@ -68,7 +68,7 @@ extern "C" {
 		@return An array of loaded materials */
 	struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials);
 
-	/** Destroys the loaded MTL material.
+	/** Destroys a loaded MTL material.
 		@param material The material to destroy. */
 	void destroy_mtl_material(struct mtl_material *material);
 
