@@ -81,7 +81,6 @@ void net_peer_dispose(struct peer *peer) {
 	// Free up the connections
 	for (unsigned int i = 0; i < peer->numConnections; i++) {
 		struct conn *connection = peer->connections[i];
-		free(connection->data);
 		free(connection);
 	}
 	free(peer->connections);

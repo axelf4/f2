@@ -44,15 +44,15 @@ extern "C" {
 #else
 	/** Compares the address families and network addresses for equality, returning non-zero in that case.
 		@def SOCK_ADDR_EQ_ADDR(sa, sb)
-		@param sa The first socket address of type @code struct sockaddr * @code to be compared
-		@param sb The second socket address of type @code struct sockaddr * @code to be compared
+		@param sa The first socket address of type <tt>struct sockaddr *</tt> to be compared
+		@param sb The second socket address of type <tt>struct sockaddr *</tt> to be compared
 		@return Zero if the arguments differ, otherwise non-zero
 		@warning Evaluates the arguments multiple times */
 #define SOCK_ADDR_EQ_ADDR(sa, sb) (((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET && ((struct sockaddr_in *)(sa))->sin_addr.s_addr == ((struct sockaddr_in *)(sb))->sin_addr.s_addr)
 	/** Compares the address families and ports for equality, returning non-zero in that case.
 		@def SOCK_ADDR_EQ_PORT(sa, sb)
-		@param sa The first socket address of type @code struct sockaddr * @code to be compared
-		@param sb The second socket address of type @code struct sockaddr * @code to be compared
+		@param sa The first socket address of type <tt>struct sockaddr *</tt> to be compared
+		@param sb The second socket address of type <tt>struct sockaddr *</tt> to be compared
 		@return Zero if the arguments differ, otherwise non-zero
 		@warning Evaluates the arguments multiple times */
 #define SOCK_ADDR_EQ_PORT(sa, sb) (((struct sockaddr *)(sa))->sa_family == AF_INET && ((struct sockaddr *)(sb))->sa_family == AF_INET && ((struct sockaddr_in *)(sa))->sin_port == ((struct sockaddr_in *)(sb))->sin_port)
@@ -82,18 +82,16 @@ extern "C" {
 
 	/** A connection. */
 	struct conn {
-		struct sockaddr address; /** Internet address of the remote end. */
-		int sentLengths[NET_SEQNO_MAX]; /** The lengths, in bytes, of the buffers in #sentBuffers. */
+		struct sockaddr address; /**< Internet address of the remote end. */
+		int sentLengths[NET_SEQNO_MAX]; /**< The lengths, in bytes, of the buffers in #sentBuffers. */
 		unsigned char *sentBuffers[NET_SEQNO_MAX], /**< History buffer */
 			missing[NET_SEQNO_MAX]; /**< Array of 1s and 0s. 0 is for packet at index (seqno - 1) has arrived. 1 is for waiting for packet. Initialized with zeros. */
 		unsigned int lastSent, /**< The sequence number of the last sent packet (defaults to 0).*/
 			lastReceived; /**< The sequence number of the last received packet (defaults to 0). */
 		long lastSendTime, /**< A timestamp of when a reliable packet was last sent to the connection. */
-			lastReceiveTime;
-		char *data; /**< Attached application data, is managed. */
+			lastReceiveTime; /**< A timestamp of when a reliable packet was last received from the connection. */
+		char *data; /**< Attached application data. */
 	};
-
-	// TODO struct addr for inet addresses
 
 	struct peer {
 #ifdef _WIN32
@@ -101,7 +99,7 @@ extern "C" {
 #else
 		int
 #endif
-			socket;
+			socket; /**< This peer's socket. */
 		struct conn **connections;
 		unsigned int numConnections;
 
@@ -109,11 +107,11 @@ extern "C" {
 		void(*disconnect)(struct peer *, struct conn *);
 	};
 
-	/** Initializes networking globally. Must be called prior to any networking functions.
-		@return \c 0, or the returned \c WSAStartup error code. */
+	/** Initializes networking globally. Must be called prior to any other networking function.
+		@return \c 0 if no errors occur, or an error code from \c WSAStartup. */
 	extern int net_initialize();
 
-	/** Deitializes networking globally. Should be called at exit. */
+	/** Deinitializes networking globally. Should be called at exit. */
 	extern void net_deinitialize();
 
 	/** Send outgoing commands.
