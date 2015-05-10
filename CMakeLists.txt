@@ -11,8 +11,8 @@ set(SOURCES
 	src/net.c
 	include/objloader.h
 	src/objloader.c
-	include/ddsloader.h
-	src/ddsloader.c
+	include/bitmap_dds.h
+	src/bitmap_dds.c
 	include/glTFloader.h
 	src/glTFloader.cpp
 	include/timer.h

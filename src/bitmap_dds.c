@@ -1,4 +1,4 @@
-#include "ddsloader.h"
+#include "bitmap_dds.h"
 #include <stdlib.h>
 #include <math.h>
 #include <stdint.h>
@@ -114,7 +114,7 @@ static GLenum getFormat(const DDPIXELFORMAT ddpf, int *bitsPerPixel, int *compre
 			return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 		}
 		// Check for D3DFORMAT enums being set here
-		switch (ddpf.dwFourCC)  {
+		switch (ddpf.dwFourCC) {
 		case 36: return GL_RGBA16; // D3DFMT_A16B16G16R16
 		case 110: return GL_RGBA16_SNORM; // D3DFMT_Q16W16V16U16
 		case 111: return GL_R16F; // D3DFMT_R16F
@@ -129,7 +129,93 @@ static GLenum getFormat(const DDPIXELFORMAT ddpf, int *bitsPerPixel, int *compre
 	return 0;
 }
 
-GLuint dds_load_texture_from_memory(const char *data) {
+// From http://src.chromium.org/viewvc/chrome/trunk/src/o3d/core/cross/bitmap_dds.cc?view=markup&pathrev=21227
+
+/** Flips a full DXT1 block in the y direction. */
+static void FlipDXT1BlockFull(unsigned char *block) {
+	// A DXT1 block layout is:
+	// [0-1] color0.
+	// [2-3] color1.
+	// [4-7] color bitmap, 2 bits per pixel.
+	// So each of the 4-7 bytes represents one line, flipping a block is just
+	// flipping those bytes.
+	unsigned char tmp = block[4];
+	block[4] = block[7];
+	block[7] = tmp;
+	tmp = block[5];
+	block[5] = block[6];
+	block[6] = tmp;
+}
+
+/** Flips a full DXT3 block in the y direction. */
+static void FlipDXT3BlockFull(unsigned char *block) {
+	// A DXT3 block layout is:
+	// [0-7]  alpha bitmap, 4 bits per pixel.
+	// [8-15] a DXT1 block.
+
+	// We can flip the alpha bits at the byte level (2 bytes per line).
+	unsigned char tmp = block[0];
+	block[0] = block[6];
+	block[6] = tmp;
+	tmp = block[1];
+	block[1] = block[7];
+	block[7] = tmp;
+	tmp = block[2];
+	block[2] = block[4];
+	block[4] = tmp;
+	tmp = block[3];
+	block[3] = block[5];
+	block[5] = tmp;
+
+	FlipDXT1BlockFull(block + 8); // And flip the DXT1 block using the above function.
+}
+
+/** Flips a full DXT5 block in the y direction. */
+static void FlipDXT5BlockFull(unsigned char *block) {
+	// A DXT5 block layout is:
+	// [0]    alpha0.
+	// [1]    alpha1.
+	// [2-7]  alpha bitmap, 3 bits per pixel.
+	// [8-15] a DXT1 block.
+
+	// The alpha bitmap doesn't easily map lines to bytes, so we have to
+	// interpret it correctly.  Extracted from
+	// http://www.opengl.org/registry/specs/EXT/texture_compression_s3tc.txt :
+	//
+	//   The 6 "bits" bytes of the block are decoded into one 48-bit integer:
+	//
+	//     bits = bits_0 + 256 * (bits_1 + 256 * (bits_2 + 256 * (bits_3 +
+	//                   256 * (bits_4 + 256 * bits_5))))
+	//
+	//   bits is a 48-bit unsigned integer, from which a three-bit control code
+	//   is extracted for a texel at location (x,y) in the block using:
+	//
+	//       code(x,y) = bits[3*(4*y+x)+1..3*(4*y+x)+0]
+	//
+	//   where bit 47 is the most significant and bit 0 is the least
+	//   significant bit.
+
+	// From Chromium (source was buggy)
+	unsigned int line_0_1 = block[2] + 256 * (block[3] + 256 * block[4]);
+	unsigned int line_2_3 = block[5] + 256 * (block[6] + 256 * block[7]);
+	// swap lines 0 and 1 in line_0_1.
+	unsigned int line_1_0 = ((line_0_1 & 0x000fff) << 12) |
+		((line_0_1 & 0xfff000) >> 12);
+	// swap lines 2 and 3 in line_2_3.
+	unsigned int line_3_2 = ((line_2_3 & 0x000fff) << 12) |
+		((line_2_3 & 0xfff000) >> 12);
+	block[2] = line_3_2 & 0xff;
+	block[3] = (line_3_2 & 0xff00) >> 8;
+	block[4] = (line_3_2 & 0xff0000) >> 16;
+	block[5] = line_1_0 & 0xff;
+	block[6] = (line_1_0 & 0xff00) >> 8;
+	block[7] = (line_1_0 & 0xff0000) >> 16;
+
+	
+	FlipDXT1BlockFull(block + 8); // And flip the DXT1 block using the above function.
+}
+
+GLuint dds_load_texture_from_memory(const char *data, int flags) {
 	// Validate size of DDS file in memory
 	// if (dataSize < sizeof(uint32_t) + sizeof(DDSURFACEDESC2)) return 0;
 
@@ -183,17 +269,36 @@ GLuint dds_load_texture_from_memory(const char *data) {
 			else {
 				size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize; // size = ceil(width / 4) * ceil(height / 4) * blockSize;
 			}
-
 			target = isCubeMap ? GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT + j : target;
 
 			if (!compressed) {
 				glTexImage2D(target, i, internalformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data + offset);
 			}
 			else {
-				glCompressedTexImage2D(target, i, internalformat, width, height, 0, size, data + offset);
+				unsigned char *pixels = 0;
+				if (flags & DDS_FLIP_UVS) {
+					pixels = malloc(size);
+					// Flip & copy to actual pixel buffer
+					int widBytes = ((width + 3) / 4)*blockSize;
+					unsigned char *s = data + offset, *d = pixels + ((height + 3) / 4 - 1) * widBytes;
+					for (unsigned int j = 0; j < (height + 3) / 4; j++) {
+						memcpy(d, s, widBytes);
+
+						for (int k = 0; k < widBytes / blockSize; k++) if (internalformat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) FlipDXT1BlockFull(d + k * blockSize);
+						else if (internalformat == GL_COMPRESSED_RGBA_S3TC_DXT3_EXT) FlipDXT3BlockFull(d + k * blockSize);
+						else if (internalformat == GL_COMPRESSED_RGBA_S3TC_DXT5_EXT) FlipDXT5BlockFull(d + k * blockSize);
+
+						s += widBytes;
+						d -= widBytes;
+					}
+				}
+
+				glCompressedTexImage2D(target, i, internalformat, width, height, 0, size, pixels ? pixels : data + offset); // data + offset
 				GLint param = 0;
 				glGetTexLevelParameteriv(target, i, GL_TEXTURE_COMPRESSED_ARB, &param);
 				if (param == 0) printf("Mipmap level %d indicated compression failed", i);
+
+				free(pixels);
 			}
 
 			offset += size;
