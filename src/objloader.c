@@ -159,7 +159,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 			tok += 7; // Skip the 7 chars in "usemtl "
 			char *materialName = parseText(&tok); // Parse the name of the material
 
-			if (flags & OBJ_FLAG_OPTIMIZE_MESHES) {
+			if (flags & OBJ_OPTIMIZE_MESHES) {
 				// If a group using the same material is found: set currentGroup to it
 				int existingGroup = 0;
 				struct group *group = firstGroup;
@@ -238,7 +238,8 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 
 		// TODO reduced the size of vertices by 3 times, still haven't tested if it works vertices only
 		float *vertices = part->vertices = (float *)malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
-		if (!(flags & OBJ_FLAG_INDICES)) {
+		if (!(flags & OBJ_INDICES)) {
+			part->indexCount = 0;
 			part->indices = 0;
 			for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
 				int vertIndex = group->faces[j++] * 3;
@@ -264,7 +265,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 
 				int existing = 0;
 				// Iterate through existing indices to find a match
-				if (flags & OBJ_FLAG_JOIN_IDENTICAL_VERTICES) for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
+				if (flags & OBJ_JOIN_IDENTICAL_VERTICES) for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
 					if (vertIndex == group->faces[l++] * 3 && (!hasUVs || uvIndex == group->faces[l++] * 2) && (!hasNorms || normIndex == group->faces[l++] * 3)) {
 						existing = 1;
 						indices[k] = indices[(l - (1 + hasUVs + hasNorms)) / (1 + hasUVs + hasNorms)];
