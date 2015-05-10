@@ -35,13 +35,20 @@ void net_deinitialize() {
 }
 
 struct peer * net_peer_create(struct sockaddr *recvaddr, unsigned short maxConnections) {
+	struct peer *peer = (struct peer *) malloc(sizeof(struct peer));
+	peer->connections = malloc(sizeof(struct conn *) * maxConnections);
+	peer->numConnections = 0;
+	peer->accept = 0;
+	peer->disconnect = 0;
+
+	// Create a socket
 #ifdef _WIN32
 	SOCKET
 #else
 	int
 #endif
 		sockfd;
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) return 0;
+	if ((peer->socket = sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) goto error;
 	// Make the socket non-blocking
 #ifdef _WIN32
 	u_long mode = 1;
@@ -49,38 +56,27 @@ struct peer * net_peer_create(struct sockaddr *recvaddr, unsigned short maxConne
 #else
 	if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
 #endif
-		return 0;
+		goto error;
 
+	// Optionally bind the socket
 	if (recvaddr != 0) {
 		// ((struct sockaddr_in *)recvaddr)->sin_addr.s_addr = INADDR_ANY;
-		int i = bind(sockfd, recvaddr, sizeof(struct sockaddr_in));
-		if (i != 0) {
-			printf("bind failed with error %d\n", WSAGetLastError());
-			return 0;
-		}
+		if (bind(sockfd, recvaddr, sizeof(struct sockaddr_in)) != 0) goto error;
 	}
-
-	struct peer *peer = (struct peer *) malloc(sizeof(struct peer));
-	peer->socket = sockfd;
-	peer->connections = malloc(sizeof(struct conn *) * maxConnections);
-	peer->numConnections = 0;
-	peer->accept = 0;
-	peer->disconnect = 0;
 	return peer;
+
+error:
+	net_peer_dispose(peer);
+	return 0;
 }
 
 void net_peer_dispose(struct peer *peer) {
-	int result =
 #ifdef _WIN32
-		closesocket
+	if (peer->socket != INVALID_SOCKET) closesocket
 #else
-		close
+	if (peer->socket != -1) close
 #endif
 		(peer->socket);
-	if (result == -1) {
-		printf("closesocket failed with error: %d\n", WSAGetLastError());
-		return;
-	}
 
 	// Free up the connections
 	for (unsigned int i = 0; i < peer->numConnections; i++) {
@@ -89,7 +85,6 @@ void net_peer_dispose(struct peer *peer) {
 		free(connection);
 	}
 	free(peer->connections);
-
 	free(peer);
 }
 
@@ -125,7 +120,6 @@ void net_update(struct peer *peer) {
 	}
 }
 
-// TODO make return error value
 int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr *to, int flag) {
 	if (flag & NET_UNRELIABLE) {
 		for (int i = 0; i < NET_SEQNO_SIZE; i++) buf[len - 1 - i] = 0;
@@ -154,15 +148,10 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 		connection->sentLengths[connection->lastSent - 1] = len;
 	}
 
-	if (sendto(peer->socket, buf, len, 0, to, sizeof(struct sockaddr_in)) == -1) {
-		// printf("sendto failed with error: %d\n", WSAGetLastError());
-		return -1;
-	}
-	return len;
+	return sendto(peer->socket, buf, len, 0, to, sizeof(struct sockaddr_in));
 }
 
 int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr *from) {
-	// TODO first write this berkeley code then optimize for windows with WSA*.
 beginning:; // If received a packet used internally: don't return, but skip it
 	socklen_t fromlen = sizeof(struct sockaddr_in), result;
 	if ((result = recvfrom(peer->socket, buf, buflen, 0, from, &fromlen)) == -1) {
@@ -173,7 +162,6 @@ beginning:; // If received a packet used internally: don't return, but skip it
 		if (error == EWOULDBLOCK || error == ECONNRESET)
 #endif
 			return 0;
-		// printf("recvfrom failed with error %d\n", error);
 	}
 	else if (result > 0) {
 		if (rand() % 2) goto beginning; // Simulate packet drop locally
