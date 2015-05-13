@@ -24,7 +24,7 @@ static struct conn * add_connection(struct peer *peer, struct sockaddr address) 
 int net_initialize() {
 #ifdef _WIN32
 	WSADATA wsaData;
-	return WSAStartup(MAKEWORD(2, 2), &wsaData);// Initialize Winsock
+	return WSAStartup(MAKEWORD(2, 2), &wsaData); // Initialize Winsock
 #endif
 }
 
