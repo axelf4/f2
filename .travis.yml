@@ -2,9 +2,12 @@ language: c
 compiler:
   - gcc
   - clang
-before_install:
+install:
   # OpenGL Extension Wrangler
-  - sudo apt-get install -y libglew-dev
+  # - sudo apt-get install -y libglew-dev
+  - wget 'http://sourceforge.net/projects/glew/files/glew/1.12.0/glew-1.12.0.zip/download'
+  - unzip glew-1.12.0.zip
+  - (cd glew-1.12.0 && make)
 script:
-  - (mkdir build && cd build && cmake -DBUILD_TESTS=ON .. -G "Unix Makefiles" && make)
+  - (mkdir build && cd build && cmake -DBUILD_TESTS=ON -DGLEW_ROOT_DIR="../glew-1.12.0" .. -G "Unix Makefiles" && make)
   - build/runTests
