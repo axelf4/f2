@@ -4,15 +4,7 @@ compiler:
   - clang
 sudo: false
 install:
-  # OpenGL Extension Wrangler
-  # - sudo apt-get install -y libglew-dev
-  - wget -O glew-1.12.0.zip 'http://sourceforge.net/projects/glew/files/glew/1.12.0/glew-1.12.0.zip/download'
-  - unzip glew-1.12.0.zip
-  - cd glew-1.12.0
-  - GLEW_ROOT=$PWD
-  - make
-  - echo $GLEW_ROOT
-  - cd ..
+  - wget -O glew-1.12.0.zip 'http://sourceforge.net/projects/glew/files/glew/1.12.0/glew-1.12.0.zip/download' && unzip glew-1.12.0.zip && (cd glew-1.12.0 && make) && GLEW_ROOT="$PWD/glew-1.12.0"
 script:
   - (mkdir build && cd build && cmake -DBUILD_TESTS=ON -DGLEW_ROOT_DIR=$GLEW_ROOT .. -G "Unix Makefiles" && make)
   - build/runTests
