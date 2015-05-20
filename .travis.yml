@@ -12,6 +12,7 @@ install:
   - GLEW_ROOT=$PWD
   - make
   - echo $GLEW_ROOT
+  - cd ..
 script:
   - (mkdir build && cd build && cmake -DBUILD_TESTS=ON -DGLEW_ROOT_DIR=$GLEW_ROOT .. -G "Unix Makefiles" && make)
   - build/runTests
