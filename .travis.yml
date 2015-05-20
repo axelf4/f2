@@ -2,6 +2,7 @@ language: c
 compiler:
   - gcc
   - clang
+sudo: false
 install:
   # OpenGL Extension Wrangler
   # - sudo apt-get install -y libglew-dev
