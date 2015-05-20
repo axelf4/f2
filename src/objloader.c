@@ -10,11 +10,6 @@
 #define ATOI_CHARACTERS "+-0123456789"
 #define ATOF_CHARACTERS ATOI_CHARACTERS "."
 
-static void skipSpacesBad(const char **token) {
-	// while(**token == ' ' || **token == '\t') (*token)++;
-	*token += strspn(*token, " \r\t\n");
-}
-
 static int isNewLine(const char c) {
 	return (c == '\r') || (c == '\n') || (c == '\0');
 }
@@ -330,9 +325,10 @@ struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials)
 
 	struct mtl_material *cur; // Current material as specified by last newmtl
 
-	char line[80], *tok;
-	while (fgets(tok = line, 80, file)) {
-		tok += strspn(tok, " \t\r"); // Skip spaces at beginning of line
+	char line[80];
+	const char *tok;
+	while (fgets(line, 80, file)) {
+		tok += strspn(tok = line, " \t\r"); // Skip spaces at beginning of line
 		if (strncmp("newmtl", tok, strlen("newmtl")) == 0) {
 			if (size + 1 >= capacity) {
 				struct mtl_material **tmp = (struct mtl_material **) realloc(materials, sizeof(struct mtl_material *) * (capacity *= 2));
@@ -352,7 +348,7 @@ struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials)
 		}
 		else if (*tok == 'K' && (tok[1] == 'a' || tok[1] == 'd' || tok[1] == 's')) { // diffuse or specular
 			float *color = tok[1] == 'a' ? cur->ambient : (tok[1] == 'd' ? cur->diffuse : cur->specular);
-			tok += 3; // Skip the characters 'K' and 'a'/'d/'s' and the space
+			tok += 3; // Skip the characters 'K' and 'a'/'d'/'s' and the space
 			color[0] = parseFloat(&tok);
 			color[1] = parseFloat(&tok);
 			color[2] = parseFloat(&tok);
