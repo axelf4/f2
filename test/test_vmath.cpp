@@ -19,7 +19,7 @@ namespace {
 	}
 
 	TEST(Vector, Load_FloatArray_Equals) {
-		float v[] = { 1, 2, 3, 4 };
+		ALIGN(16) float v[] = { 1, 2, 3, 4 };
 		EXPECT_TRUE(VectorEqual(VectorLoad(v), VectorSet(1, 2, 3, 4)));
 	}
 
@@ -53,4 +53,29 @@ namespace {
 		float dot = x1 * x2 + y1 * y2 + z1 * z2;
 		EXPECT_NEAR(dot, VectorDot(v1, v2), 1.f) << "The dot product of the two vectors [" << x1 << ", " << y1 << ", " << z1 << "] and [" << x2 << ", " << y2 << ", " << z2 << "] doesn't equal " << dot;
 	}
+
+	TEST(Matrix, Equal_SameComponents_True) {
+		MAT m1 = MatrixSet(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), m2 = MatrixSet(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+		EXPECT_TRUE(MatrixEqual(&m1, &m2));
+	}
+
+	TEST(Matrix, Equal_DifferentComponents_False) {
+		MAT m1 = MatrixSet(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), m2 = MatrixSet(16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1);
+		EXPECT_FALSE(MatrixEqual(&m1, &m2));
+	}
+
+	TEST(Matrix, Arithmetic) {
+		MAT m1 = MatrixSet(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), m2 = MatrixSet(16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1);
+		{
+			MAT A = MatrixMultiply(&m1, &m2), B = MatrixSet(80, 70, 60, 50, 240, 214, 188, 162, 400, 358, 316, 274, 560, 502, 444, 386);
+			EXPECT_TRUE(MatrixEqual(&A, &B));
+		}
+	}
+
+	TEST(Matrix, Inverse_simpleValues_Equal) {
+		MAT a = MatrixSet(4, 0, 0, 0, 0, 0, 2, 0, 0, 1, 2, 0, 1, 0, 0, 1), b = MatrixSet(.25, 0, 0, 0, 0, -1, 1, 0, 0, .5, 0, 0, -.25, 0, 0, 1);
+		EXPECT_TRUE(MatrixEqual(&a, &b));
+	}
+
+
 }

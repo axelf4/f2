@@ -666,6 +666,15 @@ extern "C" {
 		return m;
 	}
 
+	/** Returns `0` if, and only if, any component of the two matrices \a a and \a b mismatch. */
+	VMATH_INLINE int MatrixEqual(MAT *a, MAT *b) {
+#ifdef __SSE__
+		return _mm_movemask_ps(_mm_cmpeq_ps(a->row0, b->row0)) && _mm_movemask_ps(_mm_cmpeq_ps(a->row1, b->row1)) && _mm_movemask_ps(_mm_cmpeq_ps(a->row2, b->row2)) && _mm_movemask_ps(_mm_cmpeq_ps(a->row3, b->row3));
+#else
+		return a->m[0] == b->m[0] && a->m[1] == b->m[1] && a->m[2] == b->m[2] && a->m[3] == b->m[3] && a->m[4] == b->m[4] && a->m[5] == b->m[5] && a->m[6] == b->m[6] && a->m[7] == b->m[7] && a->m[8] == b->m[8] && a->m[9] == b->m[9] && a->m[10] == b->m[10] && a->m[11] == b->m[11] && a->m[12] == b->m[12] && a->m[13] == b->m[13] && a->m[14] == b->m[14] && a->m[15] == b->m[15];
+#endif
+	}
+
 #ifdef __cplusplus
 }
 #endif
