@@ -1,7 +1,7 @@
 /** Vector math library with SIMD acceleration.
 	\file vmath.h */
 
-// TODO have cmake set the variables __SSE__, __SSE2__, __SSE3, __SSE4_1__, __SSE4_2__
+	// TODO have cmake set the variables __SSE__, __SSE2__, __SSE3, __SSE4_1__, __SSE4_2__
 
 #ifndef VMATH_H
 #define VMATH_H
@@ -297,12 +297,15 @@ extern "C" {
 #endif
 	}
 
-	/** Returns `0` if, and only if, any component of the two vectors \a a and \a b mismatch. */
+	/** Compare the elements in \a a and \a b and return a bit mask where \c 1 corresponds to equality.
+		@param a The vector to compare
+		@param b The vector to compare
+		@return The result as a bit mask */
 	VMATH_INLINE int VectorEqual(VEC a, VEC b) {
 #ifdef __SSE__
 		return _mm_movemask_ps(_mm_cmpeq_ps(a, b));
 #else
-		return a.v[0] == b.v[0] && a.v[1] == b.v[1] && a.v[2] == b.v[2] && a.v[3] == b.v[3]; // TODO rewrite for floating point comparison
+		return (a.v[0] == b.v[0] ? 1 : 0) | (a.v[1] == b.v[1] ? 1 << 1 : 0) | (a.v[2] == b.v[2] ? 1 << 2 : 0) | (a.v[3] == b.v[3] ? 1 << 3 : 0);
 #endif
 	}
 
@@ -666,12 +669,18 @@ extern "C" {
 		return m;
 	}
 
-	/** Returns `0` if, and only if, any component of the two matrices \a a and \a b mismatch. */
+	/** Compare the elements in \a a and \a b and return a bit mask where \c 1 corresponds to equality.
+		@param a The vector to compare
+		@param b The vector to compare
+		@return The result as a bit mask */
 	VMATH_INLINE int MatrixEqual(MAT *a, MAT *b) {
 #ifdef __SSE__
-		return _mm_movemask_ps(_mm_cmpeq_ps(a->row0, b->row0)) && _mm_movemask_ps(_mm_cmpeq_ps(a->row1, b->row1)) && _mm_movemask_ps(_mm_cmpeq_ps(a->row2, b->row2)) && _mm_movemask_ps(_mm_cmpeq_ps(a->row3, b->row3));
+		return _mm_movemask_ps(_mm_cmpeq_ps(a->row0, b->row0)) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row1, b->row1)) << 4) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row2, b->row2)) << 8) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row3, b->row3)) << 12);
 #else
-		return a->m[0] == b->m[0] && a->m[1] == b->m[1] && a->m[2] == b->m[2] && a->m[3] == b->m[3] && a->m[4] == b->m[4] && a->m[5] == b->m[5] && a->m[6] == b->m[6] && a->m[7] == b->m[7] && a->m[8] == b->m[8] && a->m[9] == b->m[9] && a->m[10] == b->m[10] && a->m[11] == b->m[11] && a->m[12] == b->m[12] && a->m[13] == b->m[13] && a->m[14] == b->m[14] && a->m[15] == b->m[15];
+		return (a.m[0] == b.m[0] ? 1 : 0) | (a.m[1] == b.m[1] ? 1 << 1 : 0) | (a.m[2] == b.m[2] ? 1 << 2 : 0) | (a.m[3] == b.m[3] ? 1 << 3 : 0)
+			| (a.m[4] == b.m[4] ? 1 << 4 : 0) | (a.m[5] == b.m[5] ? 1 << 5 : 0) | (a.m[6] == b.m[6] ? 1 << 6 : 0) | (a.m[7] == b.m[7] ? 1 << 7 : 0)
+			| (a.m[8] == b.m[8] ? 1 << 8 : 0) | (a.m[9] == b.m[9] ? 1 << 9 : 0) | (a.m[10] == b.m[10] ? 1 << 10 : 0) | (a.m[11] == b.m[11] ? 1 << 11 : 0)
+			| (a.m[12] == b.m[12] ? 1 << 12 : 0) | (a.m[13] == b.m[13] ? 1 << 13 : 0) | (a.m[14] == b.m[14] ? 1 << 14 : 0) | (a.m[15] == b.m[15] ? 1 << 15 : 0);
 #endif
 	}
 
