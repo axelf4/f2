@@ -72,7 +72,7 @@ struct bmfont *create_bmfont(char *data) {
 		case 5:
 		{
 			// Kerning pair block
-			for (int i = 0; i < blockSize / 10; i++, data += 10) {
+			for (unsigned int i = 0; i < blockSize / 10; i++, data += 10) {
 				unsigned int first = (unsigned char) data[3] << 24 | (unsigned char) data[2] << 16 | (unsigned char) data[1] << 8 | (unsigned char) data[0],
 					second = (unsigned char) data[7] << 24 | (unsigned char) data[6] << 16 | (unsigned char) data[5] << 8 | (unsigned char) data[4];
 				int amount = data[9] << 8 | data[8];
