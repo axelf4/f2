@@ -420,7 +420,7 @@ extern "C" {
 		@param bottom The coordinate for the bottom horizontal clipping plane
 		@param top The coordinate for the top horizontal clipping plane
 		@param nearVal The distance to the nearer depth clipping plane
-		@param nearVal The distance to the farther depth clipping plane
+		@param farVal The distance to the farther depth clipping plane
 		@return The orthographic matrix */
 	VMATH_INLINE MAT MatrixOrtho(float left, float right, float bottom, float top, float nearVal, float farVal) {
 #ifdef __SSE__
