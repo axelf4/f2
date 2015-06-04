@@ -242,7 +242,7 @@ extern "C" {
 #elif defined(__SSE__)
 
 #else
-		return((float)sqrt(a.v[0] * a.v[0] + a.v[1] * a.v[1] + a.v[2] * a.v[2]));
+		return((float) sqrt(a.v[0] * a.v[0] + a.v[1] * a.v[1] + a.v[2] * a.v[2]));
 #endif
 	}
 
@@ -317,14 +317,14 @@ extern "C" {
 	VMATH_INLINE VEC QuaternionRotationRollPitchYaw(float pitch, float yaw, float roll) {
 		// Assuming the angles are in radians.
 		const float hr = roll * 0.5f;
-		const float shr = (float)sin(hr);
-		const float chr = (float)cos(hr);
+		const float shr = (float) sin(hr);
+		const float chr = (float) cos(hr);
 		const float hp = pitch * 0.5f;
-		const float shp = (float)sin(hp);
-		const float chp = (float)cos(hp);
+		const float shp = (float) sin(hp);
+		const float chp = (float) cos(hp);
 		const float hy = yaw * 0.5f;
-		const float shy = (float)sin(hy);
-		const float chy = (float)cos(hy);
+		const float shy = (float) sin(hy);
+		const float chy = (float) cos(hy);
 		const float chy_shp = chy * shp;
 		const float shy_chp = shy * chp;
 		const float chy_chp = chy * chp;
@@ -398,17 +398,39 @@ extern "C" {
 		return m;
 	}
 
-	/** Returns a perspective matrix.
+	/** Returns a custom perspective matrix.
 		@param fov The field of vision in degrees.
 		@param aspect The aspect ratio of the screen.
 		@param zNear The near coordinate of the z-plane.
-		@param zFar The far coordinate of the z-plane. */
+		@param zFar The far coordinate of the z-plane.
+		@return The perspective matrix. */
 	VMATH_INLINE MAT MatrixPerspective(float fov, float aspect, float zNear, float zFar) {
-		const float h = 1.0f / tan(fov * PI / 360);
+		const float h = 1.0F / (float) tan(fov * PI / 360);
 #ifdef __SSE__
 		MAT m = { _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) };
 #else
 		MAT m = { h / aspect, 0, 0, 0, 0, h, 0, 0, 0, 0, (zNear + zFar) / (zNear - zFar), -1, 0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0 };
+#endif
+		return m;
+	}
+
+	/** Returns a custom orthographic projection matrix.
+		@param left The coordinate for the left vertical clipping plane
+		@param right The coordinate for the right vertical clipping plane
+		@param bottom The coordinate for the bottom horizontal clipping plane
+		@param top The coordinate for the top horizontal clipping plane
+		@param nearVal The distance to the nearer depth clipping plane
+		@param nearVal The distance to the farther depth clipping plane
+		@return The orthographic matrix */
+	VMATH_INLINE MAT MatrixOrtho(float left, float right, float bottom, float top, float nearVal, float farVal) {
+#ifdef __SSE__
+		MAT m = {
+			_mm_setr_ps(2 / (right - left), 0, 0, 0),
+			_mm_setr_ps(0, 2 / (top - bottom), 0, 0),
+			_mm_setr_ps(0, 0, -2 / (farVal - nearVal), 0),
+			_mm_setr_ps(-(right + left) / (right - left), -(top + bottom) / (top - bottom), -(farVal + nearVal) / (farVal - nearVal), 1) };
+#else
+		MAT m = { 2 / (right - left), 0, 0, 0, 0, 2 / (top - bottom), 0, 0, 0, 0, -2 / (zFar - zNear), 0, -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(zFar + zNear) / (zFar - zNear), 1 };
 #endif
 		return m;
 	}
