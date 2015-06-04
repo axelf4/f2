@@ -5,20 +5,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 set(SOURCES
 	include/vmath.h
-	include/glh.h
-	src/glh.c
-	include/net.h
-	src/net.c
-	include/objloader.h
-	src/objloader.c
-	include/bitmap_dds.h
-	src/bitmap_dds.c
-	include/glTFloader.h
-	src/glTFloader.cpp
-	include/timer.h
-	src/timer.c
-	include/FileSystemWatcher.h
-	src/FileSystemWatcher.c)
+	include/glh.h src/glh.c
+	include/net.h src/net.c
+	include/objloader.h src/objloader.c
+	include/bitmap_dds.h src/bitmap_dds.c
+	include/glTFloader.h src/glTFloader.cpp
+	include/timer.h src/timer.c
+	include/FileSystemWatcher.h src/FileSystemWatcher.c
+	include/bmfont.h src/bmfont.c)
 
 find_package(OpenGL REQUIRED)
 # find_package(OpenCL REQUIRED) ${OPENCL_INCLUDE_DIRS} ${OPENCL_LIBRARIES}
