@@ -9,7 +9,6 @@ set(SOURCES
 	include/net.h src/net.c
 	include/objloader.h src/objloader.c
 	include/bitmap_dds.h src/bitmap_dds.c
-	include/glTFloader.h src/glTFloader.cpp
 	include/timer.h src/timer.c
 	include/FileSystemWatcher.h src/FileSystemWatcher.c
 	include/bmfont.h src/bmfont.c)
