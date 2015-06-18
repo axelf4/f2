@@ -6,12 +6,12 @@
 #endif
 
 /** Returns a timestamp in milliseconds. */
-long time_get() {
+float time_get() {
 #ifdef _WIN32
-	LARGE_INTEGER Frequency, count;
-	QueryPerformanceFrequency(&Frequency);
+	LARGE_INTEGER frequency, count;
+	QueryPerformanceFrequency(&frequency);
 	QueryPerformanceCounter(&count);
-	return (long)count.QuadPart * 1000000 / Frequency.QuadPart;
+	return (float) (count.QuadPart / (frequency.QuadPart / 1000));
 #else
 	/*struct timespec tp;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &tp);
