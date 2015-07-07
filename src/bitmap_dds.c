@@ -215,7 +215,7 @@ static void FlipDXT5BlockFull(unsigned char *block) {
 	FlipDXT1BlockFull(block + 8); // And flip the DXT1 block using the above function.
 }
 
-GLuint dds_load_texture_from_memory(const char *data, int flags) {
+GLuint dds_load_texture_from_memory(const char *data, int *imageWidth, int *imageHeight, int flags) {
 	// Validate size of DDS file in memory
 	// if (dataSize < sizeof(uint32_t) + sizeof(DDSURFACEDESC2)) return 0;
 
@@ -230,6 +230,8 @@ GLuint dds_load_texture_from_memory(const char *data, int flags) {
 
 	size_t width = header.dwWidth, height = header.dwHeight, depth = header.dwDepth, mipMapCount = (size_t)MIN(header.dwMipMapCount, MAX_LEVELS), arraySize = 1;
 	if (mipMapCount == 0) mipMapCount = 1;
+	if (imageWidth != 0) *imageWidth = width;
+	if (imageHeight != 0) *imageHeight = height;
 
 	int bitsPerPixel, compressed, isCubeMap = 0;
 	GLenum internalformat = getFormat(header.ddpfPixelFormat, &bitsPerPixel, &compressed);
