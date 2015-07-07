@@ -1,5 +1,6 @@
 #include "gridlayout.h"
 #include <stdlib.h>
+#include <string.h>
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -45,18 +46,23 @@ static void maximizeTracks(float space, int count, struct track *tracks) {
 static void stretchFlexibleTracks(float space, int count, struct track *tracks, struct size *template) {
 	float leftover = space, // Let leftover space be the space to fill minus the base sizes of the non - flexible grid tracks.
 		flexSum = 0; // Let flex factor sum be the sum of the flex factors of the flexible tracks. If this value is less than 1, set it to 1 instead.
-	for (int i = 0; i < count; i++) if (IS_FLEX(template[i].max)) flexSum += GET_FLEX(template[i].max);
-	else leftover -= tracks[i].base;
+	for (int i = 0; i < count; i++) if (IS_FLEX(template[i].max)) flexSum += GET_FLEX(template[i].max); else leftover -= tracks[i].base;
 	float hypothetical = leftover / MAX(flexSum, 1); // Let the hypothetical fr size be the leftover space divided by the flex factor sum.
+
 	// If the product of the hypothetical fr size and a flexible track’s flex factor is less than the track’s base size, restart this algorithm treating all such tracks as inflexible.
 	for (int i = 0; i < count; i++) {
 		float flex = template[i].max;
 		if (IS_FLEX(flex) && hypothetical * GET_FLEX(flex) < tracks[i].base) {
-			template[i].max = 0;
-			stretchFlexibleTracks(space, count, tracks, template);
+			// Create a copy of the template to not damage the original
+			struct size *templateCopy = malloc(count * sizeof(struct size));
+			memcpy(templateCopy, template, count * sizeof(struct size));
+			templateCopy[i].max = 0;
+			stretchFlexibleTracks(space, count, tracks, templateCopy);
+			free(templateCopy);
 			return;
 		}
 	}
+
 	for (int i = 0; i < count; i++) if (IS_FLEX(template[i].max)) tracks[i].base = hypothetical * GET_FLEX(template[i].max);
 }
 
@@ -109,21 +115,17 @@ void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float lay
 	} while (repeat);
 	// TODO If any track still has an infinite growth limit (because, for example, it had no items placed in it), set its growth limit to its base size.
 
-	float gridMinWidth = 0, gridMinHeight = 0, gridMaxWidth = 0, gridMaxHeight = 0;
+	grid->gridMinWidth = grid->gridMinHeight = grid->gridMaxWidth = grid->gridMaxHeight = 0;
 	for (int column = 0; column < grid->columns; column++) {
-		gridMinWidth += columnTracks[column].base;
-		gridMaxWidth += columnTracks[column].growth;
+		grid->gridMinWidth += columnTracks[column].base;
+		grid->gridMaxWidth += columnTracks[column].growth;
 	}
 	for (int row = 0; row < grid->rows; row++) {
-		gridMinHeight += rowTracks[row].base;
-		gridMaxHeight += rowTracks[row].growth;
+		grid->gridMinHeight += rowTracks[row].base;
+		grid->gridMaxHeight += rowTracks[row].growth;
 	}
-	grid->gridMinWidth = gridMinWidth;
-	grid->gridMinHeight = gridMinHeight;
-	grid->gridMaxWidth = gridMaxWidth;
-	grid->gridMaxHeight = gridMaxHeight;
 
-	float freeWidth = layoutWidth - gridMinWidth, freeHeight = layoutHeight - gridMinHeight;
+	float freeWidth = layoutWidth - grid->gridMinWidth, freeHeight = layoutHeight - grid->gridMinHeight;
 	if (freeWidth > 0) maximizeTracks(freeWidth, grid->columns, columnTracks);
 	if (freeHeight > 0) maximizeTracks(freeHeight, grid->rows, rowTracks);
 
@@ -131,8 +133,9 @@ void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float lay
 	stretchFlexibleTracks(layoutHeight, grid->rows, rowTracks, grid->templateRows);
 
 	// Position widgets within grid areas.
-	float currentX = 0, currentY = 0;
+	float currentX = layoutX, currentY;
 	for (int column = 0; column < grid->columns; column++) {
+		currentY = layoutY;
 		for (int row = 0; row < grid->rows; row++) {
 			// Find the item in the grid area
 			struct item *item = 0;
@@ -165,6 +168,8 @@ void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float lay
 			currentY += rowTracks[row].base;
 		}
 		currentX += columnTracks[column].base;
-		currentY = 0;
 	}
+
+	free(columnTracks);
+	free(rowTracks);
 }
