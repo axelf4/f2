@@ -282,7 +282,7 @@ GLuint dds_load_texture_from_memory(const char *data, int *imageWidth, int *imag
 					pixels = malloc(size);
 					// Flip & copy to actual pixel buffer
 					int widBytes = ((width + 3) / 4)*blockSize;
-					unsigned char *s = data + offset, *d = pixels + ((height + 3) / 4 - 1) * widBytes;
+					const unsigned char *s = data + offset, *d = pixels + ((height + 3) / 4 - 1) * widBytes;
 					for (unsigned int j = 0; j < (height + 3) / 4; j++) {
 						memcpy(d, s, widBytes);
 

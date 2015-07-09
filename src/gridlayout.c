@@ -55,6 +55,7 @@ static void stretchFlexibleTracks(float space, int count, struct track *tracks, 
 		if (IS_FLEX(flex) && hypothetical * GET_FLEX(flex) < tracks[i].base) {
 			// Create a copy of the template to not damage the original
 			struct size *templateCopy = malloc(count * sizeof(struct size));
+			if (templateCopy == 0) return;
 			memcpy(templateCopy, template, count * sizeof(struct size));
 			templateCopy[i].max = 0;
 			stretchFlexibleTracks(space, count, tracks, templateCopy);
@@ -67,8 +68,10 @@ static void stretchFlexibleTracks(float space, int count, struct track *tracks, 
 }
 
 void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float layoutWidth, float layoutHeight) {
-	struct track *columnTracks = malloc(grid->columns * sizeof(struct track)),
-		*rowTracks = malloc(grid->rows * sizeof(struct track));
+	struct track *columnTracks = malloc(grid->columns * sizeof(struct track));
+	if (columnTracks == 0) return;
+	struct track *rowTracks = malloc(grid->rows * sizeof(struct track));
+	if (rowTracks == 0) return;
 
 	// Initialize each track’s base size and growth limit.
 	initializeTrackSizes(grid->columns, columnTracks, grid->templateColumns);
