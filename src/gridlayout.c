@@ -1,6 +1,7 @@
 #include "gridlayout.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
@@ -37,8 +38,10 @@ static void maximizeTracks(float space, int count, struct track *tracks) {
 	if (growth * unfrozen > space) growth = space / unfrozen;
 	for (int i = 0; i < count; i++) {
 		struct track *track = tracks + i;
-		track->base += growth;
-		if (track->base - track->growth < FLT_EPSILON) unfrozen--;
+		if (fabs(track->base - track->growth) > FLT_EPSILON) {
+			track->base += growth;
+			unfrozen--;
+		}
 	}
 	if (unfrozen > 0) maximizeTracks(space, count, tracks);
 }
@@ -153,12 +156,12 @@ void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float lay
 					item->widget->width = width * item->fillX;
 					float maxWidth = grid->maxWidth(item->widget);
 					if (maxWidth > 0) item->widget->width = MIN(item->widget->width, maxWidth);
-				} else item->widget->width = grid->minWidth(item->widget);
+				} else item->widget->width = MAX(MIN(width, grid->maxWidth(item->widget)), grid->minWidth(item->widget));
 				if (item->fillY > 0) {
 					item->widget->height = height * item->fillY;
 					float maxHeight = grid->maxHeight(item->widget);
 					if (maxHeight > 0) item->widget->height = MIN(item->widget->height, maxHeight);
-				} else item->widget->height = grid->minHeight(item->widget);
+				} else item->widget->height = MAX(MIN(height, grid->maxHeight(item->widget)), grid->minHeight(item->widget));
 
 				if ((item->align & ALIGN_LEFT) != 0) item->widget->x = currentX;
 				else if ((item->align & ALIGN_RIGHT) != 0) item->widget->x = currentX + columnTracks[item->column].base - item->widget->width;
