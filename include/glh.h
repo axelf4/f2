@@ -23,9 +23,8 @@ extern "C" {
 	/** The version of OpenGL as a float. */
 #define OGLV (atof((const char*) glGetString(GL_VERSION)))
 
-	// TODO remove "#version 110\n" from GLSL for it to be ALOT more flexible
 	/** Returns the GLSL code in a string format. */
-#define GLSL(...) "#version 120\n" #__VA_ARGS__
+#define GLSL(version, ...) "#version " #version "\n" #__VA_ARGS__
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 

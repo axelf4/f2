@@ -14,19 +14,16 @@ GLsizei calculate_stride(struct attrib *attributes) {
 
 const char *read_file(const char *filename) {
 	char *buffer = 0;
-	long length;
 	FILE *f = fopen(filename, "rb");
-
 	if (f) {
 		fseek(f, 0, SEEK_END);
-		length = ftell(f);
+		long length = ftell(f);
 		fseek(f, 0, SEEK_SET);
-		buffer = malloc(length + 1);
+		if ((buffer = malloc(length + 1)) == 0) return 0;
 		buffer[length] = 0;
 		if (buffer) fread(buffer, 1, length, f);
 		fclose(f);
 	}
-
 	return buffer;
 }
 
@@ -91,6 +88,7 @@ char * getProgramInfoLog(GLuint program) {
 struct mesh * create_mesh(int indexed) {
 	GLuint buffers[2];
 	struct mesh *mesh = malloc(sizeof(struct mesh));
+	if (mesh == 0) return 0;
 	return glGenBuffers(1 + indexed, buffers), (mesh->vbo = buffers[0]), (mesh->ibo = buffers[1]), mesh;
 }
 

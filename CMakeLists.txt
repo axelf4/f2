@@ -11,6 +11,7 @@ set(SOURCES
 	include/bitmap_dds.h src/bitmap_dds.c
 	include/timer.h src/timer.c
 	include/FileSystemWatcher.h src/FileSystemWatcher.c
+	include/gridlayout.h src/gridlayout.c
 	include/bmfont.h src/bmfont.c)
 
 find_package(OpenGL REQUIRED)

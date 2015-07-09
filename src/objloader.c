@@ -16,7 +16,7 @@ static int isNewLine(const char c) {
 
 static float parseFloat(const char **token) {
 	*token += strspn(*token, SPACE);
-	float f = (float)atof(*token);
+	float f = (float) atof(*token);
 	*token += strspn(*token, ATOF_CHARACTERS);
 	return f;
 }
@@ -31,11 +31,12 @@ static unsigned int getIndex(const char **token, unsigned int size) {
 
 static char * parseText(const char **token) {
 	unsigned int len = strspn(*token, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.");
-	char *retval = (char *)malloc(sizeof(char) * len + 1); // Allocate enough memory for text
-	memcpy(retval, *token, len); // Copy string from line
-	retval[len] = '\0'; // Manually null-terminate string
+	char *buffer = malloc(len * sizeof(char) + 1); // Allocate enough memory for text
+	if (buffer == 0) return 0;
+	memcpy(buffer, *token, len); // Copy string from line
+	buffer[len] = '\0'; // Manually null-terminate string
 	*token += len;
-	return retval;
+	return buffer;
 }
 
 struct group {
@@ -46,11 +47,15 @@ struct group {
 };
 
 static struct group * create_group(char *name) {
-	struct group *group = (struct group *) malloc(sizeof(struct group));
+	struct group *group = malloc(sizeof(struct group));
+	if (group == 0) return 0;
 	group->name = name;
 	group->numFaces = 0;
 	group->facesSize = 0;
-	group->faces = (unsigned int *)malloc(sizeof(unsigned int) * (group->facesCapacity = 3));
+	if ((group->faces = malloc((group->facesCapacity = 3) * sizeof(unsigned int))) == 0) {
+		free(group);
+		return 0;
+	}
 	group->materialIndex = 0;
 	group->next = 0;
 	return group;
@@ -59,12 +64,12 @@ static struct group * create_group(char *name) {
 struct obj_model * load_obj_model(const char *filename, const char *data, int flags) {
 	// Array lists for the geometry, texture coordinate and normal storage
 	unsigned int vertsSize = 0, uvsSize = 0, normsSize = 0, vertsCapacity = 2, uvsCapacity = 2, normsCapacity = 2;
-	float *verts = (float *)malloc(sizeof(float) * vertsCapacity), *uvs = (float *)malloc(sizeof(float) * vertsCapacity), *norms = (float *)malloc(sizeof(float) * normsCapacity);
+	float *verts = (float *) malloc(sizeof(float) * vertsCapacity), *uvs = (float *) malloc(sizeof(float) * vertsCapacity), *norms = (float *) malloc(sizeof(float) * normsCapacity);
 
 	// Model-wise booleans whether texture coordinates or normals exist
 	unsigned int hasUVs = 0, hasNorms = 0;
 
-	char *defaultGroupName = (char *)malloc(sizeof "default"); // Allocate string on heap instead of in data segment to be able to free it like the rest
+	char *defaultGroupName = (char *) malloc(sizeof "default"); // Allocate string on heap instead of in data segment to be able to free it like the rest
 	strcpy(defaultGroupName, "default");
 
 	unsigned int groupsSize = 1; // TODO rename to numGroups // Store the number of groups to not have to traverse them to see the length
@@ -83,35 +88,36 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 				size = &vertsSize;
 				capacity = &vertsCapacity;
 				list = &verts;
-			}
-			else if ('t' == *tok) { // Texture coordinate
+			} else if ('t' == *tok) { // Texture coordinate
 				size = &uvsSize;
 				capacity = &uvsCapacity;
 				list = &uvs;
 				hasZ = 0;
-			}
-			else if ('n' == *tok) { // Normal
+			} else if ('n' == *tok) { // Normal
 				size = &normsSize;
 				capacity = &normsCapacity;
 				list = &norms;
 			}
 			tok++; // Skip token (either ' ', 't' or 'n')
 			if (*size + (hasZ ? 3 : 2) >= *capacity) {
-				float *tmp = (float *)realloc(*list, sizeof(float) * (*capacity *= 2));
+				float *tmp = (float *) realloc(*list, sizeof(float) * (*capacity *= 2));
 				if (tmp == 0) return 0;
 				*list = tmp;
 			}
 			x = (*list)[(*size)++] = parseFloat(&tok); // X
 			y = (*list)[(*size)++] = parseFloat(&tok); // Y
 			if (hasZ) z = (*list)[(*size)++] = parseFloat(&tok); // Z
-		}
-		else if ('f' == *tok) {
+		} else if ('f' == *tok) {
 			tok += 2; // Skip the characters 'f '
 			unsigned int i, initialFacesSize, *facesSize = &currentGroup->facesSize, *facesCapacity = &currentGroup->facesCapacity, *numFaces = &currentGroup->numFaces, **faces = &currentGroup->faces;
 			initialFacesSize = *facesSize;
 			for (i = 0; !isNewLine(*tok); i++) {
 				if (*facesSize + (1 + hasUVs + hasNorms) * (i >= 3 ? 3 : 1) >= *facesCapacity) {
-					*faces = (unsigned int *)realloc(*faces, sizeof(unsigned int) * (*facesCapacity *= 2));
+					unsigned int *tmp = realloc(*faces, (*facesCapacity *= 2) * sizeof(unsigned int));
+					if (tmp == 0) {
+						free(*faces);
+					}
+					*faces = tmp;
 				}
 
 				if (i >= 3) {
@@ -143,14 +149,12 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 				tok += strspn(tok, " \t\r"); // Ignore spaces when checking for a newline
 			}
 			assert(i >= 2 && "Points and lines aren't supported.");
-		}
-		else if ('g' == *tok) {
+		} else if ('g' == *tok) {
 			tok += 2; // Skip the 2 chars in "g "
 			struct group *oldgroup = lastGroup;
 			oldgroup->next = (currentGroup = lastGroup = create_group(parseText(&tok))); // Create a new group and leave a reference in the linked list structure
 			groupsSize++;
-		}
-		else if (strncmp("usemtl", tok, strlen("usemtl")) == 0) {
+		} else if (strncmp("usemtl", tok, strlen("usemtl")) == 0) {
 			tok += 7; // Skip the 7 chars in "usemtl "
 			char *materialName = parseText(&tok); // Parse the name of the material
 
@@ -170,7 +174,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 
 			// If the current group already has faces that doesn't use the new material we need to differentiate them
 			if (currentGroup->numFaces > 0) {
-				char *groupName = (char *)malloc(strlen(currentGroup->name) + 1); // Allocate memory for the name of the new group
+				char *groupName = (char *) malloc(strlen(currentGroup->name) + 1); // Allocate memory for the name of the new group
 				memcpy(groupName, currentGroup->name, strlen(currentGroup->name) + 1); // Copy the name of the old group into the new one's
 				struct group *oldgroup = lastGroup;
 				oldgroup->next = (currentGroup = lastGroup = create_group(groupName)); // Create a new group sharing the name of the old and link them
@@ -183,20 +187,18 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 					break;
 				}
 			}
-		}
-		else if (*tok == ' ' || *tok == '\n' || *tok == '\t' || *tok == 'r') { tok++; continue; } // Skip spaces or empty lines at beginning of line
+		} else if (*tok == ' ' || *tok == '\n' || *tok == '\t' || *tok == 'r') { tok++; continue; } // Skip spaces or empty lines at beginning of line
 		else if ('#' == *tok) {
 			tok += strcspn(tok + 1, "\n") + 1; // Skip newlines or comments
-		}
-		else if (strncmp("mtllib", tok, strlen("mtllib")) == 0) {
+		} else if (strncmp("mtllib", tok, strlen("mtllib")) == 0) {
 			// TODO make able to load multiple mtllibs as the definition: mtllib filename1 filename2 . . .
 			// Use the .obj file's directory as a base
 			tok += 7; // Skip the 7 chars in "mtllib "
 			char *file = parseText(&tok);
 			unsigned int fileLen = strlen(file);
-			unsigned int directoryLen = strrchr((char *)filename, '/') - filename + 1;
-			if (directoryLen == 0) directoryLen = strrchr((char *)filename, '\\') - filename + 1;
-			char *path = (char *)malloc(sizeof(char) * (directoryLen + fileLen + 1));
+			unsigned int directoryLen = strrchr((char *) filename, '/') - filename + 1;
+			if (directoryLen == 0) directoryLen = strrchr((char *) filename, '\\') - filename + 1;
+			char *path = (char *) malloc(sizeof(char) * (directoryLen + fileLen + 1));
 			memcpy(path, filename, directoryLen);
 			memcpy(path + directoryLen, file, fileLen);
 			path[directoryLen + fileLen] = '\0';
@@ -209,8 +211,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 			materials = (struct mtl_material **) realloc(materials, sizeof(struct mtl_material *) * (materialsSize + numMaterials));
 			memcpy(materials + sizeof(struct mtl_material *) * materialsSize, newMaterials, sizeof(struct mtl_material *) * numMaterials);
 			materialsSize += numMaterials;
-		}
-		else if ('\0' == *tok) break;
+		} else if ('\0' == *tok) break;
 		tok = strchr(tok, '\n') + 1; // Skip to next line line
 	}
 
@@ -232,7 +233,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 		part->faceCount = group->numFaces;
 
 		// TODO reduced the size of vertices by 3 times, still haven't tested if it works vertices only
-		float *vertices = part->vertices = (float *)malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
+		float *vertices = part->vertices = (float *) malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
 		if (!(flags & OBJ_INDICES)) {
 			part->indexCount = 0;
 			part->indices = 0;
@@ -254,7 +255,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 				}
 			}
 		} else {
-			unsigned int vi = 0, *indices = part->indices = (unsigned int *)malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
+			unsigned int vi = 0, *indices = part->indices = (unsigned int *) malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
 			for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
 				unsigned int vertIndex = group->faces[j++] * 3, uvIndex = hasUVs ? group->faces[j++] * 2 : 0, normIndex = hasNorms ? group->faces[j++] * 3 : 0;
 
@@ -345,23 +346,19 @@ struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials)
 			// TODO define defaults for rest
 			cur->opacity = 1.f;
 			cur->texPath = 0;
-		}
-		else if (*tok == 'K' && (tok[1] == 'a' || tok[1] == 'd' || tok[1] == 's')) { // diffuse or specular
+		} else if (*tok == 'K' && (tok[1] == 'a' || tok[1] == 'd' || tok[1] == 's')) { // diffuse or specular
 			float *color = tok[1] == 'a' ? cur->ambient : (tok[1] == 'd' ? cur->diffuse : cur->specular);
 			tok += 3; // Skip the characters 'K' and 'a'/'d'/'s' and the space
 			color[0] = parseFloat(&tok);
 			color[1] = parseFloat(&tok);
 			color[2] = parseFloat(&tok);
-		}
-		else if ((tok[0] == 'T' && tok[1] == 'r') || *tok == 'd') {
+		} else if ((tok[0] == 'T' && tok[1] == 'r') || *tok == 'd') {
 			tok += 2; // Skip the characters 'Tr' or 'd '
 			cur->opacity = parseFloat(&tok);
-		}
-		else if (tok[0] == 'n' && tok[1] == 's') {
+		} else if (tok[0] == 'n' && tok[1] == 's') {
 			tok += 3; // Skip the characters 'ns '
 			cur->shininess = parseFloat(&tok);
-		}
-		else if (strncmp("map_Kd", tok, strlen("map_Kd")) == 0) {
+		} else if (strncmp("map_Kd", tok, strlen("map_Kd")) == 0) {
 			tok += 7; // Skip the 7 characters "map_Kd "
 			cur->texPath = parseText(&tok);
 			tok += 0;
