@@ -152,16 +152,13 @@ void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float lay
 				for (int i = column; i < column + item->colspan; i++) width += columnTracks[i].base;
 				for (int i = row; i < row + item->rowspan; i++) height += rowTracks[i].base;
 
-				if (item->fillX > 0) {
-					item->widget->width = width * item->fillX;
-					float maxWidth = grid->maxWidth(item->widget);
-					if (maxWidth > 0) item->widget->width = MIN(item->widget->width, maxWidth);
-				} else item->widget->width = MAX(MIN(width, grid->maxWidth(item->widget)), grid->minWidth(item->widget));
-				if (item->fillY > 0) {
-					item->widget->height = height * item->fillY;
-					float maxHeight = grid->maxHeight(item->widget);
-					if (maxHeight > 0) item->widget->height = MIN(item->widget->height, maxHeight);
-				} else item->widget->height = MAX(MIN(height, grid->maxHeight(item->widget)), grid->minHeight(item->widget));
+				float maxWidth = grid->maxWidth(item->widget), maxHeight = grid->maxHeight(item->widget);
+
+				item->widget->width = width * item->fillX;
+				if (maxWidth > 0) item->widget->width = MIN(item->widget->width, maxWidth);
+
+				item->widget->height = height * item->fillY;
+				if (maxHeight > 0) item->widget->height = MIN(item->widget->height, maxHeight);
 
 				if ((item->align & ALIGN_LEFT) != 0) item->widget->x = currentX;
 				else if ((item->align & ALIGN_RIGHT) != 0) item->widget->x = currentX + columnTracks[item->column].base - item->widget->width;
