@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
 
 struct bmfont *create_bmfont(char *data) {
 	if (strncmp(data, "BMF\003", 4) != 0) return 0; // Check magic, only binary is supported
@@ -9,6 +10,10 @@ struct bmfont *create_bmfont(char *data) {
 
 	struct bmfont *font = (struct bmfont *)malloc(sizeof(struct bmfont));
 	if (font == 0) return 0;
+
+	for (unsigned int p = 0; p < PAGES; p++) {
+		font->glyphs[p] = malloc(sizeof(struct glyph) * PAGE_SIZE);
+	}
 
 	while (*data != '\0') {
 		char blockType = *data++;
@@ -24,16 +29,13 @@ struct bmfont *create_bmfont(char *data) {
 			// Read common block
 			unsigned int lineHeight = font->lineHeight = ((int) data[1] << 8) | data[0];
 			data += 2;
-			unsigned int base = ((int) data[1] << 8) | data[0];
+			unsigned int base = font->base = data[1] << 8 | data[0] & 0xFF;
 			data += 6; // Skip base, scaleW and scaleH
-			unsigned int pages = font->pages = ((int) data[1] << 8) | data[0];
+			unsigned int pages = font->pages = data[1] << 8 | data[0] & 0xFF;
 			data += 7;
 
 			// font->glyphs = malloc(sizeof(struct glyph *) * pages);
 			// for (unsigned int p = 0; p < font->pages; p++) font->glyphs[p] = malloc(sizeof(struct glyph) * PAGE_SIZE);
-			for (unsigned int p = 0; p < PAGES; p++) {
-				font->glyphs[p] = malloc(sizeof(struct glyph) * PAGE_SIZE);
-			}
 			break;
 		}
 		case 3:
@@ -52,20 +54,22 @@ struct bmfont *create_bmfont(char *data) {
 			int numChars = blockSize / 20;
 			for (int c = 0; c < numChars; c++, data += 20) {
 				struct glyph glyph;
-				// unsigned int id = glyph.id = ((data[3] & 0xFF) << 24) | ((data[2] & 0xFF) << 16) | ((data[1] & 0xFF) << 8) | (data[0] & 0xFF);
-				unsigned int id = glyph.id = (unsigned char) data[3] << 24 | (unsigned char) data[2] << 16 | (unsigned char) data[1] << 8 | (unsigned char) data[0];
-				glyph.x = ((int) data[5] << 8) | (data[4]);
-				glyph.y = ((int) data[7] << 8) | (data[6]);
-				glyph.width = ((int) data[9] << 8) | (data[8]);
-				glyph.height = ((int) data[11] << 8) | (data[10]);
-				glyph.xoffset = ((int) data[13] << 8) | (data[12]);
-				glyph.yoffset = ((int) data[15] << 8) | (data[14]);
-				glyph.xadvance = ((int) data[17] << 8) | (data[16]);
+				unsigned int id = glyph.id = ((data[3] & 0xFF) << 24) | ((data[2] & 0xFF) << 16) | ((data[1] & 0xFF) << 8) | (data[0] & 0xFF);
+				// unsigned int id = glyph.id = (unsigned char) data[3] << 24 | (unsigned char) data[2] << 16 | (unsigned char) data[1] << 8 | (unsigned char) data[0];
+				glyph.x = data[5] << 8 | data[4] & 0xFF;
+				glyph.y = data[7] << 8 | data[6] & 0xFF;
+				glyph.width = data[9] << 8 | data[8] & 0xFF;
+				glyph.height = data[11] << 8 | data[10] & 0xFF;
+				glyph.xoffset = data[13] << 8 | data[12] & 0xFF;
+				glyph.yoffset = data[15] << 8 | data[14] & 0xFF;
+				glyph.xadvance = data[17] << 8 | data[16] & 0xFF;
 				glyph.page = data[18];
 				glyph.kerning = 0;
 				unsigned int chnl = data[19];
 
-				font->glyphs[id / PAGE_SIZE][id & PAGE_SIZE - 1] = glyph;
+				if (id <= CHAR_MAX) {
+					font->glyphs[id / PAGE_SIZE][id & PAGE_SIZE - 1] = glyph;
+				}
 			}
 			break;
 		}
@@ -103,7 +107,8 @@ void destroy_bmfont(struct bmfont *font) {
 }
 
 struct glyph bmfont_get_glyph(struct bmfont *font, char c) {
-	return font->glyphs[c / PAGE_SIZE][c & PAGE_SIZE - 1];
+	struct glyph glyph = font->glyphs[c / PAGE_SIZE][c & PAGE_SIZE - 1];
+	return glyph;
 }
 
 int glyph_get_kerning(struct glyph glyph, char c) {
