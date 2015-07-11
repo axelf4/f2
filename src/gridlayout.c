@@ -1,4 +1,4 @@
-#include "gridlayout.h"
+ï»¿#include "gridlayout.h"
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -18,8 +18,7 @@ static void initializeTrackSizes(int count, struct track *tracks, struct size *t
 		float min = template[i].min, max = template[i].max;
 
 		track->base = IS_INTRINSIC(min) || IS_FLEX(min) ? 0 : min;
-		if (IS_INTRINSIC(max) || IS_FLEX(max)) track->growth = track->base;
-		else track->growth = max;
+		track->growth = IS_INTRINSIC(max) || IS_FLEX(max) ? track->base : max;
 		if (track->growth < track->base) track->growth = track->base;
 	}
 }
@@ -52,7 +51,7 @@ static void stretchFlexibleTracks(float space, int count, struct track *tracks, 
 	for (int i = 0; i < count; i++) if (IS_FLEX(template[i].max)) flexSum += GET_FLEX(template[i].max); else leftover -= tracks[i].base;
 	float hypothetical = leftover / MAX(flexSum, 1); // Let the hypothetical fr size be the leftover space divided by the flex factor sum.
 
-	// If the product of the hypothetical fr size and a flexible track’s flex factor is less than the track’s base size, restart this algorithm treating all such tracks as inflexible.
+	// If the product of the hypothetical fr size and a flexible trackâ€™s flex factor is less than the trackâ€™s base size, restart this algorithm treating all such tracks as inflexible.
 	for (int i = 0; i < count; i++) {
 		float flex = template[i].max;
 		if (IS_FLEX(flex) && hypothetical * GET_FLEX(flex) < tracks[i].base) {
@@ -70,54 +69,64 @@ static void stretchFlexibleTracks(float space, int count, struct track *tracks, 
 	for (int i = 0; i < count; i++) if (IS_FLEX(template[i].max)) tracks[i].base = hypothetical * GET_FLEX(template[i].max);
 }
 
+static void resolveIntrinsicTrackSizes(int start, int count, struct track *tracks, struct size *template, float minSize, float maxSize) {
+	float sum = 0, trackCount = 0, extraSpace;
+	for (int i = start, n = i + count; i < n; i++) {
+		sum += tracks[i].base;
+		trackCount += IS_INTRINSIC(template[i].min);
+	}
+	extraSpace = MAX(0, minSize - sum) / trackCount;
+	for (int i = start, n = i + count; i < n; i++) if (IS_INTRINSIC(template[i].min)) tracks[i].base += extraSpace;
+
+	sum = 0, trackCount = 0;
+	for (int i = start, n = i + count; i < n; i++) {
+		sum += tracks[i].base;
+		trackCount += template[i].min == MAX_CONTENT;
+	}
+	extraSpace = MAX(0, maxSize - sum) / trackCount;
+	for (int i = start, n = i + count; i < n; i++) if (template[i].min == MAX_CONTENT) tracks[i].base += extraSpace;
+
+	// If at this point any trackâ€™s growth limit is now less than its base size, increase its growth limit to match its base size.
+	for (int i = start, n = i + count; i < n; i++) if (tracks[i].growth < tracks[i].base) tracks[i].growth = tracks[i].base;
+
+	sum = 0, trackCount = 0;
+	for (int i = start, n = i + count; i < n; i++) {
+		sum += tracks[i].growth;
+		trackCount += IS_INTRINSIC(template[i].max);
+	}
+	extraSpace = MAX(0, minSize - sum) / trackCount;
+	for (int i = start, n = i + count; i < n; i++) if (IS_INTRINSIC(template[i].max)) tracks[i].growth += extraSpace;
+
+	sum = 0, trackCount = 0;
+	for (int i = start, n = i + count; i < n; i++) {
+		sum += tracks[i].growth;
+		trackCount += template[i].max == MAX_CONTENT;
+	}
+	extraSpace = MAX(0, maxSize - sum) / trackCount;
+	for (int i = start, n = i + count; i < n; i++) if (template[i].max == MAX_CONTENT) tracks[i].growth += extraSpace;
+}
+
 void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float layoutWidth, float layoutHeight) {
 	struct track *columnTracks = malloc(grid->columns * sizeof(struct track));
 	if (columnTracks == 0) return;
 	struct track *rowTracks = malloc(grid->rows * sizeof(struct track));
 	if (rowTracks == 0) return;
 
-	// Initialize each track’s base size and growth limit.
+	// Initialize each trackâ€™s base size and growth limit.
 	initializeTrackSizes(grid->columns, columnTracks, grid->templateColumns);
 	initializeTrackSizes(grid->rows, rowTracks, grid->templateRows);
 
 	// Resolve intrinsic track sizing functions to absolute lengths.
-	int span = 1, repeat = 0;
+	int span = 0, repeat = 0;
 	do {
 		repeat = 0;
+		span++;
 		for (int i = 0; i < grid->itemCount; i++) {
 			struct item item = grid->items[i];
-
-			if (item.colspan == span) {
-				for (int column = item.column, n = column + item.colspan; column < n; column++) {
-					struct track *track = columnTracks + column;
-					struct size template = grid->templateColumns[column];
-
-					if (template.min == MIN_CONTENT || IS_FLEX(template.min)) track->base = MAX(track->base, grid->minWidth(item.widget));
-					else if (template.min == MAX_CONTENT) track->base = MAX(track->base, grid->maxWidth(item.widget));
-
-					if (template.max == MIN_CONTENT) track->growth = MAX(track->growth, grid->minWidth(item.widget));
-					else if (template.max == MAX_CONTENT) track->growth = MAX(track->growth, grid->maxWidth(item.widget));
-
-					if (track->growth < track->base) track->growth = track->base;
-				}
-			} else if (item.colspan > span) repeat = 1;
-
-			if (item.rowspan == span) {
-				for (int row = item.row, n = row + item.rowspan; row < n; row++) {
-					struct track *track = rowTracks + row;
-					struct size template = grid->templateRows[row];
-
-					if (template.min == MIN_CONTENT || IS_FLEX(template.min)) track->base = MAX(track->base, grid->minHeight(item.widget));
-					else if (template.min == MAX_CONTENT) track->base = MAX(track->base, grid->maxHeight(item.widget));
-
-					if (template.max == MIN_CONTENT) track->growth = MAX(track->growth, grid->minHeight(item.widget));
-					else if (template.max == MAX_CONTENT) track->growth = MAX(track->growth, grid->maxHeight(item.widget));
-
-					if (track->growth < track->base) track->growth = track->base;
-				}
-			} else if (item.rowspan > span) repeat = 1;
+			if (item.colspan == span) resolveIntrinsicTrackSizes(item.column, item.colspan, columnTracks, grid->templateColumns, grid->minWidth(item.widget), grid->maxWidth(item.widget));
+			if (item.rowspan == span) resolveIntrinsicTrackSizes(item.row, item.rowspan, rowTracks, grid->templateRows, grid->minHeight(item.widget), grid->maxHeight(item.widget));
+			repeat |= item.colspan > span | item.rowspan > span;
 		}
-		span++;
 	} while (repeat);
 	// TODO If any track still has an infinite growth limit (because, for example, it had no items placed in it), set its growth limit to its base size.
 
@@ -152,16 +161,13 @@ void layoutGrid(struct gridlayout *grid, float layoutX, float layoutY, float lay
 				for (int i = column; i < column + item->colspan; i++) width += columnTracks[i].base;
 				for (int i = row; i < row + item->rowspan; i++) height += rowTracks[i].base;
 
-				if (item->fillX > 0) {
-					item->widget->width = width * item->fillX;
-					float maxWidth = grid->maxWidth(item->widget);
-					if (maxWidth > 0) item->widget->width = MIN(item->widget->width, maxWidth);
-				} else item->widget->width = MAX(MIN(width, grid->maxWidth(item->widget)), grid->minWidth(item->widget));
-				if (item->fillY > 0) {
-					item->widget->height = height * item->fillY;
-					float maxHeight = grid->maxHeight(item->widget);
-					if (maxHeight > 0) item->widget->height = MIN(item->widget->height, maxHeight);
-				} else item->widget->height = MAX(MIN(height, grid->maxHeight(item->widget)), grid->minHeight(item->widget));
+				float maxWidth = grid->maxWidth(item->widget), maxHeight = grid->maxHeight(item->widget);
+
+				item->widget->width = width * item->fillX;
+				if (maxWidth > 0) item->widget->width = MIN(item->widget->width, maxWidth);
+
+				item->widget->height = height * item->fillY;
+				if (maxHeight > 0) item->widget->height = MIN(item->widget->height, maxHeight);
 
 				if ((item->align & ALIGN_LEFT) != 0) item->widget->x = currentX;
 				else if ((item->align & ALIGN_RIGHT) != 0) item->widget->x = currentX + columnTracks[item->column].base - item->widget->width;
