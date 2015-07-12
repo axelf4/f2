@@ -88,24 +88,24 @@ extern "C" {
 #define PI 3.141592654f /**< An optimal approximation of the constant pi. */
 #define NULL_VECTOR VectorReplicate(0) /**< A null vector (or zero vector) whose length is zero, with the components [0, 0, 0, 0] (*0*). */
 
-#if MATRIX_ORDER == ROW_MAJOR
-#define M_00 0 /**< XX. */
-#define M_01 4 /**< XY. */
-#define M_02 8 /**< XZ. */
-#define M_03 12 /**< XW. */
-#define M_10 1 /**< YX. */
-#define M_11 5 /**< YY. */
-#define M_12 9 /**< YZ. */
-#define M_13 13 /**< YW. */
-#define M_20 2 /**< ZX. */
-#define M_21 6 /**< ZY. */
-#define M_22 10 /**< ZZ. */
-#define M_23 14 /**< ZW. */
-#define M_30 3 /**< WX. */
-#define M_31 7 /**< WY. */
-#define M_32 11 /**< WZ. */
-#define M_33 15 /**< WW. */
-#else
+// #if MATRIX_ORDER == ROW_MAJOR
+//#define M_00 0 /**< XX. */
+//#define M_01 4 /**< XY. */
+//#define M_02 8 /**< XZ. */
+//#define M_03 12 /**< XW. */
+//#define M_10 1 /**< YX. */
+//#define M_11 5 /**< YY. */
+//#define M_12 9 /**< YZ. */
+//#define M_13 13 /**< YW. */
+//#define M_20 2 /**< ZX. */
+//#define M_21 6 /**< ZY. */
+//#define M_22 10 /**< ZZ. */
+//#define M_23 14 /**< ZW. */
+//#define M_30 3 /**< WX. */
+//#define M_31 7 /**< WY. */
+//#define M_32 11 /**< WZ. */
+//#define M_33 15 /**< WW. */
+//#else
 #define M_00 0 /**< XX. */
 #define M_01 1 /**< XY. */
 #define M_02 2 /**< XZ. */
@@ -122,7 +122,7 @@ extern "C" {
 #define M_31 13 /**< WY. */
 #define M_32 14 /**< WZ. */
 #define M_33 15 /**< WW. */
-#endif
+//#endif
 
 	/* VECTOR */
 
@@ -368,9 +368,9 @@ extern "C" {
 #endif
 
 	/** Returns a new ::MAT from the specified components. */
-	VMATH_INLINE MAT MatrixSet(float m00, float m01, float m02, float m03, float m10, float m11, float m12, float m13, float m20, float m21, float m22, float m23, float m30, float m31, float m32, float m33) {
+	VMATH_INLINE MAT MatrixSet(float m00, float m10, float m20, float m30, float m01, float m11, float m21, float m31, float m02, float m12, float m22, float m32, float m03, float m13, float m23, float m33) {
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(m00, m01, m02, m03), _mm_setr_ps(m10, m11, m12, m13), _mm_setr_ps(m20, m21, m22, m23), _mm_setr_ps(m30, m31, m32, m33) };
+		MAT m = { _mm_setr_ps(m00, m10, m20, m30), _mm_setr_ps(m01, m11, m21, m31), _mm_setr_ps(m02, m12, m22, m32), _mm_setr_ps(m03, m13, m23, m33) };
 #else
 		MAT m = { m00, m10, m20, m30, m01, m11, m21, m31, m02, m12, m22, m32, m03, m13, m23, m33 };
 #endif
@@ -424,13 +424,12 @@ extern "C" {
 		@return The orthographic matrix */
 	VMATH_INLINE MAT MatrixOrtho(float left, float right, float bottom, float top, float nearVal, float farVal) {
 #ifdef __SSE__
-		MAT m = {
-			_mm_setr_ps(2 / (right - left), 0, 0, 0),
+		MAT m = { _mm_setr_ps(2 / (right - left), 0, 0, 0),
 			_mm_setr_ps(0, 2 / (top - bottom), 0, 0),
 			_mm_setr_ps(0, 0, -2 / (farVal - nearVal), 0),
 			_mm_setr_ps(-(right + left) / (right - left), -(top + bottom) / (top - bottom), -(farVal + nearVal) / (farVal - nearVal), 1) };
 #else
-		MAT m = { 2 / (right - left), 0, 0, 0, 0, 2 / (top - bottom), 0, 0, 0, 0, -2 / (zFar - zNear), 0, -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(zFar + zNear) / (zFar - zNear), 1 };
+		MAT m = { 2 / (right - left), 0, 0, 0, 0, 2 / (top - bottom), 0, 0, 0, 0, -2 / (farVal - nearVal), 0, -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(farVal + nearVal) / (farVal - nearVal), 1 };
 #endif
 		return m;
 	}
@@ -495,27 +494,7 @@ extern "C" {
 		MAT m = { _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) };
 		return m;
 #else
-		// A B C D    A E I M
-		// E F G H    B F J N
-		// I J K L    C G K O
-		// M N O P    D H L P
-		MAT m;
-		m.m[0] = a->m[0];  // A . . .
-		m.m[1] = a->m[4];  // A E . .
-		m.m[2] = a->m[8];  // A E I .
-		m.m[3] = a->m[12]; // A E I M
-		m.m[4] = a->m[1];  // B . . .
-		m.m[5] = a->m[5];  // B F . .
-		m.m[6] = a->m[9];  // B F J .
-		m.m[7] = a->m[13]; // B F J N
-		m.m[8] = a->m[2];  // C . . .
-		m.m[9] = a->m[6];  // C G . .
-		m.m[10] = a->m[10]; // C G K .
-		m.m[11] = a->m[14]; // C G K O
-		m.m[12] = a->m[3];  // D . . .
-		m.m[13] = a->m[7];  // D H . .
-		m.m[14] = a->m[11]; // D H L .
-		m.m[15] = a->m[15]; // D H L P
+		MAT m = { a->m[0], a->m[4], a->m[8], a->m[12], a->m[1], a->m[5], a->m[9], a->m[13], a->m[2], a->m[6], a->m[10], a->m[14], a->m[3], a->m[7], a->m[11], a->m[15] };
 		return m;
 #endif
 	}
@@ -596,7 +575,7 @@ extern "C" {
 		MAT m = { _mm_mul_ps(det, minor0), _mm_mul_ps(det, minor1), _mm_mul_ps(det, minor2), _mm_mul_ps(det, minor3) };
 		return m;
 #else
-		double inv[16], det;
+		float inv[16], det;
 		inv[0] = a->m[5] * a->m[10] * a->m[15] - a->m[5] * a->m[11] * a->m[14] - a->m[9] * a->m[6] * a->m[15] + a->m[9] * a->m[7] * a->m[14] + a->m[13] * a->m[6] * a->m[11] - a->m[13] * a->m[7] * a->m[10];
 		inv[4] = -a->m[4] * a->m[10] * a->m[15] + a->m[4] * a->m[11] * a->m[14] + a->m[8] * a->m[6] * a->m[15] - a->m[8] * a->m[7] * a->m[14] - a->m[12] * a->m[6] * a->m[11] + a->m[12] * a->m[7] * a->m[10];
 		inv[8] = a->m[4] * a->m[9] * a->m[15] - a->m[4] * a->m[11] * a->m[13] - a->m[8] * a->m[5] * a->m[15] + a->m[8] * a->m[7] * a->m[13] + a->m[12] * a->m[5] * a->m[11] - a->m[12] * a->m[7] * a->m[9];
@@ -616,7 +595,7 @@ extern "C" {
 
 		det = a->m[0] * inv[0] + a->m[1] * inv[4] + a->m[2] * inv[8] + a->m[3] * inv[12];
 		if (det == 0) return *a; // assert(det == 0 && "Non-invertible matrix");
-		det = 1.0 / det;
+		det = 1.f / det;
 
 		MAT m;
 		for (int i = 0; i < 16; i++) m.m[i] = inv[i] * det;
@@ -699,10 +678,10 @@ extern "C" {
 #ifdef __SSE__
 		return _mm_movemask_ps(_mm_cmpeq_ps(a->row0, b->row0)) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row1, b->row1)) << 4) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row2, b->row2)) << 8) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row3, b->row3)) << 12);
 #else
-		return (a.m[0] == b.m[0] ? 1 : 0) | (a.m[1] == b.m[1] ? 1 << 1 : 0) | (a.m[2] == b.m[2] ? 1 << 2 : 0) | (a.m[3] == b.m[3] ? 1 << 3 : 0)
-			| (a.m[4] == b.m[4] ? 1 << 4 : 0) | (a.m[5] == b.m[5] ? 1 << 5 : 0) | (a.m[6] == b.m[6] ? 1 << 6 : 0) | (a.m[7] == b.m[7] ? 1 << 7 : 0)
-			| (a.m[8] == b.m[8] ? 1 << 8 : 0) | (a.m[9] == b.m[9] ? 1 << 9 : 0) | (a.m[10] == b.m[10] ? 1 << 10 : 0) | (a.m[11] == b.m[11] ? 1 << 11 : 0)
-			| (a.m[12] == b.m[12] ? 1 << 12 : 0) | (a.m[13] == b.m[13] ? 1 << 13 : 0) | (a.m[14] == b.m[14] ? 1 << 14 : 0) | (a.m[15] == b.m[15] ? 1 << 15 : 0);
+		return (a->m[0] == b->m[0] ? 1 : 0) | (a->m[1] == b->m[1] ? 1 << 1 : 0) | (a->m[2] == b->m[2] ? 1 << 2 : 0) | (a->m[3] == b->m[3] ? 1 << 3 : 0)
+			| (a->m[4] == b->m[4] ? 1 << 4 : 0) | (a->m[5] == b->m[5] ? 1 << 5 : 0) | (a->m[6] == b->m[6] ? 1 << 6 : 0) | (a->m[7] == b->m[7] ? 1 << 7 : 0)
+			| (a->m[8] == b->m[8] ? 1 << 8 : 0) | (a->m[9] == b->m[9] ? 1 << 9 : 0) | (a->m[10] == b->m[10] ? 1 << 10 : 0) | (a->m[11] == b->m[11] ? 1 << 11 : 0)
+			| (a->m[12] == b->m[12] ? 1 << 12 : 0) | (a->m[13] == b->m[13] ? 1 << 13 : 0) | (a->m[14] == b->m[14] ? 1 << 14 : 0) | (a->m[15] == b->m[15] ? 1 << 15 : 0);
 #endif
 	}
 
