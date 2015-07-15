@@ -77,14 +77,6 @@ GLuint compile_shader(GLenum type, const char *source) {
 	return shader;
 }
 
-char * getProgramInfoLog(GLuint program) {
-	GLint length /* = 512 */;
-	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
-	char *infoLog = malloc(sizeof(char) * length);
-	glGetProgramInfoLog(program, sizeof infoLog, NULL, infoLog);
-	return infoLog;
-}
-
 struct mesh * create_mesh(int indexed) {
 	GLuint buffers[2];
 	struct mesh *mesh = malloc(sizeof(struct mesh));

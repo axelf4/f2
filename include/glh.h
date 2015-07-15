@@ -69,11 +69,6 @@ extern "C" {
 
 	GLuint compile_shader(GLenum type, const char *source);
 
-	// TODO remove
-	/** Returns the info log for the shader program \a program.
-		@warning Need to free return value. */
-	char * getProgramInfoLog(GLuint program);
-
 	/* MESH */
 
 	struct mesh { GLuint vbo, ibo; };
