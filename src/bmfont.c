@@ -43,7 +43,7 @@ struct bmfont *create_bmfont(char *data) {
 			// Page block
 			char **pageNames = font->pageNames = malloc(sizeof(char *) * font->pages);
 			for (unsigned int p = 0, n = strlen(data); p < font->pages; p++) {
-				pageNames[p] = _strdup(data);
+				strcpy(pageNames[p] = malloc(n + 1), data);
 				data += n + 1;
 			}
 			break;
