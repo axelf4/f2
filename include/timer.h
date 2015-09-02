@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-	extern float time_get();
+	extern unsigned int getTicks();
 
 #ifdef __cplusplus
 }
