@@ -12,8 +12,6 @@ extern "C" {
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "Ws2_32.lib")
-	// #pragma comment (lib, "Mswsock.lib")
-	// #pragma comment (lib, "AdvApi32.lib")
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -64,9 +62,6 @@ extern "C" {
 #define NET_PING_SEQNO (NET_SEQNO_MAX + 1)
 #define NET_NAK_SEQNO (NET_SEQNO_MAX + 2)
 
-#define NET_UNRELIABLE 1
-#define NET_RELIABLE 2
-
 #ifndef NET_PING_INTERVAL
 #define NET_PING_INTERVAL 500
 #endif
@@ -79,6 +74,23 @@ extern "C" {
 		@return \a addr to allow for chaining */
 #define NET_IP4_ADDR(ip, port, addr) (((struct sockaddr *)addr)->sa_family = AF_INET, ((struct sockaddr_in *)addr)->sin_port = htons(port), \
 	*ip == '\0' ? ((struct sockaddr_in *)addr)->sin_addr.s_addr = INADDR_ANY : inet_pton(AF_INET, ip, &((struct sockaddr_in *)addr)->sin_addr), addr)
+
+	enum netEventType {
+		NET_EVENT_TYPE_NONE,
+		NET_EVENT_TYPE_RECEIVE = 1 << 0,
+		NET_EVENT_TYPE_CONNECT = 1 << 1,
+		NET_EVENT_TYPE_DISCONNECT = 1 << 2
+	};
+
+	enum {
+		NET_PACKET_FLAG_RELIABLE = 1 << 0,
+		NET_PACKET_FLAG_UNRELIABLE = 1 << 1,
+	};
+
+	struct net_event {
+		enum netEventType type;
+		struct conn *connection;
+	};
 
 	/** A connection. */
 	struct conn {
@@ -102,35 +114,35 @@ extern "C" {
 			socket; /**< This peer's socket. */
 		struct conn **connections;
 		unsigned int numConnections;
-
-		void(*accept)(struct peer *, struct conn *);
-		void(*disconnect)(struct peer *, struct conn *);
 	};
 
 	/** Initializes networking globally. Must be called prior to any other networking function.
 		@return \c 0 if no errors occur, or an error code from \c WSAStartup. */
-	extern int net_initialize();
+	int net_initialize();
 
 	/** Deinitializes networking globally. Should be called at exit. */
-	extern void net_deinitialize();
+	void net_deinitialize();
 
 	/** Send outgoing commands.
 		@param address the address at which peers may connect to this peer */
-	extern struct peer * net_peer_create(struct sockaddr *recvaddr, unsigned short maxConnections);
+	struct peer * net_peer_create(struct sockaddr *recvaddr, unsigned short maxConnections);
 
-	extern void net_peer_dispose(struct peer *peer);
-
-	extern void net_update(struct peer *peer);
+	void net_peer_dispose(struct peer *peer);
 
 	/** Sends a packet to the specified remote end.
 		@return The total number of bytes sent, or \c -1 if an error occurs.
 		@warning Make sure to leave 1 byte empty in \a buf and have \a len reflect that! */
-	extern int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr *to, int flag);
+	int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockaddr *to, int flag);
 
-	/** Receives a packet from an remote end.
-		@param buflen the maximum number of bytes to read to the buffer
+	/** Receives a message from a socket.
+		@param peer the socket to read from
+		@param event information about the received event
+		@param buf a buffer to receive into
+		@param len the maximum number of bytes to read to the buffer
+		@param from the address that the message came from
 		@return -1 in case of an error, otherwise the number of bytes read, or 0 */
-	extern int net_receive(struct peer *peer, unsigned char *buf, int buflen, struct sockaddr *from);
+	int net_recv(struct peer *peer, struct net_event *event, unsigned char *buf, int len, struct sockaddr *from);
+
 
 #ifdef __cplusplus
 }
