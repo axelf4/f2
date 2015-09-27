@@ -1,4 +1,5 @@
 /** An OBJ model loader.
+	Supports polygonal geometry and face elements.
 	@file objloader.h */
 
 #ifndef OBJLOADER_H
@@ -20,7 +21,7 @@ extern "C" {
 	/** A MTL material definition. */
 	struct mtl_material {
 		char *name, /**< The name of the material. */
-			*texPath; /**< The path to the diffuse texture. */
+			*ambientTexture; /**< The path to the diffuse texture. */
 
 		float ambient[3], /**< The ambient color, declared using *Ka r g b*, where the RGB values range between 0-1. */
 			diffuse[3], /**< The diffuse color, declared using *Ka r g b*, where the RGB values range between 0-1. */
@@ -30,7 +31,7 @@ extern "C" {
 			opacity; /**< The transparency, declared with *Tr* or *d alpha*, ranges 0-1, where 1 is the default and not transparent at all. */
 	};
 
-	/** A part of a model, specifically a group or an object, with at most one material. */
+	/** A part of a model, specifically a group, with at most one material. */
 	struct obj_model_part {
 		unsigned int vertexCount, /**< The number of vertices. */
 			indexCount, /**< The number of indices. */
@@ -56,7 +57,7 @@ extern "C" {
 		@param data The data of the model file, must be null-terminated
 		@param flags Additional flags use when loading
 		@return The loaded OBJ model */
-	struct obj_model * load_obj_model(const char *filename, const char *data, int flags);
+	struct obj_model *load_obj_model(const char *filename, const char *data, int flags);
 
 	/** Destroys an loaded OBJ model by freeing the used memory.
 		@param model The model to free */

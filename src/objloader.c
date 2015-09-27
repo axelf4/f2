@@ -79,8 +79,7 @@ struct obj_model *load_obj_model(const char *filename, const char *data, int fla
 	struct mtl_material **materials = 0;
 
 	const char *tok = data;
-
-	while (1) {
+	while ('\0' != *tok) {
 		if ('v' == *tok) {
 			unsigned int *size, *capacity, hasZ = 1;
 			float **list, x, y, z;
@@ -137,7 +136,7 @@ struct obj_model *load_obj_model(const char *filename, const char *data, int fla
 
 				unsigned int x, y, z;
 				x = (*faces)[(*facesSize)++] = getIndex(&tok, vertsSize); // Faces always define geometric data
-				if (*tok == '/' && *++tok != '/') {
+				if (*tok++ == '/' /* && *tok != '/' */) {
 					y = (*faces)[(*facesSize)++] = getIndex(&tok, uvsSize);
 					hasUVs = 1;
 				}
@@ -190,8 +189,10 @@ struct obj_model *load_obj_model(const char *filename, const char *data, int fla
 				}
 			}
 			free(materialName);
-		} else if (*tok == ' ' || *tok == '\n' || *tok == '\t' || *tok == 'r') { tok++; continue; } // Skip spaces or empty lines at beginning of line
-		else if ('#' == *tok) {
+		} else if (*tok == ' ' || *tok == '\n' || *tok == '\t' || *tok == 'r') {
+			tok++; // Skip spaces or empty lines at beginning of line
+			continue;
+		} else if ('#' == *tok) {
 			tok += strcspn(tok + 1, "\n") + 1; // Skip newlines or comments
 		} else if (strncmp("mtllib", tok, strlen("mtllib")) == 0) {
 			// TODO make able to load multiple mtllibs as the definition: mtllib filename1 filename2 . . .
@@ -215,7 +216,7 @@ struct obj_model *load_obj_model(const char *filename, const char *data, int fla
 			memcpy(materials + sizeof(struct mtl_material *) * materialsSize, newMaterials, sizeof(struct mtl_material *) * numMaterials);
 			free(newMaterials);
 			materialsSize += numMaterials;
-		} else if ('\0' == *tok) break;
+		}
 		tok = strchr(tok, '\n') + 1; // Skip to next line line
 	}
 
@@ -236,7 +237,6 @@ struct obj_model *load_obj_model(const char *filename, const char *data, int fla
 			// part->faceCount = group->facesSize / (1 + hasUVs + hasNorms); // group->numFaces
 			part->faceCount = group->numFaces;
 
-			// TODO reduced the size of vertices by 3 times, still haven't tested if it works vertices only
 			float *vertices = part->vertices = (float *) malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
 			if (!(flags & OBJ_INDICES)) {
 				part->indexCount = 0;
@@ -349,7 +349,7 @@ struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials)
 			cur->name = parseText(&tok);
 			// TODO define defaults for rest
 			cur->opacity = 1.f;
-			cur->texPath = 0;
+			cur->ambientTexture = 0;
 		} else if (*tok == 'K' && (tok[1] == 'a' || tok[1] == 'd' || tok[1] == 's')) { // diffuse or specular
 			float *color = tok[1] == 'a' ? cur->ambient : (tok[1] == 'd' ? cur->diffuse : cur->specular);
 			tok += 3; // Skip the characters 'K' and 'a'/'d'/'s' and the space
@@ -364,7 +364,7 @@ struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials)
 			cur->shininess = parseFloat(&tok);
 		} else if (strncmp("map_Kd", tok, strlen("map_Kd")) == 0) {
 			tok += 7; // Skip the 7 characters "map_Kd "
-			cur->texPath = parseText(&tok);
+			cur->ambientTexture = parseText(&tok);
 			tok += 0;
 		}
 	}
@@ -381,6 +381,6 @@ struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials)
 
 void destroy_mtl_material(struct mtl_material *material) {
 	free(material->name);
-	if (material->texPath != 0) free(material->texPath);
+	if (material->ambientTexture != 0) free(material->ambientTexture);
 	free(material);
 }
