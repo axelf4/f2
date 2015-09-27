@@ -61,8 +61,6 @@ extern "C" {
 
 	/* SHADER PROGRAM */
 
-	const char *read_file(const char *filename);
-
 	// TODO add support for geometry shaders
 	/** Links the program. */
 	GLuint create_program(const char *vertexShader, const char *fragmentShader);

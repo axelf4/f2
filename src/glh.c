@@ -12,21 +12,6 @@ GLsizei calculate_stride(struct attrib *attributes) {
 	return count;
 }
 
-const char *read_file(const char *filename) {
-	char *buffer = 0;
-	FILE *f = fopen(filename, "rb");
-	if (f) {
-		fseek(f, 0, SEEK_END);
-		long length = ftell(f);
-		fseek(f, 0, SEEK_SET);
-		if ((buffer = malloc(length + 1)) == 0) return 0;
-		buffer[length] = 0;
-		if (buffer) fread(buffer, 1, length, f);
-		fclose(f);
-	}
-	return buffer;
-}
-
 GLuint create_program(const char *vertexShader, const char *fragmentShader) {
 	GLuint vert, frag, id = 0;
 	if ((vert = compile_shader(GL_VERTEX_SHADER, vertexShader)) == 0) goto deleteVertex;
@@ -40,7 +25,7 @@ GLuint create_program(const char *vertexShader, const char *fragmentShader) {
 	glGetProgramiv(id, GL_LINK_STATUS, &status);
 	if (status == GL_FALSE) goto deleteProgram;
 	goto deleteFragment; // We don't need the shaders anymore
-	
+
 deleteProgram:
 	glDeleteProgram(id);
 	id = 0;
