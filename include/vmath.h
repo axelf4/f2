@@ -42,7 +42,7 @@ extern "C" {
 #elif defined __GNUC__
 #define ALIGN(i)  __attribute__ ((aligned (i)))
 #endif
-	// if __ARM_NEON__ or __SSE__ or __ALTIVEC__
+	// if __ARM_NEON__ or __SSE__ or __ALTIVECTOR__
 #define VMATH_INLINE inline /**< Inlining. */
 
 #ifndef MATRIX_ORDER
@@ -86,7 +86,7 @@ extern "C" {
 #endif
 
 #define PI 3.141592654f /**< An optimal approximation of the constant pi. */
-#define NULL_VECTOR VectorReplicate(0) /**< A null vector (or zero vector) whose length is zero, with the components [0, 0, 0, 0] (*0*). */
+#define NULL_VECTORTOR VectorReplicate(0) /**< A null vector (or zero vector) whose length is zero, with the components [0, 0, 0, 0] (*0*). */
 
 // #if MATRIX_ORDER == ROW_MAJOR
 //#define M_00 0 /**< XX. */
@@ -124,7 +124,7 @@ extern "C" {
 #define M_33 15 /**< WW. */
 //#endif
 
-	/* VECTOR */
+	/* VECTORTOR */
 
 	/** A type representing a four-dimensional vector. */
 	typedef
@@ -133,52 +133,52 @@ extern "C" {
 #else
 	struct { float v[4]; /**< A 4 elements long float vector containing the components. */ }
 #endif
-	VEC;
+	VECTOR;
 
 	/** Stores a representation of the vector \a _A in the float array \a _V and returns \a _V.
 	@def VectorGet(_V, _A)
 	@param[out] _V A 4 elements long 16-byte aligned float array to store in.
 	@param[in] _A The vector to be stored.
 
-	This method is to be used when the data of a ::VEC needs to be converted to a more general, usable format. */
+	This method is to be used when the data of a ::VECTOR needs to be converted to a more general, usable format. */
 #ifdef __SSE__
 #define VectorGet(_V, _A) (_mm_store_ps((_V), (_A)), (_V))
 #else
 #define VectorGet(_V, _A) (memcpy((_V), (_A).v, sizeof(float) * 4), (_V))
 #endif
 
-	/** Returns a ::VEC, whoose components are solely \a v.
+	/** Returns a ::VECTOR, whoose components are solely \a v.
 		@param v The value to use for the components. */
-	VMATH_INLINE VEC VectorReplicate(float v) {
+	VMATH_INLINE VECTOR VectorReplicate(float v) {
 #ifdef __SSE__
 		return(_mm_set1_ps(v));
 #else
-		VEC result = { v, v, v, v };
+		VECTOR result = { v, v, v, v };
 		return(result);
 #endif
 	}
 
-	/** Returns a ::VEC consisting of the components \a x, \a y, \a z and \a w.
+	/** Returns a ::VECTOR consisting of the components \a x, \a y, \a z and \a w.
 		@param x The x component.
 		@param y The y component.
 		@param z The z component.
 		@param w The w component. */
-	VMATH_INLINE VEC VectorSet(float x, float y, float z, float w) {
+	VMATH_INLINE VECTOR VectorSet(float x, float y, float z, float w) {
 #ifdef __SSE__
 		return(_mm_setr_ps(x, y, z, w));
 #else
-		VEC v = { x, y, z, w };
+		VECTOR v = { x, y, z, w };
 		return(v);
 #endif
 	}
 
-	/** Loads and returns a ::VEC from the float array \a v.
+	/** Loads and returns a ::VECTOR from the float array \a v.
 		@param v The float array to load up. */
-	VMATH_INLINE VEC VectorLoad(float *v) {
+	VMATH_INLINE VECTOR VectorLoad(float *v) {
 #ifdef __SSE__
 		return(_mm_load_ps(v));
 #else
-		VEC result = { v[0], v[1], v[2], v[3] };
+		VECTOR result = { v[0], v[1], v[2], v[3] };
 		return(result);
 #endif
 	}
@@ -187,11 +187,11 @@ extern "C" {
 		@param a The first vector to add.
 		@param b The second vector to add.
 		@return The sum of the two vectors. */
-	VMATH_INLINE VEC VectorAdd(VEC a, VEC b) {
+	VMATH_INLINE VECTOR VectorAdd(VECTOR a, VECTOR b) {
 #ifdef __SSE__
 		return(_mm_add_ps(a, b));
 #else
-		VEC v = { a.v[0] + b.v[0], a.v[1] + b.v[1], a.v[2] + b.v[2], a.v[3] + b.v[3] };
+		VECTOR v = { a.v[0] + b.v[0], a.v[1] + b.v[1], a.v[2] + b.v[2], a.v[3] + b.v[3] };
 		return(v);
 #endif
 	}
@@ -200,11 +200,11 @@ extern "C" {
 		@param a The vector to be subtracted.
 		@param b The vector to subtract.
 		@return The difference between the two vectors. */
-	VMATH_INLINE VEC VectorSubtract(VEC a, VEC b) {
+	VMATH_INLINE VECTOR VectorSubtract(VECTOR a, VECTOR b) {
 #ifdef __SSE__
 		return(_mm_sub_ps(a, b));
 #else
-		VEC v = { a.v[0] - b.v[0], a.v[1] - b.v[1], a.v[2] - b.v[2], a.v[3] - b.v[3] };
+		VECTOR v = { a.v[0] - b.v[0], a.v[1] - b.v[1], a.v[2] - b.v[2], a.v[3] - b.v[3] };
 		return(v);
 #endif
 	}
@@ -213,11 +213,11 @@ extern "C" {
 		@param a The first vector to multiply.
 		@param b The second vector to multiply.
 		@return The product of sum of the two vectors. */
-	VMATH_INLINE VEC VectorMultiply(VEC a, VEC b) {
+	VMATH_INLINE VECTOR VectorMultiply(VECTOR a, VECTOR b) {
 #ifdef __SSE__
 		return(_mm_mul_ps(a, b));
 #else
-		VEC v = { a.v[0] * b.v[0], a.v[1] * b.v[1], a.v[2] * b.v[2], a.v[3] * b.v[3] };
+		VECTOR v = { a.v[0] * b.v[0], a.v[1] * b.v[1], a.v[2] * b.v[2], a.v[3] * b.v[3] };
 		return(v);
 #endif
 	}
@@ -226,17 +226,17 @@ extern "C" {
 		@param a The dividend.
 		@param b The divisor.
 		@return The quotient of the two vectors. */
-	VMATH_INLINE VEC VectorDivide(VEC a, VEC b) {
+	VMATH_INLINE VECTOR VectorDivide(VECTOR a, VECTOR b) {
 #ifdef __SSE__
 		return(_mm_div_ps(a, b));
 #else
-		VEC v = { a.v[0] / b.v[0], a.v[1] / b.v[1], a.v[2] / b.v[2], a.v[3] / b.v[3] };
+		VECTOR v = { a.v[0] / b.v[0], a.v[1] / b.v[1], a.v[2] / b.v[2], a.v[3] / b.v[3] };
 		return(v);
 #endif
 	}
 
 	/** Returns the length or magnitude or norm of the vector \a a (||a||). */
-	VMATH_INLINE float VectorLength(VEC a) {
+	VMATH_INLINE float VectorLength(VECTOR a) {
 #ifdef __SSE4_1__
 		return(_mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(a, a, 0x71))));
 #elif defined(__SSE__)
@@ -247,7 +247,7 @@ extern "C" {
 	}
 
 	/** Returns the normalized vector \a a (â). */
-	VMATH_INLINE VEC VectorNormalize(VEC a) {
+	VMATH_INLINE VECTOR VectorNormalize(VECTOR a) {
 #ifdef __SSE4_1__
 		return(_mm_mul_ps(a, _mm_rsqrt_ps(_mm_dp_ps(a, a, 0x7F /* 0x77 */))));
 #elif defined(__SSE__)
@@ -264,13 +264,13 @@ extern "C" {
 		return(_mm_mul_ps(vec0, a));
 #else
 		float length = VectorLength(a);
-		VEC v = { a.v[0] / length, a.v[1] / length, a.v[2] / length, a.v[3] / length };
+		VECTOR v = { a.v[0] / length, a.v[1] / length, a.v[2] / length, a.v[3] / length };
 		return v;
 #endif
 	}
 
 	/** Returns the dot product, a.k.a. the scalar product, of the two vectors \a a and \a b (a · b). */
-	VMATH_INLINE float VectorDot(VEC a, VEC b) {
+	VMATH_INLINE float VectorDot(VECTOR a, VECTOR b) {
 #if defined(__SSE4_1__)
 		return(_mm_cvtss_f32(_mm_dp_ps(a, b, 0x71)));
 #elif defined(__SSE3__)
@@ -285,11 +285,11 @@ extern "C" {
 	}
 
 	/** Returns the cross product, a.k.a. the vector product, of the two vectors \a a and \a b (a × b). */
-	VMATH_INLINE VEC VectorCross(VEC a, VEC b) {
+	VMATH_INLINE VECTOR VectorCross(VECTOR a, VECTOR b) {
 #ifdef __SSE__
 		return(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 1, 0, 2))), _mm_mul_ps(_mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 0, 2, 1)))));
 #else
-		VEC v = { a.v[1] * b.v[2] - a.v[2] * b.v[1],
+		VECTOR v = { a.v[1] * b.v[2] - a.v[2] * b.v[1],
 			a.v[2] * b.v[0] - a.v[0] * b.v[2],
 			a.v[0] * b.v[1] - a.v[1] * b.v[0],
 			0 };
@@ -301,7 +301,7 @@ extern "C" {
 		@param a The vector to compare
 		@param b The vector to compare
 		@return The result as a bit mask */
-	VMATH_INLINE int VectorEqual(VEC a, VEC b) {
+	VMATH_INLINE int VectorEqual(VECTOR a, VECTOR b) {
 #ifdef __SSE__
 		return _mm_movemask_ps(_mm_cmpeq_ps(a, b));
 #else
@@ -309,12 +309,12 @@ extern "C" {
 #endif
 	}
 
-	/** Constructs a new ::VEC from the Euler angles \a pitch, \a yaw and \a roll in radians.
+	/** Constructs a new ::VECTOR from the Euler angles \a pitch, \a yaw and \a roll in radians.
 		@param pitch The pitch in radians.
 		@param yaw The yaw in radians.
 		@param roll The roll in radians.
-		@return A new ::VEC from the supplied angles. */
-	VMATH_INLINE VEC QuaternionRotationRollPitchYaw(float pitch, float yaw, float roll) {
+		@return A new ::VECTOR from the supplied angles. */
+	VMATH_INLINE VECTOR QuaternionRotationRollPitchYaw(float pitch, float yaw, float roll) {
 		// Assuming the angles are in radians.
 		const float hr = roll * 0.5f;
 		const float shr = (float) sin(hr);
@@ -333,7 +333,7 @@ extern "C" {
 #ifdef __SSE__
 		return(_mm_setr_ps((chy_shp * chr) + (shy_chp * shr), (shy_chp * chr) - (chy_shp * shr), (chy_chp * shr) - (shy_shp * chr), (chy_chp * chr) + (shy_shp * shr)));
 #else
-		VEC v = { (chy_shp * chr) + (shy_chp * shr), // cos(yaw/2) * sin(pitch/2) * cos(roll/2) + sin(yaw/2) * cos(pitch/2) * sin(roll/2)
+		VECTOR v = { (chy_shp * chr) + (shy_chp * shr), // cos(yaw/2) * sin(pitch/2) * cos(roll/2) + sin(yaw/2) * cos(pitch/2) * sin(roll/2)
 			(shy_chp * chr) - (chy_shp * shr), // sin(yaw/2) * cos(pitch/2) * cos(roll/2) - cos(yaw/2) * sin(pitch/2) * sin(roll/2)
 			(chy_chp * shr) - (shy_shp * chr), // cos(yaw/2) * cos(pitch/2) * sin(roll/2) - sin(yaw/2) * sin(pitch/2) * cos(roll/2)
 			(chy_chp * chr) + (shy_shp * shr) }; // cos(yaw/2) * cos(pitch/2) * cos(roll/2) + sin(yaw/2) * sin(pitch/2) * sin(roll/2)
@@ -353,47 +353,47 @@ extern "C" {
 #else
 		float m[16]; /**< A 16 elements long float vector containing the components. */
 #endif
-	} MAT;
+	} MATRIX;
 
 	/** Stores a representation of the matrix \a _A in the float array \a _V and returns \a _V.
 	@def MatrixGet(_V, _A)
 	@param[out] _V A 16 elements long 16-byte aligned float array to store in.
 	@param[in] _A The matrix to be stored. Note: not a pointer as the rest of the matrix functions.
 
-	This method is to be used when the data of a ::MAT needs to be converted to a more general, usable format. */
+	This method is to be used when the data of a ::MATRIX needs to be converted to a more general, usable format. */
 #ifdef __SSE__
 #define MatrixGet(_V, _A) (_mm_store_ps((_V), (_A).row0), _mm_store_ps((_V) + 4, (_A).row1), _mm_store_ps((_V) + 8, (_A).row2), _mm_store_ps((_V) + 12, (_A).row3), (_V))
 #else
 #define MatrixGet(_V, _A) (memcpy((_V), (_A).m, sizeof(float) * 16), (_V))
 #endif
 
-	/** Returns a new ::MAT from the specified components. */
-	VMATH_INLINE MAT MatrixSet(float m00, float m10, float m20, float m30, float m01, float m11, float m21, float m31, float m02, float m12, float m22, float m32, float m03, float m13, float m23, float m33) {
+	/** Returns a new ::MATRIX from the specified components. */
+	VMATH_INLINE MATRIX MatrixSet(float m00, float m10, float m20, float m30, float m01, float m11, float m21, float m31, float m02, float m12, float m22, float m32, float m03, float m13, float m23, float m33) {
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(m00, m10, m20, m30), _mm_setr_ps(m01, m11, m21, m31), _mm_setr_ps(m02, m12, m22, m32), _mm_setr_ps(m03, m13, m23, m33) };
+		MATRIX m = { _mm_setr_ps(m00, m10, m20, m30), _mm_setr_ps(m01, m11, m21, m31), _mm_setr_ps(m02, m12, m22, m32), _mm_setr_ps(m03, m13, m23, m33) };
 #else
-		MAT m = { m00, m10, m20, m30, m01, m11, m21, m31, m02, m12, m22, m32, m03, m13, m23, m33 };
+		MATRIX m = { m00, m10, m20, m30, m01, m11, m21, m31, m02, m12, m22, m32, m03, m13, m23, m33 };
 #endif
 		return m;
 	}
 
-	/** Loads and returns a ::MAT from the float array \a v.
+	/** Loads and returns a ::MATRIX from the float array \a v.
 		@param v The float array to load up. */
-	VMATH_INLINE MAT MatrixLoad(float *v) {
+	VMATH_INLINE MATRIX MatrixLoad(float *v) {
 #ifdef __SSE__
-		MAT m = { _mm_load_ps(v), _mm_load_ps(v + 4), _mm_load_ps(v + 8), _mm_load_ps(v + 12) };
+		MATRIX m = { _mm_load_ps(v), _mm_load_ps(v + 4), _mm_load_ps(v + 8), _mm_load_ps(v + 12) };
 #else
-		MAT m = { v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15] };
+		MATRIX m = { v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15] };
 #endif
 		return m;
 	}
 
 	/** Returns the identity matrix (I). */
-	VMATH_INLINE MAT MatrixIdentity() {
+	VMATH_INLINE MATRIX MatrixIdentity() {
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(0, 0, 0, 1) };
+		MATRIX m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(0, 0, 0, 1) };
 #else
-		MAT m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+		MATRIX m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
 #endif
 		return m;
 	}
@@ -404,12 +404,12 @@ extern "C" {
 		@param zNear The near coordinate of the z-plane.
 		@param zFar The far coordinate of the z-plane.
 		@return The perspective matrix. */
-	VMATH_INLINE MAT MatrixPerspective(float fov, float aspect, float zNear, float zFar) {
+	VMATH_INLINE MATRIX MatrixPerspective(float fov, float aspect, float zNear, float zFar) {
 		const float h = 1.0F / (float) tan(fov * PI / 360);
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) };
+		MATRIX m = { _mm_setr_ps(h / aspect, 0, 0, 0), _mm_setr_ps(0, h, 0, 0), _mm_setr_ps(0, 0, (zNear + zFar) / (zNear - zFar), -1), _mm_setr_ps(0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0) };
 #else
-		MAT m = { h / aspect, 0, 0, 0, 0, h, 0, 0, 0, 0, (zNear + zFar) / (zNear - zFar), -1, 0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0 };
+		MATRIX m = { h / aspect, 0, 0, 0, 0, h, 0, 0, 0, 0, (zNear + zFar) / (zNear - zFar), -1, 0, 0, 2 * (zNear * zFar) / (zNear - zFar), 0 };
 #endif
 		return m;
 	}
@@ -422,14 +422,14 @@ extern "C" {
 		@param nearVal The distance to the nearer depth clipping plane
 		@param farVal The distance to the farther depth clipping plane
 		@return The orthographic matrix */
-	VMATH_INLINE MAT MatrixOrtho(float left, float right, float bottom, float top, float nearVal, float farVal) {
+	VMATH_INLINE MATRIX MatrixOrtho(float left, float right, float bottom, float top, float nearVal, float farVal) {
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(2 / (right - left), 0, 0, 0),
+		MATRIX m = { _mm_setr_ps(2 / (right - left), 0, 0, 0),
 			_mm_setr_ps(0, 2 / (top - bottom), 0, 0),
 			_mm_setr_ps(0, 0, -2 / (farVal - nearVal), 0),
 			_mm_setr_ps(-(right + left) / (right - left), -(top + bottom) / (top - bottom), -(farVal + nearVal) / (farVal - nearVal), 1) };
 #else
-		MAT m = { 2 / (right - left), 0, 0, 0, 0, 2 / (top - bottom), 0, 0, 0, 0, -2 / (farVal - nearVal), 0, -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(farVal + nearVal) / (farVal - nearVal), 1 };
+		MATRIX m = { 2 / (right - left), 0, 0, 0, 0, 2 / (top - bottom), 0, 0, 0, 0, -2 / (farVal - nearVal), 0, -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(farVal + nearVal) / (farVal - nearVal), 1 };
 #endif
 		return m;
 	}
@@ -439,7 +439,7 @@ extern "C" {
 		@param b The second matrix to multiply.
 		@return The product of the two matrices.
 		@warning The two matrices must be distinct, the result will be incorrect if \a a or \a b are equal. */
-	VMATH_INLINE MAT MatrixMultiply(MAT *a, MAT *b) {
+	VMATH_INLINE MATRIX MatrixMultiply(MATRIX *a, MATRIX *b) {
 #ifdef __SSE__
 		__m128 row0, row1, row2, row3;
 
@@ -463,10 +463,10 @@ extern "C" {
 		row2 = _mm_madd_ps(b->row3, _mm_replicate_w_ps(a->row2), row2);
 		row3 = _mm_madd_ps(b->row3, _mm_replicate_w_ps(a->row3), row3);
 
-		MAT m = { row0, row1, row2, row3 };
+		MATRIX m = { row0, row1, row2, row3 };
 		return m;
 #else
-		MAT result;
+		MATRIX result;
 		result.m[M_00] = a->m[M_00] * b->m[M_00] + a->m[M_01] * b->m[M_10] + a->m[M_02] * b->m[M_20] + a->m[M_03] * b->m[M_30];
 		result.m[M_01] = a->m[M_00] * b->m[M_01] + a->m[M_01] * b->m[M_11] + a->m[M_02] * b->m[M_21] + a->m[M_03] * b->m[M_31];
 		result.m[M_02] = a->m[M_00] * b->m[M_02] + a->m[M_01] * b->m[M_12] + a->m[M_02] * b->m[M_22] + a->m[M_03] * b->m[M_32];
@@ -488,25 +488,25 @@ extern "C" {
 	}
 
 	/** Transposes the matrix \a a (a<sup>T</sup>). */
-	VMATH_INLINE MAT MatrixTranspose(MAT *a) {
+	VMATH_INLINE MATRIX MatrixTranspose(MATRIX *a) {
 #ifdef __SSE4_1__
 		__m128 tmp0 = _mm_unpacklo_ps(a->row0, a->row1), tmp2 = _mm_unpacklo_ps(a->row2, a->row3), tmp1 = _mm_unpackhi_ps(a->row0, a->row1), tmp3 = _mm_unpackhi_ps(a->row2, a->row3);
-		MAT m = { _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) };
+		MATRIX m = { _mm_movelh_ps(tmp0, tmp2), _mm_movehl_ps(tmp2, tmp0), _mm_movelh_ps(tmp1, tmp3), _mm_movehl_ps(tmp3, tmp1) };
 		return m;
 #else
-		MAT m = { a->m[0], a->m[4], a->m[8], a->m[12], a->m[1], a->m[5], a->m[9], a->m[13], a->m[2], a->m[6], a->m[10], a->m[14], a->m[3], a->m[7], a->m[11], a->m[15] };
+		MATRIX m = { a->m[0], a->m[4], a->m[8], a->m[12], a->m[1], a->m[5], a->m[9], a->m[13], a->m[2], a->m[6], a->m[10], a->m[14], a->m[3], a->m[7], a->m[11], a->m[15] };
 		return m;
 #endif
 	}
 
 	/** Inverses the matrix \a a using Cramer's rule (a<sup>-1</sup>). */
-	VMATH_INLINE MAT MatrixInverse(MAT *a) {
+	VMATH_INLINE MATRIX MatrixInverse(MATRIX *a) {
 #ifdef __SSE__
 		__m128 minor0, minor1, minor2, minor3,
 			row0, row1, row2, row3,
 			det, tmp1;
 #if MATRIX_ORDER == ROW_MAJOR
-		MAT tmp = MatrixTranspose(a);
+		MATRIX tmp = MatrixTranspose(a);
 		a = &tmp;
 #endif
 		row0 = a->row0;
@@ -572,7 +572,7 @@ extern "C" {
 		tmp1 = _mm_rcp_ss(det);
 		det = _mm_sub_ss(_mm_add_ss(tmp1, tmp1), _mm_mul_ss(det, _mm_mul_ss(tmp1, tmp1)));
 		det = _mm_shuffle_ps(det, det, 0x00);
-		MAT m = { _mm_mul_ps(det, minor0), _mm_mul_ps(det, minor1), _mm_mul_ps(det, minor2), _mm_mul_ps(det, minor3) };
+		MATRIX m = { _mm_mul_ps(det, minor0), _mm_mul_ps(det, minor1), _mm_mul_ps(det, minor2), _mm_mul_ps(det, minor3) };
 		return m;
 #else
 		float inv[16], det;
@@ -597,7 +597,7 @@ extern "C" {
 		if (det == 0) return *a; // assert(det == 0 && "Non-invertible matrix");
 		det = 1.f / det;
 
-		MAT m;
+		MATRIX m;
 		for (int i = 0; i < 16; i++) m.m[i] = inv[i] * det;
 		return m;
 #endif
@@ -608,11 +608,11 @@ extern "C" {
 		@param y The translation along the y-axis
 		@param z The translation along the z-axis
 		@return The translation matrix */
-	VMATH_INLINE MAT MatrixTranslation(float x, float y, float z) {
+	VMATH_INLINE MATRIX MatrixTranslation(float x, float y, float z) {
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(x, y, z, 1) };
+		MATRIX m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_setr_ps(x, y, z, 1) };
 #else
-		MAT m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1 };
+		MATRIX m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1 };
 #endif
 		return m;
 	}
@@ -620,12 +620,12 @@ extern "C" {
 	/** Builds a translation matrix from a vector.
 		@param v 3D vector describing the translations along the x-axis, y-axis, and z-axis
 		@return The translation matrix */
-	VMATH_INLINE MAT MatrixTranslationFromVector(VEC v) {
+	VMATH_INLINE MATRIX MatrixTranslationFromVector(VECTOR v) {
 #ifdef __SSE__
 		__m128 t = _mm_move_ss(_mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 1, 0, 3)), _mm_set1_ps(1));
-		MAT m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_shuffle_ps(t, t, _MM_SHUFFLE(0, 3, 2, 1)) };
+		MATRIX m = { _mm_setr_ps(1, 0, 0, 0), _mm_setr_ps(0, 1, 0, 0), _mm_setr_ps(0, 0, 1, 0), _mm_shuffle_ps(t, t, _MM_SHUFFLE(0, 3, 2, 1)) };
 #else
-		MAT m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, v.v[0], v.v[1], v.v[2], v.v[3] };
+		MATRIX m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, v.v[0], v.v[1], v.v[2], v.v[3] };
 #endif
 		return m;
 	}
@@ -635,11 +635,11 @@ extern "C" {
 		@param y Scaling factor along the x-axis
 		@param z Scaling factor along the x-axis
 		@return The scaling	matrix */
-	VMATH_INLINE MAT MatrixScaling(float x, float y, float z) {
+	VMATH_INLINE MATRIX MatrixScaling(float x, float y, float z) {
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(0, 0, 0, 1) };
+		MATRIX m = { _mm_setr_ps(x, 0, 0, 0), _mm_setr_ps(0, y, 0, 0), _mm_setr_ps(0, 0, z, 0), _mm_setr_ps(0, 0, 0, 1) };
 #else
-		MAT m = { x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1 };
+		MATRIX m = { x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1 };
 #endif
 		return m;
 	}
@@ -647,7 +647,7 @@ extern "C" {
 	/** Builds a rotation matrix from the quaternion \a a.
 		@param a Quaternion defining the rotation.
 		@return The rotation matrix */
-	VMATH_INLINE MAT MatrixRotationQuaternion(VEC a) {
+	VMATH_INLINE MATRIX MatrixRotationQuaternion(VECTOR a) {
 		ALIGN(128) float q[4];
 		VectorGet(q, a);
 		float qxx = q[0] * q[0];
@@ -660,12 +660,12 @@ extern "C" {
 		float qwy = q[3] * q[1];
 		float qwz = q[3] * q[2];
 #ifdef __SSE__
-		MAT m = { _mm_setr_ps(1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0),
+		MATRIX m = { _mm_setr_ps(1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0),
 			_mm_setr_ps(2 * (qxy - qwz), 1 - 2 * (qxx + qzz), 2 * (qyz + qwx), 0),
 			_mm_setr_ps(2 * (qxz + qwy), 2 * (qyz - qwx), 1 - 2 * (qxx + qyy), 0),
 			_mm_setr_ps(0, 0, 0, 1) };
 #else
-		MAT m = { 1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0, 2 * (qxy - qwz), 1 - 2 * (qxx + qzz), 2 * (qyz + qwx), 0, 2 * (qxz + qwy), 2 * (qyz - qwx), 1 - 2 * (qxx + qyy), 0, 0, 0, 0, 1 };
+		MATRIX m = { 1 - 2 * (qyy + qzz), 2 * (qxy + qwz), 2 * (qxz - qwy), 0, 2 * (qxy - qwz), 1 - 2 * (qxx + qzz), 2 * (qyz + qwx), 0, 2 * (qxz + qwy), 2 * (qyz - qwx), 1 - 2 * (qxx + qyy), 0, 0, 0, 0, 1 };
 #endif
 		return m;
 	}
@@ -674,7 +674,7 @@ extern "C" {
 		@param a The vector to compare
 		@param b The vector to compare
 		@return The result as a bit mask */
-	VMATH_INLINE int MatrixEqual(MAT *a, MAT *b) {
+	VMATH_INLINE int MatrixEqual(MATRIX *a, MATRIX *b) {
 #ifdef __SSE__
 		return _mm_movemask_ps(_mm_cmpeq_ps(a->row0, b->row0)) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row1, b->row1)) << 4) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row2, b->row2)) << 8) | (_mm_movemask_ps(_mm_cmpeq_ps(a->row3, b->row3)) << 12);
 #else
