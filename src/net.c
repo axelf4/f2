@@ -119,12 +119,13 @@ int net_send(struct peer *peer, unsigned char *buf, int len, const struct sockad
 }
 
 int net_recv(struct peer *peer, struct net_event *event, unsigned char *buf, int len, struct sockaddr *from) {
+	event->type = 0;
 beginning:; // If received a packet used internally: don't return, but skip it
+		  if (event->type) return 1;
 		  int result;
 		  socklen_t fromlen = sizeof(struct sockaddr_in);
 		  if ((result = recvfrom(peer->socket, buf, len, 0, from, &fromlen)) > 0) {
 			  if (rand() % 2) goto beginning; // Simulate packet drop locally
-			  event->type = NET_EVENT_TYPE_RECEIVE;
 
 			  // Find out if the packet forms a new connection
 			  struct conn *connection = 0;
@@ -136,8 +137,9 @@ beginning:; // If received a packet used internally: don't return, but skip it
 					  break;
 				  }
 			  }
-			  if (!connection) {
-				  connection = add_connection(peer, *from); // First time receiving from the remote end; create a new connection
+			  if (!connection) connection = add_connection(peer, *from); // First time receiving from the remote end; create a new connection
+			  if (!connection->lastReceiveTime) {
+				  printf("First time receiving from connection! (net.c)\n");
 				  event->type |= NET_EVENT_TYPE_CONNECT;
 			  }
 			  event->connection = connection;
@@ -161,6 +163,8 @@ beginning:; // If received a packet used internally: don't return, but skip it
 				  }
 				  else no = seqno;
 
+					  // if (seqno == NET_PING_SEQNO) printf("Received ping with number: %d\n", no);
+
 				  // If the packet in question is more recent than the last received:
 				  if ((no > connection->lastReceived && no - connection->lastReceived <= NET_SEQNO_MAX / 2) ||
 						  (no < connection->lastReceived && connection->lastReceived - no > NET_SEQNO_MAX / 2)) {
@@ -181,6 +185,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 				for (int i = NET_SEQNO_SIZE * 8 - 1; i >= 0; i--) putchar((seqno & (1 << i)) ? '1' : '0');
 				putchar('\n');*/
 
+			  event->type |= NET_EVENT_TYPE_RECEIVE;
 			  return result;
 		  }
 		  event->connection = 0;
@@ -212,12 +217,12 @@ beginning:; // If received a packet used internally: don't return, but skip it
 				  unsigned char ping[NET_SEQNO_SIZE * 2];
 				  for (int i = 0; i < NET_SEQNO_SIZE; i++) ping[i] = connection->lastSent >> (NET_SEQNO_SIZE - i - 1) * 8;
 				  for (int i = 0; i < NET_SEQNO_SIZE; i++) ping[pinglen - 1 - i] = NET_PING_SEQNO >> i * 8;
+				  // printf("sending ping with no %d.\n", connection->lastSent);
 				  net_send(peer, ping, pinglen, &connection->address, 0); // Send ping
 			  }
 
 			  // printf("%lu\n", connection->lastReceiveTime);
 			  if (connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > 5000) {
-				  printf("Dropping client!\n");
 				  free(connection);
 				  memcpy(peer->connections + i, peer->connections + i + 1, --peer->numConnections - i * sizeof(struct conn *)); // Remove from list
 				  event->type = NET_EVENT_TYPE_DISCONNECT;
