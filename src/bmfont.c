@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <limits.h>
 
-struct bmfont *create_bmfont(char *data) {
+struct bmfont *create_bmfont(const char *data) {
 	if (strncmp(data, "BMF\003", 4) != 0) return 0; // Check magic, only binary is supported
 	data += 4;
 
@@ -100,9 +100,13 @@ struct bmfont *create_bmfont(char *data) {
 }
 
 void destroy_bmfont(struct bmfont *font) {
-	for (unsigned int p = 0; p < font->pages; p++) {
+	for (unsigned int p = 0; p < PAGES; p++) {
 		free(font->glyphs[p]);
 	}
+	for (unsigned int p = 0; p < font->pages; p++) {
+		free(font->pageNames[p]);
+	}
+	free(font->pageNames);
 	free(font);
 }
 

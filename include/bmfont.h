@@ -38,7 +38,7 @@ extern "C" {
 	/** Returns a new \c struct bmfont from the specified AngelCode BMFont file.
 		@param data The textual representation of the font file
 		@return A new font */
-	struct bmfont *create_bmfont(char *data);
+	struct bmfont *create_bmfont(const char *data);
 
 	/** Destroys the font in order to free up resources.
 		@param font The font to free */
