@@ -29,7 +29,7 @@ static unsigned int getIndex(const char **token, unsigned int size) {
 	return (idx > 0 ? idx - 1 : (idx < 0 ? /* negative value = relative */ size + idx : 0));
 }
 
-static char * parseText(const char **token) {
+static char *parseText(const char **token) {
 	unsigned int len = strspn(*token, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.");
 	char *buffer = malloc(len * sizeof(char) + 1); // Allocate enough memory for text
 	if (buffer == 0) return 0;
@@ -46,7 +46,7 @@ struct group {
 	struct group *next; /**< A pointer to the next group in a linked list type structure. */
 };
 
-static struct group * create_group(char *name) {
+static struct group *create_group(char *name) {
 	struct group *group = malloc(sizeof(struct group));
 	if (group == 0) return 0;
 	group->name = name;
@@ -61,7 +61,7 @@ static struct group * create_group(char *name) {
 	return group;
 }
 
-struct obj_model * load_obj_model(const char *filename, const char *data, int flags) {
+struct obj_model *load_obj_model(const char *filename, const char *data, int flags) {
 	// Array lists for the geometry, texture coordinate and normal storage
 	unsigned int vertsSize = 0, uvsSize = 0, normsSize = 0, vertsCapacity = 2, uvsCapacity = 2, normsCapacity = 2;
 	float *verts = (float *) malloc(sizeof(float) * vertsCapacity), *uvs = (float *) malloc(sizeof(float) * vertsCapacity), *norms = (float *) malloc(sizeof(float) * normsCapacity);
@@ -73,7 +73,7 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 	strcpy(defaultGroupName, "default");
 
 	unsigned int groupsSize = 1; // TODO rename to numGroups // Store the number of groups to not have to traverse them to see the length
-	struct group *currentGroup = create_group(defaultGroupName), *firstGroup = currentGroup, *lastGroup = currentGroup;
+	struct group *currentGroup = create_group(defaultGroupName), *firstGroup = currentGroup;
 
 	unsigned int materialsSize = 0;
 	struct mtl_material **materials = 0;
@@ -151,13 +151,16 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 			assert(i >= 2 && "Points and lines aren't supported.");
 		} else if ('g' == *tok) {
 			tok += 2; // Skip the 2 chars in "g "
-			struct group *oldgroup = lastGroup;
-			oldgroup->next = (currentGroup = lastGroup = create_group(parseText(&tok))); // Create a new group and leave a reference in the linked list structure
+			struct group *group = create_group(parseText(&tok));
+			group->next = currentGroup->next;
+			currentGroup->next = group;
+			currentGroup = group;
+			// currentGroup->next = create_group(parseText(&tok)); // Create a new group and leave a reference in the linked list structure
+			// currentGroup = currentGroup->next;
 			groupsSize++;
 		} else if (strncmp("usemtl", tok, strlen("usemtl")) == 0) {
 			tok += 7; // Skip the 7 chars in "usemtl "
 			char *materialName = parseText(&tok); // Parse the name of the material
-
 			if (flags & OBJ_OPTIMIZE_MESHES) {
 				// If a group using the same material is found: set currentGroup to it
 				int existingGroup = 0;
@@ -169,24 +172,24 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 						break;
 					}
 				} while ((group = group->next) != 0);
-				if (existingGroup) continue;
-			}
-
-			// If the current group already has faces that doesn't use the new material we need to differentiate them
-			if (currentGroup->numFaces > 0) {
-				char *groupName = (char *) malloc(strlen(currentGroup->name) + 1); // Allocate memory for the name of the new group
-				memcpy(groupName, currentGroup->name, strlen(currentGroup->name) + 1); // Copy the name of the old group into the new one's
-				struct group *oldgroup = lastGroup;
-				oldgroup->next = (currentGroup = lastGroup = create_group(groupName)); // Create a new group sharing the name of the old and link them
-				groupsSize++;
-			}
-			for (unsigned int i = 0; i < materialsSize; i++) {
-				struct mtl_material *material = materials[i];
-				if (strcmp(materialName, material->name) == 0) {
-					currentGroup->materialIndex = i; // currentGroup->material = material;
-					break;
+				if (!existingGroup) {
+					// If the current group already has faces that doesn't use the new material we need to differentiate them
+					if (currentGroup->numFaces > 0) {
+						char *groupName = malloc(strlen(currentGroup->name) + 1); // Allocate memory for the name of the new group
+						memcpy(groupName, currentGroup->name, strlen(currentGroup->name) + 1); // Copy the name of the old group into the new one's
+						group = create_group(groupName); // Create a new group sharing the name of the old and link them
+						group->next = currentGroup->next;
+						currentGroup->next = group;
+						currentGroup = group;
+						groupsSize++;
+					}
+					for (unsigned int i = 0; i < materialsSize; i++) if (strcmp(materialName, materials[i]->name) == 0) {
+						currentGroup->materialIndex = i;
+						break;
+					}
 				}
 			}
+			free(materialName);
 		} else if (*tok == ' ' || *tok == '\n' || *tok == '\t' || *tok == 'r') { tok++; continue; } // Skip spaces or empty lines at beginning of line
 		else if ('#' == *tok) {
 			tok += strcspn(tok + 1, "\n") + 1; // Skip newlines or comments
@@ -210,90 +213,90 @@ struct obj_model * load_obj_model(const char *filename, const char *data, int fl
 
 			materials = (struct mtl_material **) realloc(materials, sizeof(struct mtl_material *) * (materialsSize + numMaterials));
 			memcpy(materials + sizeof(struct mtl_material *) * materialsSize, newMaterials, sizeof(struct mtl_material *) * numMaterials);
+			free(newMaterials);
 			materialsSize += numMaterials;
 		} else if ('\0' == *tok) break;
 		tok = strchr(tok, '\n') + 1; // Skip to next line line
 	}
 
-	struct obj_model *model = (struct obj_model *) malloc(sizeof(struct obj_model));
+	struct obj_model *model = malloc(sizeof(struct obj_model));
 	model->hasUVs = hasUVs;
 	model->hasNorms = hasNorms;
-	model->parts = (struct obj_model_part **) malloc(sizeof(struct obj_model_part *) * groupsSize);
+	model->parts = malloc(sizeof(struct obj_model_part *) * groupsSize);
 	model->numMaterials = materialsSize;
 	model->materials = materials;
 	unsigned int i = 0;
 	struct group *group = firstGroup, *nextGroup;
 	do {
 		nextGroup = group->next; // Need this reference before freeing the group
-		// Skip the group if empty, don't care about the empty space in the parts array
-		if (group->facesSize == 0) continue;
-		struct obj_model_part *part = model->parts[i] = (struct obj_model_part *) malloc(sizeof(struct obj_model_part));
-		part->materialIndex = group->materialIndex; // part->material = group->material;
-		// part->faceCount = group->facesSize / (1 + hasUVs + hasNorms); // group->numFaces
-		part->faceCount = group->numFaces;
+		// Skip the group if empty
+		if (group->facesSize) {
+			struct obj_model_part *part = model->parts[i++] = malloc(sizeof(struct obj_model_part));
+			part->materialIndex = group->materialIndex; // part->material = group->material;
+			// part->faceCount = group->facesSize / (1 + hasUVs + hasNorms); // group->numFaces
+			part->faceCount = group->numFaces;
 
-		// TODO reduced the size of vertices by 3 times, still haven't tested if it works vertices only
-		float *vertices = part->vertices = (float *) malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
-		if (!(flags & OBJ_INDICES)) {
-			part->indexCount = 0;
-			part->indices = 0;
-			for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
-				int vertIndex = group->faces[j++] * 3;
-				vertices[vi++] = verts[vertIndex++];
-				vertices[vi++] = verts[vertIndex++];
-				vertices[vi++] = verts[vertIndex];
-				if (hasUVs) {
-					int uvIndex = group->faces[j++] * 2;
-					vertices[vi++] = uvs[uvIndex++];
-					vertices[vi++] = uvs[uvIndex];
-				}
-				if (hasNorms) {
-					int normIndex = group->faces[j++] * 3;
-					vertices[vi++] = norms[normIndex++];
-					vertices[vi++] = norms[normIndex++];
-					vertices[vi++] = norms[normIndex];
-				}
-			}
-		} else {
-			unsigned int vi = 0, *indices = part->indices = (unsigned int *) malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
-			for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
-				unsigned int vertIndex = group->faces[j++] * 3, uvIndex = hasUVs ? group->faces[j++] * 2 : 0, normIndex = hasNorms ? group->faces[j++] * 3 : 0;
-
-				int existing = 0;
-				// Iterate through existing indices to find a match
-				if (flags & OBJ_JOIN_IDENTICAL_VERTICES) for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
-					if (vertIndex == group->faces[l++] * 3 && (!hasUVs || uvIndex == group->faces[l++] * 2) && (!hasNorms || normIndex == group->faces[l++] * 3)) {
-						existing = 1;
-						indices[k] = indices[(l - (1 + hasUVs + hasNorms)) / (1 + hasUVs + hasNorms)];
-						break;
-					}
-				}
-				if (!existing) {
-					indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
+			// TODO reduced the size of vertices by 3 times, still haven't tested if it works vertices only
+			float *vertices = part->vertices = (float *) malloc(sizeof(float) * (part->vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
+			if (!(flags & OBJ_INDICES)) {
+				part->indexCount = 0;
+				part->indices = 0;
+				for (unsigned int j = 0, vi = 0; j < group->facesSize;) {
+					int vertIndex = group->faces[j++] * 3;
 					vertices[vi++] = verts[vertIndex++];
 					vertices[vi++] = verts[vertIndex++];
 					vertices[vi++] = verts[vertIndex];
 					if (hasUVs) {
+						int uvIndex = group->faces[j++] * 2;
 						vertices[vi++] = uvs[uvIndex++];
 						vertices[vi++] = uvs[uvIndex];
 					}
 					if (hasNorms) {
+						int normIndex = group->faces[j++] * 3;
 						vertices[vi++] = norms[normIndex++];
 						vertices[vi++] = norms[normIndex++];
 						vertices[vi++] = norms[normIndex];
 					}
 				}
-			}
-			part->vertices = vertices;
-			part->vertexCount = vi;
-			float *tmp = realloc(part->vertices = vertices, sizeof(float) * (part->vertexCount = vi)); // Reallocate the array to a save some memory
-			if (tmp != 0) part->vertices = tmp;
-		}
+			} else {
+				unsigned int vi = 0, *indices = part->indices = (unsigned int *) malloc(sizeof(unsigned int) * (part->indexCount = group->numFaces));
+				for (unsigned int j = 0, k = 0; j < group->facesSize; k++) {
+					unsigned int vertIndex = group->faces[j++] * 3, uvIndex = hasUVs ? group->faces[j++] * 2 : 0, normIndex = hasNorms ? group->faces[j++] * 3 : 0;
 
+					int existing = 0;
+					// Iterate through existing indices to find a match
+					if (flags & OBJ_JOIN_IDENTICAL_VERTICES) for (unsigned int l = 0; l < j - (1 + hasUVs + hasNorms);) {
+						if (vertIndex == group->faces[l++] * 3 && (!hasUVs || uvIndex == group->faces[l++] * 2) && (!hasNorms || normIndex == group->faces[l++] * 3)) {
+							existing = 1;
+							indices[k] = indices[(l - (1 + hasUVs + hasNorms)) / (1 + hasUVs + hasNorms)];
+							break;
+						}
+					}
+					if (!existing) {
+						indices[k] = vi / (3 + hasUVs * 2 + hasNorms * 3);
+						vertices[vi++] = verts[vertIndex++];
+						vertices[vi++] = verts[vertIndex++];
+						vertices[vi++] = verts[vertIndex];
+						if (hasUVs) {
+							vertices[vi++] = uvs[uvIndex++];
+							vertices[vi++] = uvs[uvIndex];
+						}
+						if (hasNorms) {
+							vertices[vi++] = norms[normIndex++];
+							vertices[vi++] = norms[normIndex++];
+							vertices[vi++] = norms[normIndex];
+						}
+					}
+				}
+				part->vertices = vertices;
+				part->vertexCount = vi;
+				float *tmp = realloc(part->vertices = vertices, sizeof(float) * (part->vertexCount = vi)); // Reallocate the array to a save some memory
+				if (tmp != 0) part->vertices = tmp;
+			}
+		}
 		free(group->name);
 		free(group->faces);
 		free(group);
-		i++; // Increment for next group
 	} while ((group = nextGroup) != 0);
 	model->numParts = i; // Set the model's number of parts to the actual number of groups/parts as counted
 	free(verts);
@@ -308,13 +311,14 @@ void destroy_obj_model(struct obj_model *model) {
 		struct obj_model_part *part = model->parts[i];
 		free(part->vertices);
 		free(part->indices);
+		free(part);
 	}
+	free(model->parts);
 	for (unsigned int i = 0; i < model->numMaterials; i++) {
 		struct mtl_material *material = model->materials[i];
 		destroy_mtl_material(material);
 	}
 	if (model->materials != 0) free(model->materials);
-	free(model->parts);
 	free(model);
 }
 
@@ -366,7 +370,7 @@ struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials)
 	}
 	fclose(file);
 
-	struct mtl_material **retval = (struct mtl_material **) realloc(materials, sizeof(struct mtl_material *) * size);
+	struct mtl_material **retval = realloc(materials, sizeof(struct mtl_material *) * size);
 	if (retval == 0) {
 		free(materials);
 		perror("realloc failed inside load_mtl.");
