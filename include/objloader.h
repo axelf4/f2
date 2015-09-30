@@ -31,23 +31,29 @@ extern "C" {
 			opacity; /**< The transparency, declared with *Tr* or *d alpha*, ranges 0-1, where 1 is the default and not transparent at all. */
 	};
 
-	/** A part of a model, specifically a group, with at most one material. */
-	struct obj_model_part {
-		unsigned int vertexCount, /**< The number of vertices. */
-			indexCount, /**< The number of indices. */
-			faceCount, /**< The number of faces. */
-			materialIndex; /**< The index of the material in the \c materials array. */
-		float *vertices; /**< An array of vertices. */
-		unsigned int *indices; /**< An array of indices. */
+	/** A collection of elements in an OBJ model. */
+	struct obj_group {
+		char *name; /**< The name of the group. */
+		unsigned int numFaces, /**< This group's number of triangles. */
+					 facesSize, /**< The number of elements in the #faces array. */
+					 facesCapacity, /**< The allocated size of the #faces array. */
+					 *faces, /**< Array of triangles. Interleaved with position, (optional) uv, (optional) normal, ... */
+					 materialIndex; /**< Index of this group's material in obj_model#materials. */
 	};
 
 	/** An OBJ model. */
 	struct obj_model {
-		unsigned int numParts, /**< The number of parts. */
-			numMaterials, /**< The number of materials. */
-			hasUVs, /**< A boolean value of whether this model has texture coordinates. @warning This changes the memory layout. */
-			hasNorms; /**< A boolean value of whether this model has normals. @warning This changes the memory layout. */
-		struct obj_model_part **parts; /**< An array of pointers to parts of type \c obj_model_part. */
+		unsigned int numGroups, /**< The number of groups. */
+					 numMaterials, /**< The number of materials. */
+					 hasUVs, /**< Whether this model has texture coordinates. */
+					 hasNorms, /**< Whether this model has normals. */
+					 vertCount, /**< The number of vertices in #verts. */
+					 uvCount, /**< The number of texture coordinates in #uvs. */
+					 normCount; /**< The number of normals in #norms. */
+		float *verts, /**< Array of the positions. */
+			  *uvs, /**< Array of the texture coordinates. */
+			  *norms; /**< Array of the normals. */
+		struct obj_group *groups; /**< Array of groups. */
 		struct mtl_material **materials; /**< The set of materials. */
 	};
 
@@ -57,11 +63,11 @@ extern "C" {
 		@param data The data of the model file, must be null-terminated
 		@param flags Additional flags use when loading
 		@return The loaded OBJ model */
-	struct obj_model *load_obj_model(const char *filename, const char *data, int flags);
+	struct obj_model *obj_load_model(const char *filename, const char *data, int flags);
 
 	/** Destroys an loaded OBJ model by freeing the used memory.
 		@param model The model to free */
-	void destroy_obj_model(struct obj_model *model);
+	void obj_destroy_model(struct obj_model *model);
 
 	/** Loads a MTL material definition from a file.
 		@param filename The path to the MTL file
@@ -72,6 +78,8 @@ extern "C" {
 	/** Destroys a loaded MTL material.
 		@param material The material to destroy. */
 	void destroy_mtl_material(struct mtl_material *material);
+
+	void obj_get_vertices(struct obj_model *model, struct obj_group *group, unsigned int *vertexCount, unsigned int *indexCount, float **vertices, unsigned int **indices);
 
 #ifdef __cplusplus
 }
