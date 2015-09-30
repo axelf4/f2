@@ -41,10 +41,10 @@ static char *parseText(const char **token) {
 
 static struct obj_group *create_group(char *name, unsigned int *numGroups, struct obj_group **groups) {
 	struct obj_group *tmp = realloc(*groups, sizeof(struct obj_group) * (*numGroups + 1));
-	if (tmp) *groups = tmp;
-	else return 0;
+	if (!tmp) return 0;
+	*groups = tmp;
 
-	struct obj_group *group = *groups + (*numGroups)++;
+	struct obj_group *group = *groups + *numGroups;
 	group->name = name;
 	group->materialIndex = 0;
 	group->numFaces = 0;
@@ -53,26 +53,28 @@ static struct obj_group *create_group(char *name, unsigned int *numGroups, struc
 		free(name);
 		return 0;
 	}
+	++*numGroups;
 	return group;
 }
 
 struct obj_model *obj_load_model(const char *filename, const char *data, int flags) {
 	// Array lists for the geometry, texture coordinate and normal storage
 	unsigned int vertsSize = 0, uvsSize = 0, normsSize = 0, vertsCapacity = 2, uvsCapacity = 2, normsCapacity = 2;
-	float *verts = malloc(sizeof(float) * vertsCapacity), *uvs = malloc(sizeof(float) * vertsCapacity), *norms = malloc(sizeof(float) * normsCapacity);
-
+	float *verts = 0, *uvs = 0, *norms = 0;
 	// Model-wise booleans whether texture coordinates or normals exist
 	unsigned int hasUVs = 0, hasNorms = 0;
-
-	char *defaultGroupName = malloc(sizeof "default"); // Allocate string on heap to be able to free it like the rest
-	strcpy(defaultGroupName, "default");
-
+	char *defaultGroupName = 0;
 	unsigned int numGroups = 0;
-	struct obj_group *groups;
-	struct obj_group *currentGroup = create_group(defaultGroupName, &numGroups, &groups);
-
-	unsigned int materialsSize = 0;
+	struct obj_group *groups = 0, *currentGroup;
+	unsigned int numMaterials = 0;
 	struct mtl_material **materials = 0;
+
+	if(!(verts = malloc(sizeof(float) * vertsCapacity))) goto error;
+	if(!(uvs = malloc(sizeof(float) * vertsCapacity))) goto error;
+	if(!(norms = malloc(sizeof(float) * normsCapacity))) goto error;
+	if(!(defaultGroupName = malloc(sizeof "default"))) goto error; // Allocate string on heap to be able to free it like the rest
+	strcpy(defaultGroupName, "default");
+	if(!(currentGroup = create_group(defaultGroupName, &numGroups, &groups))) goto error;
 
 	const char *tok = data;
 	while ('\0' != *tok) {
@@ -95,8 +97,8 @@ struct obj_model *obj_load_model(const char *filename, const char *data, int fla
 			}
 			tok++; // Skip token (either ' ', 't' or 'n')
 			if (*size + (hasZ ? 3 : 2) >= *capacity) {
-				float *tmp = (float *) realloc(*list, sizeof(float) * (*capacity *= 2));
-				if (tmp == 0) return 0;
+				float *tmp = realloc(*list, sizeof(float) * (*capacity *= 2));
+				if (!tmp) goto error;
 				*list = tmp;
 			}
 			x = (*list)[(*size)++] = parseFloat(&tok); // X
@@ -109,9 +111,7 @@ struct obj_model *obj_load_model(const char *filename, const char *data, int fla
 			for (i = 0; !isNewLine(*tok); i++) {
 				if (*facesSize + (1 + hasUVs + hasNorms) * (i >= 3 ? 3 : 1) >= *facesCapacity) {
 					unsigned int *tmp = realloc(*faces, (*facesCapacity *= 2) * sizeof(unsigned int));
-					if (tmp == 0) {
-						free(*faces);
-					}
+					if (!tmp) goto error;
 					*faces = tmp;
 				}
 
@@ -146,10 +146,11 @@ struct obj_model *obj_load_model(const char *filename, const char *data, int fla
 			assert(i >= 2 && "Points and lines aren't supported.");
 		} else if ('g' == *tok) {
 			tok += 2; // Skip the 2 chars in "g "
-			currentGroup = create_group(parseText(&tok), &numGroups, &groups); // Create a new group
+			if (!(currentGroup = create_group(parseText(&tok), &numGroups, &groups))) goto error; // Create a new group
 		} else if (strncmp("usemtl", tok, strlen("usemtl")) == 0) {
 			tok += 7; // Skip the 7 chars in "usemtl "
 			char *materialName = parseText(&tok); // Parse the name of the material
+			if (!materialName) goto error;
 			int existingGroup = 0;
 			if (flags & OBJ_OPTIMIZE_MESHES) {
 				// If a group using the same material is found: set currentGroup to it
@@ -163,10 +164,19 @@ struct obj_model *obj_load_model(const char *filename, const char *data, int fla
 				// If the current group already has faces that doesn't use the new material we need to differentiate them
 				if (currentGroup->numFaces > 0) {
 					char *groupName = malloc(strlen(currentGroup->name) + 1); // Allocate memory for the name of the new group
+					if (!groupName) {
+						free(materialName);
+						goto error;
+					}
 					strcpy(groupName, currentGroup->name); // Copy the name of the old group into the new one's
-					currentGroup = create_group(groupName, &numGroups, &groups); // Create a new group sharing the name of the old and link them
+					// Create a new group sharing old one's name and link them
+					if (!(currentGroup = create_group(groupName, &numGroups, &groups))) {
+						free(materialName);
+						free(groupName);
+						goto error;
+					}
 				}
-				for (unsigned int i = 0; i < materialsSize; i++) if (strcmp(materialName, materials[i]->name) == 0) {
+				for (unsigned int i = 0; i < numMaterials; i++) if (strcmp(materialName, materials[i]->name) == 0) {
 					currentGroup->materialIndex = i;
 					break;
 				}
@@ -178,33 +188,44 @@ struct obj_model *obj_load_model(const char *filename, const char *data, int fla
 		} else if ('#' == *tok) {
 			tok += strcspn(tok + 1, "\n") + 1; // Skip newlines or comments
 		} else if (strncmp("mtllib", tok, strlen("mtllib")) == 0) {
-			// TODO load multiple mtllibs as the definition: mtllib filename1 filename2 . . .
+			// TODO load multiple mtllibs as per definition: mtllib filename1 filename2 . . .
 			// Use the .obj file's directory as a base
 			tok += 7; // Skip the 7 chars in "mtllib "
 			char *file = parseText(&tok);
+			if (!file) goto error;
 			unsigned int fileLen = strlen(file);
 			unsigned int directoryLen = strrchr((char *) filename, '/') - filename + 1;
 			if (directoryLen == 0) directoryLen = strrchr((char *) filename, '\\') - filename + 1;
 			char *path = malloc(sizeof(char) * (directoryLen + fileLen + 1));
+			if (!path) {
+				free(file);
+				goto error;
+			}
 			memcpy(path, filename, directoryLen);
 			memcpy(path + directoryLen, file, fileLen);
 			path[directoryLen + fileLen] = '\0';
 			free(file);
 
-			unsigned int numMaterials;
-			struct mtl_material **newMaterials = load_mtl(path, &numMaterials);
+			unsigned int numNewMaterials;
+			struct mtl_material **newMaterials = load_mtl(path, &numNewMaterials);
 			free(path);
+			if (!newMaterials) goto error;
 
-			materials = realloc(materials, sizeof(struct mtl_material *) * (materialsSize + numMaterials));
-			memcpy(materials + sizeof(struct mtl_material *) * materialsSize, newMaterials, sizeof(struct mtl_material *) * numMaterials);
+			struct mtl_material **tmp = realloc(materials, sizeof(struct mtl_material *) * (numMaterials + numNewMaterials));
+			if (!tmp) {
+				free(newMaterials);
+				goto error;
+			}
+			materials = tmp;
+			memcpy(materials + sizeof(struct mtl_material *) * numMaterials, newMaterials, sizeof(struct mtl_material *) * numNewMaterials);
 			free(newMaterials);
-			materialsSize += numMaterials;
+			numMaterials += numNewMaterials;
 		}
 		tok = strchr(tok, '\n') + 1; // Skip to next line line
 	}
 
 	struct obj_model *model = malloc(sizeof(struct obj_model));
-	if (!model) return 0;
+	if (!model) goto error;
 	model->numGroups = numGroups;
 	model->groups = groups;
 	model->hasUVs = hasUVs;
@@ -215,9 +236,22 @@ struct obj_model *obj_load_model(const char *filename, const char *data, int fla
 	model->verts = verts;
 	model->uvs = uvs;
 	model->norms = norms;
-	model->numMaterials = materialsSize;
+	model->numMaterials = numMaterials;
 	model->materials = materials;
 	return model;
+error:
+	free(verts);
+	free(uvs);
+	free(norms);
+	free(defaultGroupName);
+	if(groups) for (int i = 0; i < numGroups; i++) {
+		free(groups[i].name);
+		free(groups[i].faces);
+	}
+	free(groups);
+	if (materials) for (int i = 0; i < numMaterials; i++) destroy_mtl_material(materials[i]);
+	free(materials);
+	return 0;
 }
 
 void obj_destroy_model(struct obj_model *model) {
@@ -305,10 +339,7 @@ void obj_get_vertices(struct obj_model *model, struct obj_group *group, unsigned
 	int hasUVs = model->hasUVs, hasNorms = model->hasNorms;
 	int flags = OBJ_INDICES;
 	float *verts = model->verts, *uvs = model->uvs, *norms = model->norms;
-	printf("verts lol: %f\n", verts[1]);
-	printf("group->numFaces: %d\n", group->numFaces);
 	*vertices = malloc(sizeof(float) * (*vertexCount = group->numFaces * (3 + (hasUVs ? 2 : 0) + (hasNorms ? 3 : 0))));
-	printf("vertexCount: %d\n", *vertexCount);
 	if (!(flags & OBJ_INDICES)) {
 		*indexCount = 0;
 		*indices = 0;
