@@ -224,7 +224,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 			  // printf("%lu\n", connection->lastReceiveTime);
 			  if (connection->lastReceiveTime != 0 && now - connection->lastReceiveTime > 5000) {
 				  free(connection);
-				  memcpy(peer->connections + i, peer->connections + i + 1, --peer->numConnections - i * sizeof(struct conn *)); // Remove from list
+				  memcpy(peer->connections + i, peer->connections + i + 1, sizeof(struct conn *) * (--peer->numConnections - i)); // Remove from list
 				  event->type = NET_EVENT_TYPE_DISCONNECT;
 				  return 1;
 			  }
