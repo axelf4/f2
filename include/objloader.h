@@ -33,7 +33,8 @@ extern "C" {
 
 	/** A collection of elements in an OBJ model. */
 	struct obj_group {
-		char *name; /**< The name of the group. */
+		char *name, /**< The name of the group. */
+			 *materialName; /**< The material name for this group, or if @c 0 the same material as the last group. */
 		unsigned int numFaces, /**< This group's number of triangles. */
 					 facesSize, /**< The number of elements in the #faces array. */
 					 facesCapacity, /**< The allocated size of the #faces array. */
@@ -44,7 +45,8 @@ extern "C" {
 	/** An OBJ model. */
 	struct obj_model {
 		unsigned int numGroups, /**< The number of groups. */
-					 numMaterials, /**< The number of materials. */
+					 numMaterialLibraries, /**< The number of material libraries. */
+					 // numMaterials, /**< The number of materials. */
 					 hasUVs, /**< Whether this model has texture coordinates. */
 					 hasNorms, /**< Whether this model has normals. */
 					 vertCount, /**< The number of vertices in #verts. */
@@ -54,7 +56,7 @@ extern "C" {
 			  *uvs, /**< Array of the texture coordinates. */
 			  *norms; /**< Array of the normals. */
 		struct obj_group *groups; /**< Array of groups. */
-		struct mtl_material **materials; /**< The set of materials. */
+		char **materialLibraries; /**< An array of relative filenames to material libraries. */
 	};
 
 	/** Loads an OBJ model.
@@ -63,9 +65,9 @@ extern "C" {
 		@param data The data of the model file, must be null-terminated
 		@param flags Additional flags use when loading
 		@return The loaded OBJ model */
-	struct obj_model *obj_load_model(const char *filename, const char *data, int flags);
+	struct obj_model *obj_load_model(const char *data, int flags);
 
-	/** Destroys an loaded OBJ model by freeing the used memory.
+	/** Destroys an OBJ model.
 		@param model The model to free */
 	void obj_destroy_model(struct obj_model *model);
 
