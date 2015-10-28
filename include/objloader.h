@@ -46,7 +46,6 @@ extern "C" {
 	struct obj_model {
 		unsigned int numGroups, /**< The number of groups. */
 					 numMaterialLibraries, /**< The number of material libraries. */
-					 // numMaterials, /**< The number of materials. */
 					 hasUVs, /**< Whether this model has texture coordinates. */
 					 hasNorms, /**< Whether this model has normals. */
 					 vertCount, /**< The number of vertices in #verts. */
@@ -60,26 +59,24 @@ extern "C" {
 	};
 
 	/** Loads an OBJ model.
-		The filename must be passed to resolve the paths to the material definitions.
-		@param filename The filename of the loaded model
 		@param data The data of the model file, must be null-terminated
 		@param flags Additional flags use when loading
-		@return The loaded OBJ model */
+		@return The OBJ model */
 	struct obj_model *obj_load_model(const char *data, int flags);
 
 	/** Destroys an OBJ model.
 		@param model The model to free */
 	void obj_destroy_model(struct obj_model *model);
 
-	/** Loads a MTL material definition from a file.
-		@param filename The path to the MTL file
+	/** Loads a MTL material definition from a string.
+		@param data The contents of the material file
 		@param numMaterials A pointer to a integer which will be set to the number of materials
-		@return An array of loaded materials */
-	struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials);
+		@return An array of materials */
+	struct mtl_material *load_mtl(const char *data, unsigned int *numMaterials);
 
-	/** Destroys a loaded MTL material.
-		@param material The material to destroy. */
-	void destroy_mtl_material(struct mtl_material *material);
+	/** Destroys a MTL material.
+		@param material The material to destroy */
+	void destroy_mtl_material(struct mtl_material material);
 
 	void obj_get_vertices(struct obj_model *model, struct obj_group *group, unsigned int *vertexCount, unsigned int *indexCount, float **vertices, unsigned int **indices);
 

@@ -189,7 +189,7 @@ struct obj_model *obj_load_model(const char *data, int flags) {
 			}
 			(model->materialLibraries = tmp)[model->numMaterialLibraries++] = filename;
 		}
-		tok = strchr(tok, '\n') + 1; // Skip to next line line
+		tok += strcspn(tok, "\n") + 1; // Skip to next line
 	}
 
 	return model;
@@ -226,67 +226,59 @@ void obj_destroy_model(struct obj_model *model) {
 	free(model);
 }
 
-struct mtl_material **load_mtl(const char *filename, unsigned int *numMaterials) {
-	FILE *file = fopen(filename, "r");
-
+struct mtl_material *load_mtl(const char *data, unsigned int *numMaterials) {
 	unsigned int size = 0, capacity = 2;
-	struct mtl_material **materials = (struct mtl_material **) malloc(sizeof(struct mtl_material *) * capacity);
+	struct mtl_material *materials = malloc(capacity * sizeof(struct mtl_material)),
+						*current; // Current material from last newmtl
+	if (!materials) return 0;
 
-	struct mtl_material *cur; // Current material as specified by last newmtl
-
-	char line[80];
-	const char *tok;
-	while (fgets(line, 80, file)) {
-		tok += strspn(tok = line, " \t\r"); // Skip spaces at beginning of line
+	const char *tok = data;
+	for (;;) {
 		if (strncmp("newmtl", tok, strlen("newmtl")) == 0) {
+			tok += 7; // Skip the 7 characters in "newmtl "
 			if (size + 1 >= capacity) {
-				struct mtl_material **tmp = (struct mtl_material **) realloc(materials, sizeof(struct mtl_material *) * (capacity *= 2));
+				struct mtl_material *tmp = realloc(materials, (capacity *= 2) * sizeof(struct mtl_material));
 				if (tmp == 0) {
 					free(materials);
-					perror("realloc failed inside load_mtl.");
 					return 0;
 				}
 				materials = tmp;
 			}
-			cur = materials[size++] = (struct mtl_material *) malloc(sizeof(struct mtl_material));
-			tok += 7; // Skip the 7 characters in "newmtl "
-			cur->name = parseText(&tok);
+			current = materials + size++;
+			current->name = parseText(&tok);
 			// TODO define defaults for rest
-			cur->opacity = 1.f;
-			cur->ambientTexture = 0;
+			current->opacity = 1.f;
+			current->ambientTexture = 0;
 		} else if (*tok == 'K' && (tok[1] == 'a' || tok[1] == 'd' || tok[1] == 's')) { // diffuse or specular
-			float *color = tok[1] == 'a' ? cur->ambient : (tok[1] == 'd' ? cur->diffuse : cur->specular);
+			float *color = tok[1] == 'a' ? current->ambient : (tok[1] == 'd' ? current->diffuse : current->specular);
 			tok += 3; // Skip the characters 'K' and 'a'/'d'/'s' and the space
 			color[0] = parseFloat(&tok);
 			color[1] = parseFloat(&tok);
 			color[2] = parseFloat(&tok);
 		} else if ((tok[0] == 'T' && tok[1] == 'r') || *tok == 'd') {
 			tok += 2; // Skip the characters 'Tr' or 'd '
-			cur->opacity = parseFloat(&tok);
+			current->opacity = parseFloat(&tok);
 		} else if (tok[0] == 'n' && tok[1] == 's') {
 			tok += 3; // Skip the characters 'ns '
-			cur->shininess = parseFloat(&tok);
+			current->shininess = parseFloat(&tok);
 		} else if (strncmp("map_Kd", tok, strlen("map_Kd")) == 0) {
 			tok += 7; // Skip the 7 characters "map_Kd "
-			cur->ambientTexture = parseText(&tok);
+			current->ambientTexture = parseText(&tok);
 			tok += 0;
-		}
+		} else if (*tok == ' ' || *tok == '\n' || *tok == '\t' || *tok == 'r') {
+			tok++; // Skip spaces or empty lines at beginning of line
+			continue;
+		} else if ('\0' == *tok) break;
+		tok += strcspn(tok, "\n") + 1; // Skip to next line
 	}
-	fclose(file);
 
-	struct mtl_material **retval = realloc(materials, sizeof(struct mtl_material *) * size);
-	if (retval == 0) {
-		free(materials);
-		perror("realloc failed inside load_mtl.");
-	}
 	*numMaterials = size;
-	return retval;
+	return materials;
 }
 
-void destroy_mtl_material(struct mtl_material *material) {
-	free(material->name);
-	if (material->ambientTexture != 0) free(material->ambientTexture);
-	free(material);
+void destroy_mtl_material(struct mtl_material material) {
+	free(material.name);
+	if (material.ambientTexture != 0) free(material.ambientTexture);
 }
 
 void obj_get_vertices(struct obj_model *model, struct obj_group *group, unsigned int *vertexCount, unsigned int *indexCount, float **vertices, unsigned int **indices) {
