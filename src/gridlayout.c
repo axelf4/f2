@@ -12,17 +12,24 @@ struct track {
 		growth; /** The growth limit. */
 };
 
+// 10.3 Initialize Track Sizes
 static void initializeTrackSizes(int count, struct track *tracks, struct size *template) {
 	for (int i = 0; i < count; i++) {
 		struct track *track = tracks + i;
 		float min = template[i].min, max = template[i].max;
 
+		// 0 if intrinsic or flexible sizing function otherwise the resolved absolute length
 		track->base = IS_INTRINSIC(min) || IS_FLEX(min) ? 0 : min;
+		// For fixed track sizes, resolve to an absolute length and use that size.
+		// For flexible track sizes, use the track's initial base size as its initial growth limit.
+		// For intrinsic track sizes, use an initial growth limit of infinity.
 		track->growth = IS_INTRINSIC(max) || IS_FLEX(max) ? track->base : max;
+		// If the growth limit is less than the base size, increase the growth limit to match the base size
 		if (track->growth < track->base) track->growth = track->base;
 	}
 }
 
+// Distribute equally among tracks
 static void maximizeTracks(float space, int count, struct track *tracks) {
 	int unfrozen = 0;
 	float growth = 0;

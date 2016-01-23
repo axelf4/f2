@@ -125,7 +125,7 @@ beginning:; // If received a packet used internally: don't return, but skip it
 		  int result;
 		  socklen_t fromlen = sizeof(struct sockaddr_in);
 		  if ((result = recvfrom(peer->socket, buf, len, 0, from, &fromlen)) > 0) {
-			  if (rand() % 2) goto beginning; // Simulate packet drop locally
+			  // if (rand() % 2) goto beginning; // Simulate packet loss
 
 			  // Find out if the packet forms a new connection
 			  struct conn *connection = 0;
